@@ -19,7 +19,6 @@
     "benchmark": "^1.0.0",
     "faucet": "0.0.1",
     "jshint": "^2.5.10",
-    "simplify": "^1.0.0",
     "tape": "^3.0.3"
   },
   "scripts": {

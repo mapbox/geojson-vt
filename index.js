@@ -1,6 +1,7 @@
 module.exports = tileGeoJSON;
 
 var simplify = require('./simplify');
+var clip = require('./src/clip');
 
 function transform(p) {
     var sin = Math.sin(p[1] * Math.PI / 180);
@@ -12,120 +13,83 @@ function transform(p) {
     ];
 }
 
-function toID(z, x, y, w) {
-    w = w || 0;
-    w *= 2;
-    if (w < 0) w = w * -1 -1;
-    var dim = 1 << z;
-    return ((dim * dim * w + dim * y + x) * 32) + z;
+function toID(z, x, y) {
+    return (((1 << z) * y + x) * 32) + z;
 }
 
-function tileGeoJSON(geojson) {
-    // temporarily hardcoded
-    var coords = geojson.features[0].geometry.coordinates.map(transform);
+function tileGeoJSON(geojson, maxZoom) {
+    var features = [{
+        // temporarily hardcoded
+        coords: geojson.features[0].geometry.coordinates.map(transform),
+        type: 2,
+        props: 1
+    }];
 
-    var features = [coords];
+    var tiles = {};
+    var stats = {};
 
     console.time('tile');
-    var tiles = {};
-    splitTile(tiles, features, 0, 0, 0, 0, 0, 512, 512, 2, 0);
+    if (features && features.length) splitTile(stats, tiles, features, 0, 0, 0, 0, 0, 512, 512, maxZoom);
     console.timeEnd('tile');
 
-    console.log(Object.keys(tiles).length);
+    console.log('total tiles', Object.keys(tiles).length);
+    console.log(stats);
 
     return tiles;
 }
 
-function intersectionX(p0, p1, x) {
+function intersectX(p0, p1, x) {
     return [x, (x - p0[0]) * (p1[1] - p0[1]) / (p1[0] - p0[0]) + p0[1]];
 }
 
-function intersectionY(p0, p1, y) {
+function intersectY(p0, p1, y) {
     return [(y - p0[1]) * (p1[0] - p0[0]) / (p1[1] - p0[1]) + p0[0], y];
-}
-
-function belowX(p, x) {
-    return p[0] < x;
-}
-function aboveX(p, x) {
-    return p[0] > x;
-}
-function belowY(p, y) {
-    return p[1] < y;
-}
-function aboveY(p, y) {
-    return p[1] > y;
-}
-
-function getSlice(coords, pIn, i, j, pOut) {
-    var slice = coords.slice(i, j);
-    if (pIn) slice.unshift(pIn);
-    if (pOut) slice.push(pOut);
-    return slice;
-}
-
-function cutOutPlane(features, k, inside, outside, intersection) {
-    var slices = [];
-
-    for (var i = 0; i < features.length; i++) {
-        var coords = features[i],
-            cut = 0,
-            len = coords.length,
-            pIn, pOut, slice;
-
-        for (var j = 1; j < len; j++) {
-            var a = coords[j - 1],
-                b = coords[j];
-
-            // segment goes inside -> save intersection and index
-            if (outside(a, k) && inside(b, k)) {
-                pIn = intersection(a, b, k);
-                cut = j;
-
-            // segment goes outside -> cut a slice
-            } else if (inside(a, k) && outside(b, k)) {
-                var pOut = intersection(a, b, k);
-                slices.push(getSlice(coords, pIn, cut, j, pOut));
-            }
-        }
-
-        // line ends up inside -> cut the final slice
-        if (inside(coords[len - 1], k)) {
-            slices.push(getSlice(coords, pIn, cut, j));
-        }
-    }
-
-    return slices;
-}
-
-function coordsNumWithin(features, k) {
-    var num = 0;
-    for (var i = 0; i < features.length; i++) {
-        num += features[i].length;
-        if (num > k) return false;
-    }
-    return true;
 }
 
 function coordsNum(features, k) {
     var num = 0;
     for (var i = 0; i < features.length; i++) {
-        num += features[i].length;
+        num += features[i].coords.length;
     }
     return num;
 }
 
-function simplifyFeatures(features, tolerance) {
-    var simplified = [];
+function coordsNumWithin(features, k) {
+    var num = 0;
     for (var i = 0; i < features.length; i++) {
-        simplified.push(simplify(features[i], tolerance));
+        num += features[i].coords.length;
+        if (num > k) return false;
     }
-    return simplified;
+    return true;
+}
+
+
+function simplifyFeatures(features) {
+    var simplified = [],
+        effective = false,
+        numCoords = 0;
+
+    for (var i = 0; i < features.length; i++) {
+        var coords = features[i].coords,
+            simplifiedCoords = simplify(coords);
+
+        // if (coords.length < simplifiedCoords.length) console.log(coords, simplifiedCoords);
+
+        if (coords.length - simplifiedCoords.length > 1) effective = true;
+        numCoords += coords.length;
+
+        simplified.push({
+            coords: simplifiedCoords,
+            type: features[i].type,
+            props: features[i].props
+        });
+    }
+    return effective ? simplified : false;
 }
 
 function doubleCoords(features) {
     for (var i = 0; i < features.length; i++) {
-        var coords = features[i];
+        var coords = features[i].coords;
         for (var j = 0; j < coords.length; j++) {
             coords[j] = [coords[j][0] * 2, coords[j][1] * 2];
         }
@@ -133,36 +97,49 @@ function doubleCoords(features) {
     return features;
 }
 
-function splitTile(tiles, features, z, tx, ty, x1, y1, x2, y2, maxZoom, maxPoints) {
+function splitTile(stats, tiles, features, z, tx, ty, x1, y1, x2, y2, maxZoom) {
 
-    if (features.length) {
-        var simplified = simplifyFeatures(features, 1);
-        tiles[toID(z, tx, ty)] = simplified;
-        console.log('saved tile', z, tx, ty, (simplified));
+    stats[z] = (stats[z] || 0) + 1;
+
+    var id = toID(z, tx, ty);
+
+    if (coordsNumWithin(features, 100)) {
+        tiles[id] = features;
+        return;
     }
 
-    if (z === maxZoom || coordsNumWithin(features, maxPoints)) return;
+    var simplified = simplifyFeatures(features);
+
+    if (!simplified) {
+        tiles[id] = features;
+        return;
+    }
+
+    tiles[id] = simplified;
+
+    if (z === maxZoom) return;
 
     var x = (x1 + x2) / 2,
         y = (y1 + y2) / 2,
         p = 25,
 
-        left = cutOutPlane(features, x + p, belowX, aboveX, intersectionX),
-        right = cutOutPlane(features, x - p, aboveX, belowX, intersectionX);
+        left  = clip(features, x1 - p, x + p, 0, intersectX),
+        right = clip(features, x - p, x2 + p, 0, intersectX);
 
-    if (left.length) {
-        var topLeft = cutOutPlane(left, y + p, belowY, aboveY, intersectionY),
-            bottomLeft = cutOutPlane(left, y - p, aboveY, belowY, intersectionY);
 
-        splitTile(tiles, doubleCoords(topLeft),     z + 1, tx * 2, ty * 2,     x1 * 2, y1 * 2, x * 2, y * 2, maxZoom, maxPoints);
-        splitTile(tiles, doubleCoords(bottomLeft),  z + 1, tx * 2, ty * 2 + 1, x1 * 2, y * 2, x * 2, y2 * 2, maxZoom, maxPoints);
+    if (left) {
+        var topLeft    = clip(left, y1 - p, y + p, 1, intersectY),
+            bottomLeft = clip(left, y - p, y2 + p, 1, intersectY);
+
+        if (topLeft)    splitTile(stats, tiles, doubleCoords(topLeft),     z + 1, tx * 2, ty * 2,     x1 * 2, y1 * 2, x * 2, y * 2, maxZoom);
+        if (bottomLeft) splitTile(stats, tiles, doubleCoords(bottomLeft),  z + 1, tx * 2, ty * 2 + 1, x1 * 2, y * 2, x * 2, y2 * 2, maxZoom);
     }
 
-    if (right.length) {
-        var topRight = cutOutPlane(right, y + p, belowY, aboveY, intersectionY),
-            bottomRight = cutOutPlane(right, y + p, aboveY, belowY, intersectionY);
+    if (right) {
+        var topRight    = clip(right, y1 - p, y + p, 1, intersectY),
+            bottomRight = clip(right, y - p, y2 + p, 1, intersectY);
 
-        splitTile(tiles, doubleCoords(topRight),    z + 1, tx * 2 + 1, ty * 2,     x * 2, y1 * 2, x2 * 2, y * 2, maxZoom, maxPoints);
-        splitTile(tiles, doubleCoords(bottomRight), z + 1, tx * 2 + 1, ty * 2 + 1, x * 2, y * 2, x2 * 2, y2 * 2, maxZoom, maxPoints);
+        if (topRight)    splitTile(stats, tiles, doubleCoords(topRight),    z + 1, tx * 2 + 1, ty * 2,     x * 2, y1 * 2, x2 * 2, y * 2, maxZoom);
+        if (bottomRight) splitTile(stats, tiles, doubleCoords(bottomRight), z + 1, tx * 2 + 1, ty * 2 + 1, x * 2, y * 2, x2 * 2, y2 * 2, maxZoom);
     }
 }
