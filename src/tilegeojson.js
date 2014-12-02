@@ -1,7 +1,7 @@
 module.exports = tileGeoJSON;
 
 var simplify = require('./simplify');
-var clip = require('./src/clip');
+var clip = require('./clip');
 
 function transform(p) {
     var sin = Math.sin(p[1] * Math.PI / 180);

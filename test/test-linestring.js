@@ -1,5 +1,5 @@
 
-var tileGeoJSON = require('../index.js');
+var tileGeoJSON = require('../src/tilegeojson.js');
 var route = require('./fixtures/route.json');
 
 // var test = {
