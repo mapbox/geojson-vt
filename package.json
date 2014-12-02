@@ -1,0 +1,34 @@
+{
+  "name": "tilegeojson",
+  "version": "0.0.1",
+  "description": "Cuts GeoJSON data into tiles with a smart adaptive algorithm",
+  "homepage": "https://github.com/mapbox/tilegeojson",
+  "keywords": [
+    "spatial",
+    "geojson",
+    "tiles",
+    "geometry"
+  ],
+  "author": "Vladimir Agafonkin",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mapbox/tilegeojson.git"
+  },
+  "main": "index.js",
+  "devDependencies": {
+    "benchmark": "^1.0.0",
+    "jshint": "^2.5.10",
+    "simplify": "^1.0.0"
+  },
+  "scripts": {
+    "test": "jshint index.js"
+  },
+  "jshintConfig": {
+    "unused": true,
+    "undef": true,
+    "trailing": true,
+    "eqeqeq": true,
+    "indent": 4,
+    "node": true
+  }
+}
