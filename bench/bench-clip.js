@@ -5,8 +5,8 @@ var clip = require('../src/clip');
 function belowX(p, x) { return p[0] < x; }
 function aboveX(p, x) { return p[0] > x; }
 
-function intersectX(p0, p1, x) {
-    return [x, (x - p0[0]) * (p1[1] - p0[1]) / (p1[0] - p0[0]) + p0[1]];
+function intersectX(a, b, x) {
+    return [x, (x - a[0]) * (b[1] - a[1]) / (b[0] - a[0]) + a[1]];
 }
 
 var coords1 =
@@ -26,12 +26,20 @@ var polygons = [
     {coords: coords2, type: 3, props: 2}
 ];
 
+var points = [
+    {coords: coords1, type: 1, props: 1},
+    {coords: coords2, type: 1, props: 2}
+];
+
 new Benchmark.Suite()
 .add('polylines', function() {
-    clip(polylines, 10, 40, belowX, aboveX, intersectX);
+    clip(polylines, 10, 40, 0, intersectX);
 })
 .add('polygons', function() {
-    clip(polygons, 10, 40, belowX, aboveX, intersectX);
+    clip(polygons, 10, 40, 0, intersectX);
+})
+.add('points', function() {
+    clip(points, 10, 40, 0, intersectX);
 })
 .on('cycle', function(event) {
     console.log(String(event.target));
