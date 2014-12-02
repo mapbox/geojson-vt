@@ -10,14 +10,14 @@ module.exports = clip;
  */
 
 function clip(features, k1, k2, below, above, intersect) {
-    var clipped = [],
-        slice = [];
+    var clipped = [];
 
     for (var i = 0; i < features.length; i++) {
         var coords = features[i].coords,
             type = features[i].type,
             props = features[i].props,
             len = coords.length,
+            slice = [],
             a, b;
 
         for (var j = 0; j < len - 1; j++) {
@@ -33,7 +33,7 @@ function clip(features, k1, k2, below, above, intersect) {
                     slice = newSlice(clipped, slice, type, props);
 
                 // ---|-->  |
-                } else slice.push(intersect(a, b, k1));
+                } else if (!below(b, k1)) slice.push(intersect(a, b, k1));
 
             } else if (above(a, k2)) {
 
@@ -44,7 +44,7 @@ function clip(features, k1, k2, below, above, intersect) {
                     slice = newSlice(clipped, slice, type, props);
 
                 //    |  <--|---
-                } else slice.push(intersect(a, b, k2));
+                } else if (!above(b, k2)) slice.push(intersect(a, b, k2));
 
             } else {
                 slice.push(a);
@@ -68,7 +68,7 @@ function clip(features, k1, k2, below, above, intersect) {
         if (!above(a, k2) && !below(a, k1)) slice.push(a);
 
         // add the final slice
-        addSlice(features, slice, type, props);
+        addSlice(clipped, slice, type, props);
     }
 
     return clipped.length ? clipped : null;
