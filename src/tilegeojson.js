@@ -5,11 +5,9 @@ var clip = require('./clip');
 
 function transform(p) {
     var sin = Math.sin(p[1] * Math.PI / 180);
-    var y = 512 * (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI);
-    if (y < 0) console.log(p[1], y);
     return [
         512 * (p[0] / 360 + 0.5),
-        y
+        512 * (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI)
     ];
 }
 
@@ -18,12 +16,31 @@ function toID(z, x, y) {
 }
 
 function tileGeoJSON(geojson, maxZoom) {
-    var features = [{
-        // temporarily hardcoded
-        coords: geojson.features[0].geometry.coordinates.map(transform),
-        type: 2,
-        props: 1
-    }];
+
+    var features = [];
+
+    for (var i = 0; i < geojson.features.length; i++) {
+        var feature = geojson.features[i],
+            geom = feature.geometry;
+
+        if (geom.type === 'LineString') {
+            features.push({
+                coords: geom.coordinates.map(transform),
+                type: 2,
+                props: feature.properties
+            });
+
+        } else if (geom.type === 'Polygon' && geom.coordinates.length === 1) {
+            features.push({
+                coords: geom.coordinates[0].map(transform),
+                type: 3,
+                props: feature.properties
+            });
+
+        } else {
+            throw new Error('Unsupported GeoJSON type');
+        }
+    }
 
     var tiles = {};
     var stats = {};
@@ -32,7 +49,6 @@ function tileGeoJSON(geojson, maxZoom) {
     if (features && features.length) splitTile(stats, tiles, features, 0, 0, 0, 0, 0, 512, 512, maxZoom);
     console.timeEnd('tile');
 
-    console.log('total tiles', Object.keys(tiles).length);
     console.log(stats);
 
     return tiles;
@@ -46,7 +62,7 @@ function intersectY(p0, p1, y) {
     return [(y - p0[1]) * (p1[0] - p0[0]) / (p1[1] - p0[1]) + p0[0], y];
 }
 
-function coordsNum(features, k) {
+function coordsNum(features) {
     var num = 0;
     for (var i = 0; i < features.length; i++) {
         num += features[i].coords.length;
@@ -65,18 +81,11 @@ function coordsNumWithin(features, k) {
 
 
 function simplifyFeatures(features) {
-    var simplified = [],
-        effective = false,
-        numCoords = 0;
+    var simplified = [];
 
     for (var i = 0; i < features.length; i++) {
         var coords = features[i].coords,
             simplifiedCoords = simplify(coords);
-
-        // if (coords.length < simplifiedCoords.length) console.log(coords, simplifiedCoords);
-
-        if (coords.length - simplifiedCoords.length > 1) effective = true;
-        numCoords += coords.length;
 
         simplified.push({
             coords: simplifiedCoords,
@@ -84,7 +93,8 @@ function simplifyFeatures(features) {
             props: features[i].props
         });
     }
-    return effective ? simplified : false;
+
+    return simplified;
 }
 
 function doubleCoords(features) {
@@ -103,17 +113,17 @@ function splitTile(stats, tiles, features, z, tx, ty, x1, y1, x2, y2, maxZoom) {
 
     var id = toID(z, tx, ty);
 
-    if (coordsNumWithin(features, 100)) {
-        tiles[id] = features;
-        return;
-    }
-
     var simplified = simplifyFeatures(features);
 
-    if (!simplified) {
-        tiles[id] = features;
-        return;
-    }
+    // if (features.length === 1 && features[0].coords.length - simplified[0].coords.length <= 1) {
+    //     tiles[id] = features;
+    //     return;
+    // }
+
+    // if (coordsNumWithin(features, 20)) {
+    //     tiles[id] = features;
+    //     return;
+    // }
 
     tiles[id] = simplified;
 
