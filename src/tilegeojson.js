@@ -1,6 +1,6 @@
 module.exports = tileGeoJSON;
 
-var simplify = require('./simplify');
+// var simplify = require('./simplify');
 var clip = require('./clip');
 
 
@@ -49,7 +49,7 @@ function splitTile(stats, tiles, features, z, tx, ty, x1, y1, x2, y2, maxZoom) {
 
     var id = toID(z, tx, ty);
 
-    var simplified = simplifyFeatures(features);
+    // var simplified = simplifyFeatures(features);
 
     // if (features.length === 1 && features[0].coords.length - simplified[0].coords.length <= 1) {
     //     tiles[id] = features;
@@ -61,7 +61,7 @@ function splitTile(stats, tiles, features, z, tx, ty, x1, y1, x2, y2, maxZoom) {
     //     return;
     // }
 
-    tiles[id] = simplified;
+    tiles[id] = features;
 
     if (z === maxZoom) return;
 
@@ -132,13 +132,8 @@ function toID(z, x, y) {
     return (((1 << z) * y + x) * 32) + z;
 }
 
-function intersectX(p0, p1, x) {
-    return [x, (x - p0[0]) * (p1[1] - p0[1]) / (p1[0] - p0[0]) + p0[1]];
-}
-
-function intersectY(p0, p1, y) {
-    return [(y - p0[1]) * (p1[0] - p0[0]) / (p1[1] - p0[1]) + p0[0], y];
-}
+function intersectX(a, b, x) { return [x, (x - a[0]) * (b[1] - a[1]) / (b[0] - a[0]) + a[1]]; }
+function intersectY(a, b, y) { return [(y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]) + a[0], y]; }
 
 function coordsNum(features) {
     var num = 0;

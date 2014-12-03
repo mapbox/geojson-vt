@@ -2,29 +2,30 @@
 module.exports = simplify;
 
 // square distance between 2 points
-function getSqDist(p1, p2) {
+function getSqDist(a, b) {
 
-    var dx = p1[0] - p2[0],
-        dy = p1[1] - p2[1];
+    var dx = a[0] - b[0],
+        dy = a[1] - b[1];
 
     return dx * dx + dy * dy;
 }
 
 // square distance from a point to a segment
-function getSqSegDist(p, p1, p2) {
+function getSqSegDist(p, a, b) {
 
-    var x = p1[0],
-        y = p1[1],
-        dx = p2[0] - x,
-        dy = p2[1] - y;
+    var x = a[0], y = a[1],
+        bx = b[0], by = b[1],
+        px = p[0], py = p[1],
+        dx = bx - x,
+        dy = by - y;
 
     if (dx !== 0 || dy !== 0) {
 
-        var t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
+        var t = ((px - x) * dx + (py - y) * dy) / (dx * dx + dy * dy);
 
         if (t > 1) {
-            x = p2[0];
-            y = p2[1];
+            x = bx;
+            y = by;
 
         } else if (t > 0) {
             x += dx * t;
@@ -32,32 +33,10 @@ function getSqSegDist(p, p1, p2) {
         }
     }
 
-    dx = p[0] - x;
-    dy = p[1] - y;
+    dx = px - x;
+    dy = py - y;
 
     return dx * dx + dy * dy;
-}
-// rest of the code doesn't care about point format
-
-// basic distance-based simplification
-function simplifyRadialDist(points, sqTolerance) {
-
-    var prevPoint = points[0],
-        newPoints = [prevPoint],
-        point;
-
-    for (var i = 1, len = points.length; i < len; i++) {
-        point = points[i];
-
-        if (getSqDist(point, prevPoint) > sqTolerance) {
-            newPoints.push(point);
-            prevPoint = point;
-        }
-    }
-
-    if (prevPoint !== point) newPoints.push(point);
-
-    return newPoints;
 }
 
 // simplification using optimized Douglas-Peucker algorithm with recursion elimination
@@ -102,7 +81,19 @@ function simplifyDouglasPeucker(points, sqTolerance) {
     return newPoints;
 }
 
-// both algorithms combined for awesome performance
+function coord(p) {
+    var sin = Math.sin(p[1] * Math.PI / 180),
+        x = (p[0] / 360 + 0.5),
+        y = (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI);
+    return [x, y, 1, 0];
+}
+
+function tileCoord(p, z2, tx, ty) {
+    var x = Math.round(4096 * (p[0] * z2 - tx)),
+        y = Math.round(4096 * (p[1] * z2 - ty));
+    return [x, y];
+}
+
 function simplify(points, tolerance, highestQuality) {
 
     if (points.length <= 2) return points;
