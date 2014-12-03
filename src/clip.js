@@ -40,24 +40,18 @@ function clip(features, k1, k2, axis, intersect) {
             if (ak < k1) {
 
                 if ((bk > k2)) { // ---|-----|-->
-                    slice.push(intersect(a, b, k1));
-                    slice.push(intersect(a, b, k2));
+                    slice.push(intersect(a, b, k1), intersect(a, b, k2));
                     slice = newSlice(clipped, slice, type, props);
 
-                } else if (bk >= k1) { // ---|-->  |
-                    slice.push(intersect(a, b, k1));
-                }
+                } else if (bk >= k1) slice.push(intersect(a, b, k1)); // ---|-->  |
 
             } else if (ak > k2) {
 
                 if ((bk < k1)) { // <--|-----|---
-                    slice.push(intersect(a, b, k2));
-                    slice.push(intersect(a, b, k1));
+                    slice.push(intersect(a, b, k2), intersect(a, b, k1));
                     slice = newSlice(clipped, slice, type, props);
 
-                } else if (bk <= k2) { // |  <--|---
-                    slice.push(intersect(a, b, k2));
-                }
+                } else if (bk <= k2) slice.push(intersect(a, b, k2)); // |  <--|---
 
             } else {
 
