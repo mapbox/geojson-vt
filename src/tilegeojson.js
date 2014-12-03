@@ -4,6 +4,7 @@ var simplify = require('./simplify');
 var clip = require('./clip');
 
 var tileSize = 4096,
+    simplification = 1,
     padding = 0.05, // padding on each side of tile in percentage
     minPx = Math.round(-padding * tileSize),
     maxPx = Math.round((1 + padding) * tileSize);
@@ -15,7 +16,7 @@ function tileGeoJSON(geojson, maxZoom) {
     console.time('preprocess features');
 
     var features = [],
-        tolerance = 1 / (tileSize * Math.pow(2, maxZoom)); // simplify up to maxZoom
+        tolerance = simplification / (tileSize * Math.pow(2, maxZoom)); // simplify up to maxZoom
 
     for (var i = 0; i < geojson.features.length; i++) {
         var feature = geojson.features[i],
@@ -57,12 +58,10 @@ function splitTile(stats, tiles, features, z, tx, ty, x1, y1, x2, y2, maxZoom) {
 
     stats[z] = (stats[z] || 0) + 1;
 
-    var id = toID(z, tx, ty);
+    var id = toID(z, tx, ty),
+        tile = tiles[id] = transformFeatures(features, Math.pow(2, z), tx, ty);
 
-    tiles[id] = transformFeatures(features, Math.pow(2, z), tx, ty);
-
-    if (isClippedSquare(tiles[id])) return;
-    if (z === maxZoom) return;
+    if (z === maxZoom || isClippedSquare(tile)) return;
 
     var x = (x1 + x2) / 2,
         y = (y1 + y2) / 2,
@@ -115,12 +114,13 @@ function project(lonlats, tolerance) {
 // simplify and transform projected coordinates for tile geometry
 function transform(points, type, z2, tx, ty) {
     var newPoints = [],
-        tolerance = 1 / (tileSize * z2);
+        tolerance = simplification / (tileSize * z2),
+        sqTolerance = tolerance * tolerance;
 
     for (var i = 0, len = points.length; i < len; i++) {
         var p = points[i];
         // simplify, keeping points with significance > tolerance (plus 1st, last, and clip points on boundaries)
-        if (type === 1 || i === 0 || i === len - 1 || p[2] === -1 || p[2] > tolerance) {
+        if (type === 1 || i === 0 || i === len - 1 || p[2] === -1 || p[2] > sqTolerance) {
             newPoints.push(transformPoint(p, z2, tx, ty));
         }
     }
