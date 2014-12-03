@@ -73,6 +73,9 @@ function clip(features, k1, k2, axis, intersect) {
         ak = a[axis];
         if (ak >= k1 && ak <= k2) slice.push(a);
 
+        // close the polygon if its endpoints are not the same after clipping
+        if (type === 3 && slice[0] !== slice[slice.length - 1]) slice.push(slice[0]);
+
         // add the final slice
         addSlice(clipped, slice, type, props);
     }
