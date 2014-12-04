@@ -1,5 +1,8 @@
 'use strict';
 
+var simplify = require('../src/simplify'),
+    t = require('tape');
+
 var points = [
     [224.55,250.15],[226.91,244.19],[233.31,241.45],[234.98,236.06],
     [244.21,232.76],[262.59,215.31],[267.76,213.81],[273.57,201.84],
@@ -39,9 +42,6 @@ var simplified = [
     [844.09,371.89],[839.57,390.4],[848.4,407.55],[839.51,432.76],
     [853.97,471.15],[866.36,480.77]
 ];
-
-var simplify = require('../src/simplify'),
-    t = require('tape');
 
 t('simplifies points correctly with the given tolerance', function (t) {
     simplify(points, 1);

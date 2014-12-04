@@ -14,7 +14,7 @@
     "type": "git",
     "url": "git://github.com/mapbox/tilegeojson.git"
   },
-  "main": "src/tilegeojson.js",
+  "main": "src/index.js",
   "devDependencies": {
     "benchmark": "^1.0.0",
     "faucet": "0.0.1",
@@ -24,8 +24,8 @@
   },
   "scripts": {
     "test": "jshint src/*.js test/test-*.js && tape test/test-*.js | faucet",
-    "build": "browserify -d src/tilegeojson.js -s tileGeoJSON > debug/tilegeojson-dev.js",
-    "watch": "watchify -v -d src/tilegeojson.js -s tileGeoJSON -o debug/tilegeojson-dev.js"
+    "build": "browserify -d src/index.js -s tileGeoJSON > debug/tilegeojson-dev.js",
+    "watch": "watchify -v -d src/index.js -s tileGeoJSON -o debug/tilegeojson-dev.js"
   },
   "jshintConfig": {
     "undef": true,
