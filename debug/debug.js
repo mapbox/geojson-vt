@@ -1,6 +1,9 @@
 
 var tileGeoJSON = require('../src/tilegeojson.js');
-var route = require('./fixtures/route.json');
+
+var route = require('../test/fixtures/route.json');
+var tmcw = require('../test/fixtures/tiles.json');
+var states = require('../test/fixtures/us-states.json');
 
 var test = {
     "type": "FeatureCollection",
@@ -15,5 +18,8 @@ var test = {
 
 var tiles = tileGeoJSON(route, 14);
 
-// var keys = Object.keys(tiles);
-// console.log(tiles[keys[Math.round(keys.length / 2)]][0].coords);
+var keys = Object.keys(tiles);
+
+console.log('total tiles', keys.length);
+
+// console.log(tiles[keys[Math.round(keys.length / 4)]][0].coords);
