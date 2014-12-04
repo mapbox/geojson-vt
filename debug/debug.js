@@ -1,5 +1,5 @@
 
-var tileGeoJSON = require('../src/index.js');
+var geojsonvt = require('../src/index.js');
 
 var route = require('./data/route.json');
 var tmcw = require('./data/tiles.json');
@@ -16,10 +16,11 @@ var test = {
     }]
 };
 
-var tiles = tileGeoJSON(route, 14);
+var tileIndex = geojsonvt(route, 14);
 
-var keys = Object.keys(tiles);
+var keys = Object.keys(tileIndex.tiles);
 
+console.log(tileIndex.stats);
 console.log('total tiles', keys.length);
 
 // console.log(tiles[keys[Math.round(keys.length / 4)]][0].coords);

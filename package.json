@@ -1,8 +1,8 @@
 {
-  "name": "tilegeojson",
-  "version": "0.0.1",
+  "name": "geojson-vt",
+  "version": "1.0.0",
   "description": "Slice GeoJSON data into vector tiles efficiently",
-  "homepage": "https://github.com/mapbox/tilegeojson",
+  "homepage": "https://github.com/mapbox/geojson-vt",
   "keywords": [
     "spatial",
     "geojson",
@@ -12,7 +12,7 @@
   "author": "Vladimir Agafonkin",
   "repository": {
     "type": "git",
-    "url": "git://github.com/mapbox/tilegeojson.git"
+    "url": "git://github.com/mapbox/geojson-vt.git"
   },
   "main": "src/index.js",
   "devDependencies": {
@@ -24,8 +24,8 @@
   },
   "scripts": {
     "test": "jshint src/*.js test/test-*.js && tape test/test-*.js | faucet",
-    "build": "browserify -d src/index.js -s tileGeoJSON > debug/tilegeojson-dev.js",
-    "watch": "watchify -v -d src/index.js -s tileGeoJSON -o debug/tilegeojson-dev.js"
+    "build": "browserify src/index.js -s geojson-vt -o geojson-vt.js",
+    "watch": "watchify -v -d src/index.js -s geojson-vt -o debug/geojson-vt-dev.js"
   },
   "jshintConfig": {
     "undef": true,
