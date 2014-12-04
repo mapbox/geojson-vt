@@ -4,7 +4,7 @@ module.exports = geojsonvt;
 
 var clip = require('./clip'),
     convert = require('./convert'),
-    transform = require('./transform'),
+    createTile = require('./tile'),
 
     extent = 4096,
     tolerance = 1 / extent, // simplification tolerance
@@ -43,14 +43,14 @@ function GeoJSONVT(data, maxZoom) {
 GeoJSONVT.prototype.splitTile = function (features, z, z2, tx, ty, x1, y1, x2, y2) {
 
     var id = toID(z, tx, ty),
-        tile = transform(features, z2, tx, ty, tolerance, extent);
+        tile = createTile(features, z2, tx, ty, tolerance / z2, extent);
 
-    if (isClippedSquare(tile)) return; // useless tile
+    if (isClippedSquare(tile.features)) return; // useless tile
 
     this.tiles[id] = tile;
     this.stats[z] = (this.stats[z] || 0) + 1;
 
-    if (z === this.maxZoom || coordsNumWithin(features, 100)) return;
+    if (z === this.maxZoom || tile.numPoints <= 100) return;
 
     var x = (x1 + x2) / 2,
         y = (y1 + y2) / 2,
@@ -99,13 +99,4 @@ function intersectX(a, b, x) {
 
 function intersectY(a, b, y) {
     return [(y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]) + a[0], y, -1];
-}
-
-function coordsNumWithin(features, k) {
-    var num = 0;
-    for (var i = 0; i < features.length; i++) {
-        num += features[i].geometry.length;
-        if (num > k) return false;
-    }
-    return true;
 }
