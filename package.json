@@ -33,6 +33,9 @@
     "trailing": true,
     "eqeqeq": true,
     "indent": 4,
-    "node": true
+    "node": true,
+    "latedef": "nofunc",
+    "strict": true,
+    "globalstrict": true
   }
 }
