@@ -1,7 +1,7 @@
 {
   "name": "tilegeojson",
   "version": "0.0.1",
-  "description": "Cuts GeoJSON data into tiles with a smart adaptive algorithm",
+  "description": "Slice GeoJSON data into vector tiles efficiently",
   "homepage": "https://github.com/mapbox/tilegeojson",
   "keywords": [
     "spatial",
@@ -14,15 +14,18 @@
     "type": "git",
     "url": "git://github.com/mapbox/tilegeojson.git"
   },
-  "main": "index.js",
+  "main": "src/tilegeojson.js",
   "devDependencies": {
     "benchmark": "^1.0.0",
     "faucet": "0.0.1",
     "jshint": "^2.5.10",
-    "tape": "^3.0.3"
+    "tape": "^3.0.3",
+    "watchify": "^2.1.1"
   },
   "scripts": {
-    "test": "jshint src/*.js test/test-*.js && tape test/test-*.js | faucet"
+    "test": "jshint src/*.js test/test-*.js && tape test/test-*.js | faucet",
+    "build": "browserify -d src/tilegeojson.js -s tileGeoJSON > debug/tilegeojson-dev.js",
+    "watch": "watchify -v -d src/tilegeojson.js -s tileGeoJSON -o debug/tilegeojson-dev.js"
   },
   "jshintConfig": {
     "undef": true,
