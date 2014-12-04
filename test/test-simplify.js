@@ -46,13 +46,12 @@ var simplified = [
 t('simplifies points correctly with the given tolerance', function (t) {
     simplify(points, 1);
 
-    var result = [points[0]];
-    for (var i = 1; i < points.length - 1; i++) {
+    var result = [];
+    for (var i = 0; i < points.length; i++) {
         if (points[i][2] > 25) {
             result.push([points[i][0], points[i][1]]);
         }
     }
-    result.push(points[points.length - 1]);
     t.same(result, simplified);
     t.end();
 });

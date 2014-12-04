@@ -24,8 +24,8 @@ function transformGeometry(points, type, z2, tx, ty, tolerance, extent) {
 
     for (var i = 0, len = points.length; i < len; i++) {
         var p = points[i];
-        // simplify, keeping points with significance > tolerance (plus 1st, last, and clip points on boundaries)
-        if (type === 1 || i === 0 || i === len - 1 || p[2] === -1 || p[2] > sqTolerance) {
+        // simplify, keeping points with significance > tolerance and points introduced by clipping
+        if (type === 1 || p[2] === -1 || p[2] > sqTolerance) {
             transformed.push(transformPoint(p, z2, tx, ty, extent));
         }
     }
