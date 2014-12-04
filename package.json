@@ -29,6 +29,7 @@
   },
   "jshintConfig": {
     "undef": true,
+    "unused": true,
     "trailing": true,
     "eqeqeq": true,
     "indent": 4,

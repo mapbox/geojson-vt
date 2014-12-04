@@ -163,14 +163,6 @@ function isClippedSquare(features) {
     return true;
 }
 
-function coordsNum(features) {
-    var num = 0;
-    for (var i = 0; i < features.length; i++) {
-        num += features[i].coords.length;
-    }
-    return num;
-}
-
 function coordsNumWithin(features, k) {
     var num = 0;
     for (var i = 0; i < features.length; i++) {
