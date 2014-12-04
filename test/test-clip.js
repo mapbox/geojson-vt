@@ -33,18 +33,21 @@ test('clips polylines', function (t) {
     t.end();
 });
 
+function closed(coords) {
+    return coords.concat([coords[0]]);
+}
 
 test('clips polygons', function (t) {
 
     var clipped = clip([
-        {coords: coords1, type: 3, props: 1},
-        {coords: coords2, type: 3, props: 2}
+        {coords: closed(coords1), type: 3, props: 1},
+        {coords: closed(coords2), type: 3, props: 2}
     ], 10, 40, 0, intersectX);
 
     t.same(clipped, [
         {"coords":[[10,0],[40,0],[40,10],[20,10],[20,20],[30,20],[30,30],[40,30],
-                   [40,40],[25,40],[25,50],[10,50],[10,60],[25,60]],"type":3,"props":1},
-        {"coords":[[10,0],[40,0],[40,10],[10,10]],"type":3,"props":2}
+                   [40,40],[25,40],[25,50],[10,50],[10,60],[25,60],[10,24],[10,0]],"type":3,"props":1},
+        {"coords":[[10,0],[40,0],[40,10],[10,10],[10,0]],"type":3,"props":2}
     ]);
 
     t.end();

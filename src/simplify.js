@@ -35,15 +35,6 @@ function simplify(points, tolerance) {
     }
 }
 
-// square distance between 2 points
-function getSqDist(a, b) {
-
-    var dx = a[0] - b[0],
-        dy = a[1] - b[1];
-
-    return dx * dx + dy * dy;
-}
-
 // square distance from a point to a segment
 function getSqSegDist(p, a, b) {
 

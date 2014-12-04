@@ -22,10 +22,9 @@
     "tape": "^3.0.3"
   },
   "scripts": {
-    "test": "jshint index.js"
+    "test": "jshint src/*.js test/test-*.js && tape test/test-*.js | faucet"
   },
   "jshintConfig": {
-    "unused": true,
     "undef": true,
     "trailing": true,
     "eqeqeq": true,
