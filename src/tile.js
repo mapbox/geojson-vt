@@ -5,7 +5,8 @@ module.exports = createTile;
 function createTile(features, z2, tx, ty, tolerance, extent) {
     var tile = {
         features: [],
-        numPoints: 0
+        numPoints: 0,
+        source: null
     };
     for (var i = 0; i < features.length; i++) {
         addFeature(tile, features[i], z2, tx, ty, tolerance, extent);

@@ -9,8 +9,11 @@ module.exports = clip;
  *     |        |
  */
 
-function clip(features, k1, k2, axis, intersect) {
+function clip(features, scale, k1, k2, axis, intersect) {
     var clipped = [];
+
+    k1 /= scale;
+    k2 /= scale;
 
     for (var i = 0; i < features.length; i++) {
 

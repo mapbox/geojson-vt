@@ -19,7 +19,7 @@ test('clips polylines', function (t) {
     var clipped = clip([
         {geometry: geom1, type: 2, tags: 1},
         {geometry: geom2, type: 2, tags: 2}
-    ], 10, 40, 0, intersectX);
+    ], 1, 10, 40, 0, intersectX);
 
     t.same(clipped, [
         {"geometry":[[10,0],[40,0]],"type":2,"tags":1},
@@ -42,7 +42,7 @@ test('clips polygons', function (t) {
     var clipped = clip([
         {geometry: closed(geom1), type: 3, tags: 1},
         {geometry: closed(geom2), type: 3, tags: 2}
-    ], 10, 40, 0, intersectX);
+    ], 1, 10, 40, 0, intersectX);
 
     t.same(clipped, [
         {"geometry":[[10,0],[40,0],[40,10],[20,10],[20,20],[30,20],[30,30],[40,30],
@@ -58,7 +58,7 @@ test('clips points', function (t) {
     var clipped = clip([
         {geometry: geom1, type: 1, tags: 1},
         {geometry: geom2, type: 1, tags: 2}
-    ], 10, 40, 0, intersectX);
+    ], 1, 10, 40, 0, intersectX);
 
     t.same(clipped, [{"geometry":[[20,10],[20,20],[30,20],[30,30],[25,40],[25,50],[25,60]],"type":1,"tags":1}]);
 
