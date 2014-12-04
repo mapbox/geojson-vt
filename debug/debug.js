@@ -1,9 +1,9 @@
 
 var tileGeoJSON = require('../src/tilegeojson.js');
 
-var route = require('../test/fixtures/route.json');
-var tmcw = require('../test/fixtures/tiles.json');
-var states = require('../test/fixtures/us-states.json');
+var route = require('./data/route.json');
+var tmcw = require('./data/tiles.json');
+var states = require('./data/us-states.json');
 
 var test = {
     "type": "FeatureCollection",
