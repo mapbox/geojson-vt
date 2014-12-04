@@ -19,7 +19,9 @@ function clip(features, k1, k2, axis, intersect) {
             props = features[i].props,
             len = coords.length,
             slice = [],
-            j, a, b, ak, bk;
+            ak = 0, bk = 0,
+            b = null,
+            j, a;
 
         if (type === 1) {
             for (j = 0; j < len; j++) {
@@ -32,9 +34,9 @@ function clip(features, k1, k2, axis, intersect) {
         }
 
         for (j = 0; j < len - 1; j++) {
-            a = coords[j];
+            a = b || coords[j];
             b = coords[j + 1];
-            ak = a[axis];
+            ak = bk || a[axis];
             bk = b[axis];
 
             if (ak < k1) {
