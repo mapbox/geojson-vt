@@ -37,7 +37,7 @@ function tileGeoJSON(geojson, maxZoom) {
             });
 
         } else {
-            throw new Error('Unsupported GeoJSON type');
+            console.log('Unsupported GeoJSON type: ' + geom.type);
         }
     }
     console.timeEnd('preprocess features');
@@ -56,12 +56,15 @@ function tileGeoJSON(geojson, maxZoom) {
 
 function splitTile(stats, tiles, features, z, tx, ty, x1, y1, x2, y2, maxZoom) {
 
+    var id = toID(z, tx, ty),
+        tile = transformFeatures(features, Math.pow(2, z), tx, ty);
+
+    if (isClippedSquare(tile)) return; // useless tile
+
+    tiles[id] = tile;
     stats[z] = (stats[z] || 0) + 1;
 
-    var id = toID(z, tx, ty),
-        tile = tiles[id] = transformFeatures(features, Math.pow(2, z), tx, ty);
-
-    if (z === maxZoom || isClippedSquare(tile)) return;
+    if (z === maxZoom || coordsNumWithin(features, 100)) return;
 
     var x = (x1 + x2) / 2,
         y = (y1 + y2) / 2,
