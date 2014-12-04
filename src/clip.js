@@ -14,10 +14,10 @@ function clip(features, k1, k2, axis, intersect) {
 
     for (var i = 0; i < features.length; i++) {
 
-        var coords = features[i].coords,
+        var geometry = features[i].geometry,
             type = features[i].type,
-            props = features[i].props,
-            len = coords.length,
+            tags = features[i].tags,
+            len = geometry.length,
             slice = [],
             ak = 0, bk = 0,
             b = null,
@@ -25,17 +25,17 @@ function clip(features, k1, k2, axis, intersect) {
 
         if (type === 1) {
             for (j = 0; j < len; j++) {
-                a = coords[j];
+                a = geometry[j];
                 ak = a[axis];
                 if (ak >= k1 && ak <= k2) slice.push(a);
             }
-            addSlice(clipped, slice, type, props);
+            addSlice(clipped, slice, type, tags);
             continue;
         }
 
         for (j = 0; j < len - 1; j++) {
-            a = b || coords[j];
-            b = coords[j + 1];
+            a = b || geometry[j];
+            b = geometry[j + 1];
             ak = bk || a[axis];
             bk = b[axis];
 
@@ -43,7 +43,7 @@ function clip(features, k1, k2, axis, intersect) {
 
                 if ((bk > k2)) { // ---|-----|-->
                     slice.push(intersect(a, b, k1), intersect(a, b, k2));
-                    slice = newSlice(clipped, slice, type, props);
+                    slice = newSlice(clipped, slice, type, tags);
 
                 } else if (bk >= k1) slice.push(intersect(a, b, k1)); // ---|-->  |
 
@@ -51,7 +51,7 @@ function clip(features, k1, k2, axis, intersect) {
 
                 if ((bk < k1)) { // <--|-----|---
                     slice.push(intersect(a, b, k2), intersect(a, b, k1));
-                    slice = newSlice(clipped, slice, type, props);
+                    slice = newSlice(clipped, slice, type, tags);
 
                 } else if (bk <= k2) slice.push(intersect(a, b, k2)); // |  <--|---
 
@@ -61,17 +61,17 @@ function clip(features, k1, k2, axis, intersect) {
 
                 if (bk < k1) { // <--|---  |
                     slice.push(intersect(a, b, k1));
-                    slice = newSlice(clipped, slice, type, props);
+                    slice = newSlice(clipped, slice, type, tags);
 
                 } else if (bk > k2) { // |  ---|-->
                     slice.push(intersect(a, b, k2));
-                    slice = newSlice(clipped, slice, type, props);
+                    slice = newSlice(clipped, slice, type, tags);
                 }
                 // | --> |
             }
         }
 
-        a = coords[len - 1];
+        a = geometry[len - 1];
         ak = a[axis];
         if (ak >= k1 && ak <= k2) slice.push(a);
 
@@ -79,24 +79,24 @@ function clip(features, k1, k2, axis, intersect) {
         if (type === 3 && slice[0] !== slice[slice.length - 1]) slice.push(slice[0]);
 
         // add the final slice
-        addSlice(clipped, slice, type, props);
+        addSlice(clipped, slice, type, tags);
     }
 
     return clipped.length ? clipped : null;
 }
 
-function newSlice(features, slice, type, props) {
+function newSlice(features, slice, type, tags) {
     if (type === 3) return slice; // polygon -> clipped slices should be joined
-    addSlice(features, slice, type, props);
+    addSlice(features, slice, type, tags);
     return [];
 }
 
-function addSlice(features, slice, type, props) {
+function addSlice(features, slice, type, tags) {
     if (slice.length) {
         features.push({
-            coords: slice,
+            geometry: slice,
             type: type,
-            props: props
+            tags: tags
         });
     }
 }

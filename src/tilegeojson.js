@@ -2,8 +2,8 @@
 
 module.exports = tileGeoJSON;
 
-var simplify = require('./simplify');
 var clip = require('./clip');
+var convert = require('./convert');
 
 var tileSize = 4096,
     simplification = 1,
@@ -21,26 +21,7 @@ function tileGeoJSON(geojson, maxZoom) {
         tolerance = simplification / (tileSize * Math.pow(2, maxZoom)); // simplify up to maxZoom
 
     for (var i = 0; i < geojson.features.length; i++) {
-        var feature = geojson.features[i],
-            geom = feature.geometry;
-
-        if (geom.type === 'LineString') {
-            features.push({
-                coords: project(geom.coordinates, tolerance),
-                type: 2,
-                props: feature.properties
-            });
-
-        } else if (geom.type === 'Polygon' && geom.coordinates.length === 1) {
-            features.push({
-                coords: project(geom.coordinates[0], tolerance),
-                type: 3,
-                props: feature.properties
-            });
-
-        } else {
-            console.log('Unsupported GeoJSON type: ' + geom.type);
-        }
+        features.push(convert(geojson.features[i], tolerance));
     }
     console.timeEnd('preprocess features');
 
@@ -97,23 +78,14 @@ function transformFeatures(features, z2, tx, ty) {
 
     for (var i = 0; i < features.length; i++) {
         var feature = features[i];
+
         transformed.push({
-            coords: transform(feature.coords, feature.type, z2, tx, ty),
+            geometry: transform(feature.geometry, feature.type, z2, tx, ty),
             type: feature.type,
-            props: feature.props
+            tags: feature.tags || null
         });
     }
     return transformed;
-}
-
-// project original points, calculating simplification data along the way
-function project(lonlats, tolerance) {
-    var projected = [];
-    for (var i = 0; i < lonlats.length; i++) {
-        projected.push(projectPoint(lonlats[i]));
-    }
-    simplify(projected, tolerance);
-    return projected;
 }
 
 // simplify and transform projected coordinates for tile geometry
@@ -130,13 +102,6 @@ function transform(points, type, z2, tx, ty) {
         }
     }
     return newPoints;
-}
-
-function projectPoint(p) {
-    var sin = Math.sin(p[1] * Math.PI / 180),
-        x = (p[0] / 360 + 0.5),
-        y = (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI);
-    return [x, y, 0];
 }
 
 function transformPoint(p, z2, tx, ty) {
@@ -157,8 +122,8 @@ function isClippedSquare(features) {
     var feature = features[0];
     if (feature.type !== 3) return false;
 
-    for (var i = 0; i < feature.coords.length; i++) {
-        var p = feature.coords[i];
+    for (var i = 0; i < feature.geometry.length; i++) {
+        var p = feature.geometry[i];
         if (p[0] !== minPx && p[0] !== maxPx) return false;
         if (p[1] !== minPx && p[1] !== maxPx) return false;
     }
@@ -168,7 +133,7 @@ function isClippedSquare(features) {
 function coordsNumWithin(features, k) {
     var num = 0;
     for (var i = 0; i < features.length; i++) {
-        num += features[i].coords.length;
+        num += features[i].geometry.length;
         if (num > k) return false;
     }
     return true;
