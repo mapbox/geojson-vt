@@ -24,8 +24,8 @@
   },
   "scripts": {
     "test": "jshint src/*.js test/test-*.js && tape test/test-*.js | faucet",
-    "build": "browserify src/index.js -s geojson-vt -o geojson-vt.js",
-    "watch": "watchify -v -d src/index.js -s geojson-vt -o debug/geojson-vt-dev.js"
+    "build": "browserify src/index.js -s geojsonvt -o geojson-vt.js",
+    "watch": "watchify -v -d src/index.js -s geojsonvt -o debug/geojson-vt-dev.js"
   },
   "jshintConfig": {
     "undef": true,
@@ -36,6 +36,7 @@
     "node": true,
     "latedef": "nofunc",
     "strict": true,
-    "globalstrict": true
+    "globalstrict": true,
+    "quotmark": true
   }
 }
