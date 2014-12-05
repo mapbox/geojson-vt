@@ -1,26 +1,22 @@
 
 var geojsonvt = require('../src/index.js');
 
-var route = require('./data/route.json');
-var tmcw = require('./data/tiles.json');
-var states = require('./data/us-states.json');
+console.time('load');
+var data = require('./data/zips.json');
+console.timeEnd('load');
 
-var test = {
-    "type": "FeatureCollection",
-    "features": [{
-        "type": "Feature",
-        "geometry": {
-            "type": "Polygon",
-            "coordinates": [[[-180, -85], [-180, 85], [180, 85], [180, -85], [-180, -85]]]
-        }
-    }]
-};
-
-var tileIndex = geojsonvt(route, 14);
-
-var keys = Object.keys(tileIndex.tiles);
+var tileIndex = geojsonvt(data, 4);
 
 console.log(tileIndex.stats);
-console.log('total tiles', keys.length);
 
-// console.log(tiles[keys[Math.round(keys.length / 4)]][0].coords);
+tileIndex.maxZoom = 14;
+tileIndex.getTile(14, 4100, 6200);
+
+console.log(tileIndex.stats);
+
+tileIndex.getTile(14, 4100, 6000);
+
+console.log(tileIndex.stats);
+
+var keys = Object.keys(tileIndex.tiles);
+console.log('total tiles', keys.length);
