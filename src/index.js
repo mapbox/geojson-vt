@@ -21,13 +21,15 @@ function geojsonvt(data, maxZoom) {
 function GeoJSONVT(data, maxZoom) {
     if (maxZoom === undefined) maxZoom = 14;
     this.maxZoom = maxZoom;
+    this.maxPoints = 100;
 
     console.time('preprocess features');
     var features = [],
         z2 = Math.pow(2, maxZoom);
 
     for (var i = 0; i < data.features.length; i++) {
-        features.push(convert(data.features[i], tolerance / z2));
+        var feature = convert(data.features[i], tolerance / z2);
+        if (feature) features.push(feature);
     }
     console.timeEnd('preprocess features');
 
@@ -35,50 +37,71 @@ function GeoJSONVT(data, maxZoom) {
     this.stats = {};
 
     console.time('generate tiles');
-    this.splitTile(features, 0, 1, 0, 0, 100);
+    this.splitTile(features, 0, 0, 0);
     console.timeEnd('generate tiles');
 }
 
-GeoJSONVT.prototype.splitTile = function (features, z, z2, tx, ty, maxPoints) {
+GeoJSONVT.prototype.splitTile = function (features, z, x, y) {
 
-    var id = toID(z, tx, ty),
-        tile = this.tiles[id];
+    var stack = [features, z, x, y];
 
-    if (!tile) {
-        tile = this.tiles[id] = createTile(features, z2, tx, ty, tolerance / z2, extent);
-        this.stats[z] = (this.stats[z] || 0) + 1;
-    }
+    while (stack.length) {
+        features = stack.shift();
+        z = stack.shift();
+        x = stack.shift();
+        y = stack.shift();
 
-    if (z === this.maxZoom || tile.numPoints <= maxPoints || isClippedSquare(tile.features)) {
-        tile.source = features; // save original features for later on-demand tiling
-        return;
-    }
+        var z2 = 1 << z,
+            id = toID(z, x, y),
+            tile = this.tiles[id];
 
-    // clean up the original features since we'll have them in children tiles
-    tile.source = null;
+        if (!tile) {
+            // console.time('creation');
+            tile = this.tiles[id] = createTile(features, z2, x, y, tolerance / z2, extent);
+            // console.log('tile z' + z + '-' + x + '-' +  y + ' points: ' + tile.numPoints + ', simplified: ' + tile.numSimplified);
+            // console.timeEnd('creation');
+            this.stats[z] = (this.stats[z] || 0) + 1;
+        }
 
-    var k1 = 0.5 * padding,
-        k2 = 0.5 - k1,
-        k3 = 0.5 + k1,
-        k4 = 1 + k1,
+        if (z === this.maxZoom || tile.numPoints <= this.maxPoints || isClippedSquare(tile.features)) {
+            tile.source = features; // save original features for later on-demand tiling
+            continue; // stop tiling
+        }
 
-        left  = clip(features, z2, tx - k1, tx + k3, 0, intersectX),
-        right = clip(features, z2, tx + k2, tx + k4, 0, intersectX);
+        // clean up the original features since we'll have them in children tiles
+        tile.source = null;
 
-    if (left) {
-        var tl = clip(left, z2, ty - k1, ty + k3, 1, intersectY),
-            bl = clip(left, z2, ty + k2, ty + k4, 1, intersectY);
+        // console.time('clipping');
 
-        if (tl) this.splitTile(tl, z + 1, z2 * 2, tx * 2, ty * 2,     maxPoints);
-        if (bl) this.splitTile(bl, z + 1, z2 * 2, tx * 2, ty * 2 + 1, maxPoints);
-    }
+        var k1 = 0.5 * padding,
+            k2 = 0.5 - k1,
+            k3 = 0.5 + k1,
+            k4 = 1 + k1,
 
-    if (right) {
-        var tr = clip(right, z2, ty - k1, ty + k3, 1, intersectY),
-            br = clip(right, z2, ty + k2, ty + k4, 1, intersectY);
+            left  = clip(features, z2, x - k1, x + k3, 0, intersectX),
+            right = clip(features, z2, x + k2, x + k4, 0, intersectX),
 
-        if (tr) this.splitTile(tr, z + 1, z2 * 2, tx * 2 + 1, ty * 2,     maxPoints);
-        if (br) this.splitTile(br, z + 1, z2 * 2, tx * 2 + 1, ty * 2 + 1, maxPoints);
+            tl = null,
+            bl = null,
+            tr = null,
+            br = null;
+
+        if (left) {
+            tl = clip(left, z2, y - k1, y + k3, 1, intersectY);
+            bl = clip(left, z2, y + k2, y + k4, 1, intersectY);
+        }
+
+        if (right) {
+            tr = clip(right, z2, y - k1, y + k3, 1, intersectY);
+            br = clip(right, z2, y + k2, y + k4, 1, intersectY);
+        }
+
+        // console.timeEnd('clipping');
+
+        if (tl) stack.push(tl, z + 1, x * 2, y * 2);
+        if (bl) stack.push(bl, z + 1, x * 2, y * 2 + 1);
+        if (tr) stack.push(tr, z + 1, x * 2 + 1, y * 2);
+        if (br) stack.push(br, z + 1, x * 2 + 1, y * 2 + 1);
     }
 };
 
