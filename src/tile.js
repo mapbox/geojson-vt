@@ -37,15 +37,20 @@ function addFeature(tile, feature, z2, tx, ty, tolerance, extent) {
         // simplify and transform projected coordinates for tile geometry
         for (i = 0; i < geom.length; i++) {
             ring = geom[i];
+
+            var transformedRing = [];
+
             for (j = 0; j < ring.length; j++) {
                 p = ring[j];
                 // keep points with significance > tolerance and points introduced by clipping
                 if (p[2] === -1 || p[2] > sqTolerance) {
-                    transformed.push(transformPoint(p, z2, tx, ty, extent));
+                    transformedRing.push(transformPoint(p, z2, tx, ty, extent));
                     tile.numSimplified++;
                 }
                 tile.numPoints++;
             }
+
+            transformed.push(transformedRing);
         }
     }
 
