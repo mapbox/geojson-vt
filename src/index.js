@@ -11,7 +11,9 @@ var clip = require('./clip'),
     padding = 0.05, // padding on each side of tile in percentage
 
     minPx = Math.round(-padding * extent),
-    maxPx = Math.round((1 + padding) * extent);
+    maxPx = Math.round((1 + padding) * extent),
+
+    debug = true;
 
 
 function geojsonvt(data, maxZoom) {
@@ -23,7 +25,7 @@ function GeoJSONVT(data, maxZoom) {
     this.maxZoom = maxZoom;
     this.maxPoints = 100;
 
-    console.time('preprocess features');
+    if (debug) console.time('preprocess features');
     var features = [],
         z2 = Math.pow(2, maxZoom);
 
@@ -31,14 +33,14 @@ function GeoJSONVT(data, maxZoom) {
         var feature = convert(data.features[i], tolerance / z2);
         if (feature) features.push(feature);
     }
-    console.timeEnd('preprocess features');
+    if (debug) console.timeEnd('preprocess features');
 
     this.tiles = {};
     this.stats = {};
 
-    console.time('generate tiles');
+    if (debug) console.time('generate tiles');
     this.splitTile(features, 0, 0, 0);
-    console.timeEnd('generate tiles');
+    if (debug) console.timeEnd('generate tiles');
 }
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y) {
@@ -56,11 +58,16 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y) {
             tile = this.tiles[id];
 
         if (!tile) {
-            // console.time('creation');
+            if (debug) console.time('creation');
+
             tile = this.tiles[id] = createTile(features, z2, x, y, tolerance / z2, extent);
-            // console.log('tile z' + z + '-' + x + '-' +  y + ' points: ' + tile.numPoints + ', simplified: ' + tile.numSimplified);
-            // console.timeEnd('creation');
-            this.stats[z] = (this.stats[z] || 0) + 1;
+
+            if (debug) {
+                console.log('tile z' + z + '-' + x + '-' +  y + ' (features: ' +  tile.numFeatures +
+                ', points: ' + tile.numPoints + ', simplified: ' + tile.numSimplified + ')');
+                console.timeEnd('creation');
+                this.stats[z] = (this.stats[z] || 0) + 1;
+            }
         }
 
         if (z === this.maxZoom || tile.numPoints <= this.maxPoints || isClippedSquare(tile.features)) {
@@ -71,7 +78,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y) {
         // clean up the original features since we'll have them in children tiles
         tile.source = null;
 
-        // console.time('clipping');
+        if (debug) console.time('clipping');
 
         var k1 = 0.5 * padding,
             k2 = 0.5 - k1,
@@ -96,7 +103,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y) {
             br = clip(right, z2, y + k2, y + k4, 1, intersectY);
         }
 
-        // console.timeEnd('clipping');
+        if (debug) console.timeEnd('clipping');
 
         if (tl) stack.push(tl, z + 1, x * 2, y * 2);
         if (bl) stack.push(bl, z + 1, x * 2, y * 2 + 1);

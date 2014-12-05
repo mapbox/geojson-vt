@@ -7,9 +7,11 @@ function createTile(features, z2, tx, ty, tolerance, extent) {
         features: [],
         numPoints: 0,
         numSimplified: 0,
+        numFeatures: 0,
         source: null
     };
     for (var i = 0; i < features.length; i++) {
+        tile.numFeatures++;
         addFeature(tile, features[i], z2, tx, ty, tolerance, extent);
     }
     return tile;
