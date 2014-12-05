@@ -13,16 +13,11 @@ function convert(feature, tolerance) {
         tags = feature.properties,
         i, j, rings;
 
-    if (type === 'Point') {
-        return create(tags, 1, [projectPoint(coords)]);
+    if (type === 'Point') return create(tags, 1, [projectPoint(coords)]);
+    else if (type === 'MultiPoint') return create(tags, 1, project(coords));
+    else if (type === 'LineString') return create(tags, 2, [project(coords, tolerance)]);
 
-    } else if (type === 'MultiPoint') {
-        return create(tags, 1, project(coords));
-
-    } else if (type === 'LineString') {
-        return create(tags, 2, [project(coords, tolerance)]);
-
-    } else if (type === 'MultiLineString' || type === 'Polygon') {
+    else if (type === 'MultiLineString' || type === 'Polygon') {
         rings = [];
         for (i = 0; i < coords.length; i++) {
             rings.push(project(coords[i], tolerance));

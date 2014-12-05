@@ -11,23 +11,19 @@ module.exports = clip;
 
 function clip(features, scale, k1, k2, axis, intersect) {
 
-    var clipped = [];
-
     k1 /= scale;
     k2 /= scale;
+
+    var clipped = [];
 
     for (var i = 0; i < features.length; i++) {
 
         var geometry = features[i].geometry,
-            type = features[i].type,
-            slices;
+            type = features[i].type;
 
-        if (type === 1) {
-            slices = clipPoints(geometry, k1, k2, axis);
-
-        } else {
-            slices = clipGeometry(geometry, k1, k2, axis, intersect, type === 3);
-        }
+        var slices = type === 1 ?
+                clipPoints(geometry, k1, k2, axis) :
+                clipGeometry(geometry, k1, k2, axis, intersect, type === 3);
 
         if (slices.length) {
             clipped.push({
@@ -42,15 +38,14 @@ function clip(features, scale, k1, k2, axis, intersect) {
 }
 
 function clipPoints(geometry, k1, k2, axis) {
-
     var slice = [];
 
-    for (var i = 0, a, ak; i < geometry.length; i++) {
-        a = geometry[i];
-        ak = a[axis];
+    for (var i = 0; i < geometry.length; i++) {
+        var a = geometry[i],
+            ak = a[axis];
+
         if (ak >= k1 && ak <= k2) slice.push(a);
     }
-
     return slice;
 }
 

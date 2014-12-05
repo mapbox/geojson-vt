@@ -26,22 +26,32 @@ function GeoJSONVT(data, maxZoom) {
     this.maxZoom = maxZoom;
     this.maxPoints = 100;
 
-    if (debug) console.time('preprocess features');
+    if (debug) console.time('preprocess data');
+
     var features = [],
-        z2 = Math.pow(2, maxZoom);
+        z2 = 1 << maxZoom;
 
     for (var i = 0; i < data.features.length; i++) {
         var feature = convert(data.features[i], tolerance / z2);
         if (feature) features.push(feature);
     }
-    if (debug) console.timeEnd('preprocess features');
 
     this.tiles = {};
-    this.stats = {};
 
-    if (debug) console.time('generate tiles');
+    if (debug) {
+        console.timeEnd('preprocess data');
+        console.time('generate tiles');
+        this.stats = {};
+        this.total = 0;
+    }
+
     this.splitTile(features, 0, 0, 0);
-    if (debug) console.timeEnd('generate tiles');
+
+    if (debug) {
+        console.timeEnd('generate tiles');
+        console.log('%d tiles generated:', this.total);
+        console.log(this.stats);
+    }
 }
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
@@ -65,11 +75,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
             if (debug) {
                 if (debug2) {
-                    console.log('tile z' + z + '-' + x + '-' +  y + ' (features: ' +  tile.numFeatures +
-                    ', points: ' + tile.numPoints + ', simplified: ' + tile.numSimplified + ')');
+                    console.log('tile z%d-%d-%d (features: %d, points: %d, simplified: %d)',
+                        z, x, y, tile.numFeatures, tile.numPoints, tile.numSimplified);
                     console.timeEnd('creation');
                 }
                 this.stats[z] = (this.stats[z] || 0) + 1;
+                this.total++;
             }
         }
 
@@ -125,7 +136,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     var id = toID(z, x, y);
     if (this.tiles[id]) return this.tiles[id];
 
-    if (debug) console.log('drilling down to ', z, x, y);
+    if (debug) console.log('drilling down to z%d-%d-%d', z, x, y);
 
     var z0 = z,
         x0 = x,
@@ -139,14 +150,13 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
         parent = this.tiles[toID(z0, x0, y0)];
     }
 
-    if (debug) {
-        console.log('parent tile', z0, x0, y0, parent.source && parent.source.length);
-        console.time('drilling down');
+    if (debug) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
+
+    if (parent.source) {
+        if (debug) console.time('drilling down');
+        this.splitTile(parent.source, z0, x0, y0, z, x, y);
+        if (debug) console.timeEnd('drilling down');
     }
-
-    if (parent.source) this.splitTile(parent.source, z0, x0, y0, z, x, y);
-
-    if (debug) console.timeEnd('drilling down');
 
     return this.tiles[id];
 };
