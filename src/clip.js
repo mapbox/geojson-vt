@@ -10,6 +10,7 @@ module.exports = clip;
  */
 
 function clip(features, scale, k1, k2, axis, intersect) {
+
     var clipped = [];
 
     k1 /= scale;
@@ -19,26 +20,57 @@ function clip(features, scale, k1, k2, axis, intersect) {
 
         var geometry = features[i].geometry,
             type = features[i].type,
-            tags = features[i].tags,
-            len = geometry.length,
-            slice = [],
-            ak = 0, bk = 0,
-            b = null,
-            j, a;
+            slices;
 
         if (type === 1) {
-            for (j = 0; j < len; j++) {
-                a = geometry[j];
-                ak = a[axis];
-                if (ak >= k1 && ak <= k2) slice.push(a);
-            }
-            addSlice(clipped, slice, type, tags);
-            continue;
+            slices = clipPoints(geometry, k1, k2, axis);
+
+        } else {
+            slices = clipGeometry(geometry, k1, k2, axis, intersect, type === 3);
         }
 
+        if (slices.length) {
+            clipped.push({
+                geometry: slices,
+                type: type,
+                tags: features[i].tags || null
+            });
+        }
+    }
+
+    return clipped.length ? clipped : null;
+}
+
+function clipPoints(geometry, k1, k2, axis) {
+
+    var slice = [];
+
+    for (var i = 0, a, ak; i < geometry.length; i++) {
+        a = geometry[i];
+        ak = a[axis];
+        if (ak >= k1 && ak <= k2) slice.push(a);
+    }
+
+    return slice;
+}
+
+function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
+
+    var slices = [];
+
+    for (var i = 0; i < geometry.length; i++) {
+
+        var ak = 0,
+            bk = 0,
+            b = null,
+            slice = [],
+            points = geometry[i],
+            len = points.length,
+            a, j;
+
         for (j = 0; j < len - 1; j++) {
-            a = b || geometry[j];
-            b = geometry[j + 1];
+            a = b || points[j];
+            b = points[j + 1];
             ak = bk || a[axis];
             bk = b[axis];
 
@@ -46,7 +78,7 @@ function clip(features, scale, k1, k2, axis, intersect) {
 
                 if ((bk > k2)) { // ---|-----|-->
                     slice.push(intersect(a, b, k1), intersect(a, b, k2));
-                    slice = newSlice(clipped, slice, type, tags);
+                    if (!closed) slice = newSlice(slices, slice);
 
                 } else if (bk >= k1) slice.push(intersect(a, b, k1)); // ---|-->  |
 
@@ -54,7 +86,7 @@ function clip(features, scale, k1, k2, axis, intersect) {
 
                 if ((bk < k1)) { // <--|-----|---
                     slice.push(intersect(a, b, k2), intersect(a, b, k1));
-                    slice = newSlice(clipped, slice, type, tags);
+                    if (!closed) slice = newSlice(slices, slice);
 
                 } else if (bk <= k2) slice.push(intersect(a, b, k2)); // |  <--|---
 
@@ -64,42 +96,33 @@ function clip(features, scale, k1, k2, axis, intersect) {
 
                 if (bk < k1) { // <--|---  |
                     slice.push(intersect(a, b, k1));
-                    slice = newSlice(clipped, slice, type, tags);
+                    if (!closed) slice = newSlice(slices, slice);
 
                 } else if (bk > k2) { // |  ---|-->
                     slice.push(intersect(a, b, k2));
-                    slice = newSlice(clipped, slice, type, tags);
+                    if (!closed) slice = newSlice(slices, slice);
                 }
                 // | --> |
             }
         }
 
-        a = geometry[len - 1];
+        a = points[len - 1];
         ak = a[axis];
         if (ak >= k1 && ak <= k2) slice.push(a);
 
+        var sliceLen = slice.length;
+
         // close the polygon if its endpoints are not the same after clipping
-        if (type === 3 && slice[0] !== slice[slice.length - 1]) slice.push(slice[0]);
+        if (closed && slice[0] !== slice[sliceLen - 1]) slice.push(slice[0]);
 
         // add the final slice
-        addSlice(clipped, slice, type, tags);
+        if (sliceLen) slices.push(slice);
     }
 
-    return clipped.length ? clipped : null;
+    return slices;
 }
 
-function newSlice(features, slice, type, tags) {
-    if (type === 3) return slice; // polygon -> clipped slices should be joined
-    addSlice(features, slice, type, tags);
+function newSlice(slices, slice) {
+    if (slice.length) slices.push(slice);
     return [];
-}
-
-function addSlice(features, slice, type, tags) {
-    if (slice.length) {
-        features.push({
-            geometry: slice,
-            type: type,
-            tags: tags
-        });
-    }
 }

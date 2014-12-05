@@ -22,17 +22,31 @@ function addFeature(tile, feature, z2, tx, ty, tolerance, extent) {
     var geom = feature.geometry,
         type = feature.type,
         transformed = [],
-        sqTolerance = tolerance * tolerance;
+        sqTolerance = tolerance * tolerance,
+        i, j, ring, p;
 
-    // simplify and transform projected coordinates for tile geometry
-    for (var i = 0, len = geom.length; i < len; i++) {
-        var p = geom[i];
-        // simplify, keeping points with significance > tolerance and points introduced by clipping
-        if (type === 1 || p[2] === -1 || p[2] > sqTolerance) {
-            transformed.push(transformPoint(p, z2, tx, ty, extent));
+    if (type === 1) {
+        for (i = 0; i < geom.length; i++) {
+            transformed.push(transformPoint(geom[i], z2, tx, ty, extent));
+            tile.numPoints++;
             tile.numSimplified++;
         }
-        tile.numPoints++;
+
+    } else {
+
+        // simplify and transform projected coordinates for tile geometry
+        for (i = 0; i < geom.length; i++) {
+            ring = geom[i];
+            for (j = 0; j < ring.length; j++) {
+                p = ring[j];
+                // keep points with significance > tolerance and points introduced by clipping
+                if (p[2] === -1 || p[2] > sqTolerance) {
+                    transformed.push(transformPoint(p, z2, tx, ty, extent));
+                    tile.numSimplified++;
+                }
+                tile.numPoints++;
+            }
+        }
     }
 
     tile.features.push({

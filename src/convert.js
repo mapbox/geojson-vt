@@ -8,17 +8,38 @@ var simplify = require('./simplify');
 
 function convert(feature, tolerance) {
     var geom = feature.geometry,
+        type = geom.type,
         coords = geom.coordinates,
-        tags = feature.properties;
+        tags = feature.properties,
+        i, j, rings;
 
-    if (geom.type === 'LineString') {
-        return create(tags, 2, project(coords, tolerance));
+    if (type === 'Point') {
+        return create(tags, 1, [projectPoint(coords)]);
 
-    } else if (geom.type === 'Polygon' && coords.length === 1) {
-        return create(tags, 3, project(coords[0], tolerance));
+    } else if (type === 'MultiPoint') {
+        return create(tags, 1, project(coords));
+
+    } else if (type === 'LineString') {
+        return create(tags, 2, [project(coords, tolerance)]);
+
+    } else if (type === 'MultiLineString' || type === 'Polygon') {
+        rings = [];
+        for (i = 0; i < coords.length; i++) {
+            rings.push(project(coords[i], tolerance));
+        }
+        return create(tags, type === 'Polygon' ? 3 : 2, rings);
+
+    } else if (type === 'MultiPolygon') {
+        rings = [];
+        for (i = 0; i < coords.length; i++) {
+            for (j = 0; j < coords[i].length; j++) {
+                rings.push(project(coords[i][j], tolerance));
+            }
+        }
+        return create(tags, 3, rings);
 
     } else {
-        console.log('Unsupported GeoJSON type: ' + geom.type);
+        console.warn('Unsupported GeoJSON type: ' + geom.type);
     }
 }
 
@@ -35,7 +56,7 @@ function project(lonlats, tolerance) {
     for (var i = 0; i < lonlats.length; i++) {
         projected.push(projectPoint(lonlats[i]));
     }
-    simplify(projected, tolerance);
+    if (tolerance) simplify(projected, tolerance);
     return projected;
 }
 
