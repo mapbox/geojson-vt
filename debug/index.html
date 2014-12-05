@@ -16,15 +16,19 @@
     <script>
 
         var extent = 4096,
-            padding = 0.05,
-            totalExtent = 4096 * (1 + padding * 2),
+            totalExtent = 4096 * (1 + 0.05 * 2),
 
             tileIndex,
 
             canvas = document.getElementById('canvas'),
             ctx = canvas.getContext('2d'),
             height = canvas.height = canvas.width = window.innerHeight - 40,
-            ratio = height / totalExtent;
+            ratio = height / totalExtent,
+            pad = 4096 * 0.05 * ratio,
+
+            x = 0,
+            y = 0,
+            z = 0;
 
         if (devicePixelRatio > 1) {
             canvas.style.width = canvas.width + 'px';
@@ -55,12 +59,71 @@
                     maxZoom: 14,
                     debug: 1
                 });
+
+                drawTile();
             };
             reader.readAsText(e.dataTransfer.files[0]);
 
             e.preventDefault();
             return false;
         };
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,0,0,0.5)';
+        ctx.fillStyle = 'rgba(255,0,0,0.1)';
+
+        function drawTile() {
+            ctx.clearRect(0, 0, height, height);
+
+            var tile = tileIndex.getTile(z, x, y);
+            if (!tile) {
+                console.log('not found', tile);
+                return;
+            }
+
+            var features = tile.features;
+
+            for (var i = 0; i < features.length; i++) {
+                var feature = features[i],
+                    type = feature.type;
+
+                for (var j = 0; j < feature.geometry.length; j++) {
+                    var ring = feature.geometry[j];
+
+                    ctx.beginPath();
+
+                    for (var k = 0; k < ring.length; k++) {
+                        var p = ring[k];
+                        if (k) ctx.lineTo(p[0] * ratio + pad, p[1] * ratio + pad);
+                        else ctx.moveTo(p[0] * ratio + pad, p[1] * ratio + pad);
+                    }
+                }
+
+                if (type === 3) ctx.fill('evenodd');
+                ctx.stroke();
+            }
+        }
+
+        canvas.onclick = function (e) {
+            if (!tileIndex) return;
+
+            var mouseX = e.layerX - 10,
+                mouseY = e.layerY - 10,
+                left = mouseX / height < 0.5,
+                top = mouseY / height < 0.5;
+
+            z++;
+            x *= 2;
+            y *= 2;
+            if (!left) x++;
+            if (!top) y++;
+
+            drawTile();
+        };
+
+        function toID(z, x, y) {
+            return (((1 << z) * y + x) * 32) + z;
+        }
 
     </script>
 </body>
