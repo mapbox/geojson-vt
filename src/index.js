@@ -11,25 +11,22 @@ var clip = require('./clip'),
     padding = 0.05, // padding on each side of tile in percentage
 
     minPx = Math.round(-padding * extent),
-    maxPx = Math.round((1 + padding) * extent),
-
-    debug = true,
-    debug2 = false;
+    maxPx = Math.round((1 + padding) * extent);
 
 
-function geojsonvt(data, maxZoom) {
-    return new GeoJSONVT(data, maxZoom);
+function geojsonvt(data, options) {
+    return new GeoJSONVT(data, options);
 }
 
-function GeoJSONVT(data, maxZoom) {
-    if (maxZoom === undefined) maxZoom = 14;
-    this.maxZoom = maxZoom;
-    this.maxPoints = 100;
+function GeoJSONVT(data, options) {
+    this.options = extend(Object.create(this.options), options);
+
+    var debug = this.options.debug;
 
     if (debug) console.time('preprocess data');
 
     var features = [],
-        z2 = 1 << maxZoom;
+        z2 = 1 << this.options.baseZoom;
 
     for (var i = 0; i < data.features.length; i++) {
         var feature = convert(data.features[i], tolerance / z2);
@@ -40,23 +37,32 @@ function GeoJSONVT(data, maxZoom) {
 
     if (debug) {
         console.timeEnd('preprocess data');
-        console.time('generate tiles');
-        this.stats = {};
+        console.profile('generate tiles');
+        this.stats = [];
         this.total = 0;
     }
 
     this.splitTile(features, 0, 0, 0);
 
     if (debug) {
-        console.timeEnd('generate tiles');
-        console.log('%d tiles generated:', this.total);
-        console.log(this.stats);
+        console.profileEnd('generate tiles');
+        console.log('tiles generated:', this.total, this.stats);
     }
 }
 
+GeoJSONVT.prototype.options = {
+    maxZoom: 14,
+    baseZoom: 14,
+    maxPoints: 100,
+    debug: 0
+};
+
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
-    var stack = [features, z, x, y];
+    var stack = [features, z, x, y],
+        maxZoom = this.options.maxZoom,
+        maxPoints = this.options.maxPoints,
+        debug = this.options.debug;
 
     while (stack.length) {
         features = stack.shift();
@@ -69,12 +75,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             tile = this.tiles[id];
 
         if (!tile) {
-            if (debug2) console.time('creation');
+            if (debug > 1) console.time('creation');
 
             tile = this.tiles[id] = createTile(features, z2, x, y, tolerance / z2, extent);
 
             if (debug) {
-                if (debug2) {
+                if (debug > 1) {
                     console.log('tile z%d-%d-%d (features: %d, points: %d, simplified: %d)',
                         z, x, y, tile.numFeatures, tile.numPoints, tile.numSimplified);
                     console.timeEnd('creation');
@@ -84,7 +90,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             }
         }
 
-        if (z === this.maxZoom || tile.numPoints <= this.maxPoints || isClippedSquare(tile.features)) {
+        if (z === maxZoom || tile.numPoints <= maxPoints || isClippedSquare(tile.features)) {
             tile.source = features; // save original features for later on-demand tiling
             continue; // stop tiling
         }
@@ -92,7 +98,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         // clean up the original features since we'll have them in children tiles
         tile.source = null;
 
-        if (debug2) console.time('clipping');
+        if (debug > 1) console.time('clipping');
 
         var k1 = 0.5 * padding,
             k2 = 0.5 - k1,
@@ -123,7 +129,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             if (!cz || !goTop) br = clip(right, z2, y + k2, y + k4, 1, intersectY);
         }
 
-        if (debug2) console.timeEnd('clipping');
+        if (debug > 1) console.timeEnd('clipping');
 
         if (tl) stack.push(tl, z + 1, x * 2,     y * 2);
         if (bl) stack.push(bl, z + 1, x * 2,     y * 2 + 1);
@@ -135,6 +141,8 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 GeoJSONVT.prototype.getTile = function (z, x, y) {
     var id = toID(z, x, y);
     if (this.tiles[id]) return this.tiles[id];
+
+    var debug = this.options.debug;
 
     if (debug) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -184,4 +192,11 @@ function intersectX(a, b, x) {
 
 function intersectY(a, b, y) {
     return [(y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]) + a[0], y, -1];
+}
+
+function extend(dest, src) {
+    for (var i in src) {
+        dest[i] = src[i];
+    }
+    return dest;
 }

@@ -11,5 +11,10 @@ but can be useful for other data visualization purposes.
 #### Usage
 
 ```js
-var tileIndex = geojsonvt(geoJSON);
+var tileIndex = geojsonvt(geoJSON, {
+	baseZoom: 14, // max zoom to preserve detail on
+	maxZoom: 14, // zoom to slice down on first pass
+	maxPoints: 100, // during first pass, stop slicing each tile below this number of points
+	debug: 0 // debug level: 1 = some timing info; 2 = individual tiles timing;
+});
 ```

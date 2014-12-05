@@ -5,7 +5,10 @@ console.time('load data');
 var data = require('./data/hrr.json');
 console.timeEnd('load data');
 
-var tileIndex = geojsonvt(data, 14);
+var tileIndex = geojsonvt(data, {
+	maxZoom: 14,
+	debug: 1
+});
 
 // tileIndex.maxZoom = 14;
 // tileIndex.getTile(14, 4100, 6200);
