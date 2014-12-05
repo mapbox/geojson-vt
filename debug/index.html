@@ -87,10 +87,11 @@
                 var feature = features[i],
                     type = feature.type;
 
+                ctx.beginPath();
+
                 for (var j = 0; j < feature.geometry.length; j++) {
                     var ring = feature.geometry[j];
 
-                    ctx.beginPath();
 
                     for (var k = 0; k < ring.length; k++) {
                         var p = ring[k];
@@ -98,8 +99,9 @@
                         else ctx.moveTo(p[0] * ratio + pad, p[1] * ratio + pad);
                     }
                 }
-
-                if (type === 3) ctx.fill('evenodd');
+                if (type === 3) {
+                    ctx.fill('evenodd');
+                }
                 ctx.stroke();
             }
         }

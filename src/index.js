@@ -61,6 +61,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     var stack = [features, z, x, y],
         maxZoom = this.options.maxZoom,
+        baseZoom = this.options.baseZoom,
         maxPoints = this.options.maxPoints,
         debug = this.options.debug;
 
@@ -72,12 +73,13 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         var z2 = 1 << z,
             id = toID(z, x, y),
-            tile = this.tiles[id];
+            tile = this.tiles[id],
+            tileTolerance = (z === baseZoom ? 0 : 2) * tolerance / z2;
 
         if (!tile) {
             if (debug > 1) console.time('creation');
 
-            tile = this.tiles[id] = createTile(features, z2, x, y, tolerance / z2, extent);
+            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, extent);
 
             if (debug) {
                 if (debug > 1) {

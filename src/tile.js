@@ -38,8 +38,12 @@ function addFeature(tile, feature, z2, tx, ty, tolerance, extent) {
         for (i = 0; i < geom.length; i++) {
             ring = geom[i];
 
-            if (type === 2 && ring.dist < tolerance * 10) continue;
-            if (type === 3 && ring.area < sqTolerance * 16) continue;
+            // filter out tiny polylines & polygons
+            if ((type === 2 && ring.dist < tolerance * 4) ||
+                (type === 3 && ring.area < sqTolerance * 16)) {
+                tile.numPoints += ring.length;
+                continue;
+            }
 
             var transformedRing = [];
 
