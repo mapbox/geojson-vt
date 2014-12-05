@@ -37,7 +37,7 @@ function GeoJSONVT(data, options) {
 
     if (debug) {
         console.timeEnd('preprocess data');
-        console.profile('generate tiles');
+        console.time('generate tiles');
         this.stats = [];
         this.total = 0;
     }
@@ -45,7 +45,7 @@ function GeoJSONVT(data, options) {
     this.splitTile(features, 0, 0, 0);
 
     if (debug) {
-        console.profileEnd('generate tiles');
+        console.timeEnd('generate tiles');
         console.log('tiles generated:', this.total, this.stats);
     }
 }

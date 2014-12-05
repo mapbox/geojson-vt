@@ -58,10 +58,26 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
         var ak = 0,
             bk = 0,
             b = null,
-            slice = [],
             points = geometry[i],
             len = points.length,
             a, j;
+
+        var inside = true;
+
+        for (j = 0; j < len; j++) {
+            a = points[j];
+            ak = a[axis];
+            if (ak < k1 || ak > k2) {
+                inside = false;
+                break;
+            }
+        }
+        if (inside) {
+            slices.push(points);
+            continue;
+        }
+
+        var slice = [];
 
         for (j = 0; j < len - 1; j++) {
             a = b || points[j];
