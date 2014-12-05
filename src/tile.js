@@ -38,6 +38,9 @@ function addFeature(tile, feature, z2, tx, ty, tolerance, extent) {
         for (i = 0; i < geom.length; i++) {
             ring = geom[i];
 
+            if (type === 2 && ring.dist < tolerance * 10) continue;
+            if (type === 3 && ring.area < sqTolerance * 16) continue;
+
             var transformedRing = [];
 
             for (j = 0; j < ring.length; j++) {
@@ -54,11 +57,13 @@ function addFeature(tile, feature, z2, tx, ty, tolerance, extent) {
         }
     }
 
-    tile.features.push({
-        geometry: transformed,
-        type: type,
-        tags: feature.tags || null
-    });
+    if (transformed.length) {
+        tile.features.push({
+            geometry: transformed,
+            type: type,
+            tags: feature.tags || null
+        });
+    }
 }
 
 function transformPoint(p, z2, tx, ty, extent) {

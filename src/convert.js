@@ -51,8 +51,26 @@ function project(lonlats, tolerance) {
     for (var i = 0; i < lonlats.length; i++) {
         projected.push(projectPoint(lonlats[i]));
     }
-    if (tolerance) simplify(projected, tolerance);
+    if (tolerance) {
+        simplify(projected, tolerance);
+        calcSize(projected);
+    }
+
     return projected;
+}
+
+// calculate length and size of the poly
+function calcSize(points) {
+    var sum = 0,
+        dist = 0;
+    for (var i = 0, a, b; i < points.length - 1; i++) {
+        a = b || points[i];
+        b = points[i + 1];
+        sum += a[0] * b[1] - b[0] * a[1];
+        dist += Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]); // Manhattan distance
+    }
+    points.area = Math.abs(sum / 2);
+    points.dist = dist;
 }
 
 function projectPoint(p) {

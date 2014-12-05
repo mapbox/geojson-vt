@@ -59,6 +59,8 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
             bk = 0,
             b = null,
             points = geometry[i],
+            area = points.area,
+            dist = points.dist,
             len = points.length,
             a, j;
 
@@ -89,7 +91,7 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
 
                 if ((bk > k2)) { // ---|-----|-->
                     slice.push(intersect(a, b, k1), intersect(a, b, k2));
-                    if (!closed) slice = newSlice(slices, slice);
+                    if (!closed) slice = newSlice(slices, slice, area, dist);
 
                 } else if (bk >= k1) slice.push(intersect(a, b, k1)); // ---|-->  |
 
@@ -97,7 +99,7 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
 
                 if ((bk < k1)) { // <--|-----|---
                     slice.push(intersect(a, b, k2), intersect(a, b, k1));
-                    if (!closed) slice = newSlice(slices, slice);
+                    if (!closed) slice = newSlice(slices, slice, area, dist);
 
                 } else if (bk <= k2) slice.push(intersect(a, b, k2)); // |  <--|---
 
@@ -107,11 +109,11 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
 
                 if (bk < k1) { // <--|---  |
                     slice.push(intersect(a, b, k1));
-                    if (!closed) slice = newSlice(slices, slice);
+                    if (!closed) slice = newSlice(slices, slice, area, dist);
 
                 } else if (bk > k2) { // |  ---|-->
                     slice.push(intersect(a, b, k2));
-                    if (!closed) slice = newSlice(slices, slice);
+                    if (!closed) slice = newSlice(slices, slice, area, dist);
                 }
                 // | --> |
             }
@@ -127,13 +129,17 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
         if (closed && slice[0] !== slice[sliceLen - 1]) slice.push(slice[0]);
 
         // add the final slice
-        if (sliceLen) slices.push(slice);
+        newSlice(slices, slice, area, dist);
     }
 
     return slices;
 }
 
-function newSlice(slices, slice) {
-    if (slice.length) slices.push(slice);
+function newSlice(slices, slice, area, dist) {
+    if (slice.length) {
+        slice.area = area;
+        slice.dist = dist;
+        slices.push(slice);
+    }
     return [];
 }
