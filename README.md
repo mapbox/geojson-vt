@@ -21,3 +21,5 @@ var tileIndex = geojsonvt(geoJSON, {
 
 To see a **geojson-vt** in action, open `debug/index.html` in your browser and drag any GeoJSON on the page.
 It was tested on files up to 100Mb.
+
+![](https://cloud.githubusercontent.com/assets/25395/5328821/511687c2-7d5e-11e4-8346-cd37a5d69319.gif)

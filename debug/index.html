@@ -5,8 +5,10 @@
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        #canvas { border: 2px dashed #bbb; cursor: pointer; }
-        #canvas.hover { border: 2px dashed black; }
+        body { padding: 0; margin: 0; }
+        #canvas { border-right: 1px dotted #aaa; border-bottom: 1px dotted #aaa;}
+        #canvas.hover { background: #cfc; }
+        #canvas.loaded { cursor: pointer; }
     </style>
 </head>
 
@@ -25,7 +27,7 @@
 
             canvas = document.getElementById('canvas'),
             ctx = canvas.getContext('2d'),
-            height = canvas.height = canvas.width = window.innerHeight - 30,
+            height = canvas.height = canvas.width = window.innerHeight - 5,
             ratio = height / totalExtent,
             pad = 4096 * 0.05 * ratio,
 
