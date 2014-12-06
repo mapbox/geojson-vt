@@ -5,8 +5,8 @@
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        #canvas { border: 10px dashed #ccc; }
-        #canvas.hover { border: 10px dashed #333; }
+        #canvas { border: 5px dashed #ccc; }
+        #canvas.hover { border: 5px dashed #333; }
     </style>
 </head>
 
@@ -15,14 +15,17 @@
     <canvas id="canvas"></canvas>
     <script>
 
-        var extent = 4096,
+        var maxZoom = 3,
+            debug = 1,
+
+            extent = 4096,
             totalExtent = 4096 * (1 + 0.05 * 2),
 
             tileIndex,
 
             canvas = document.getElementById('canvas'),
             ctx = canvas.getContext('2d'),
-            height = canvas.height = canvas.width = window.innerHeight - 40,
+            height = canvas.height = canvas.width = window.innerHeight - 30,
             ratio = height / totalExtent,
             pad = 4096 * 0.05 * ratio,
 
@@ -56,8 +59,8 @@
                 console.timeEnd('data parsed');
 
                 tileIndex = geojsonvt(data, {
-                    maxZoom: 14,
-                    debug: 1
+                    maxZoom: maxZoom,
+                    debug: debug
                 });
 
                 drawTile();
@@ -69,11 +72,10 @@
         };
 
         ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(255,0,0,0.5)';
-        ctx.fillStyle = 'rgba(255,0,0,0.1)';
+        ctx.strokeStyle = 'red';
+        ctx.fillStyle = 'rgba(255,0,0,0.05)';
 
         function drawTile() {
-            ctx.clearRect(0, 0, height, height);
 
             var tile = tileIndex.getTile(z, x, y);
             if (!tile) {
@@ -81,10 +83,14 @@
                 return;
             }
 
+            console.time('draw');
+            ctx.clearRect(0, 0, height, height);
+
             var features = tile.features;
 
             for (var i = 0; i < features.length; i++) {
                 var feature = features[i],
+                    typeChanged = type !== feature.type,
                     type = feature.type;
 
                 ctx.beginPath();
@@ -92,22 +98,21 @@
                 for (var j = 0; j < feature.geometry.length; j++) {
                     var ring = feature.geometry[j];
 
-
                     for (var k = 0; k < ring.length; k++) {
                         var p = ring[k];
                         if (k) ctx.lineTo(p[0] * ratio + pad, p[1] * ratio + pad);
                         else ctx.moveTo(p[0] * ratio + pad, p[1] * ratio + pad);
                     }
                 }
-                if (type === 3) {
-                    ctx.fill('evenodd');
-                }
+
+                if (type === 3) ctx.fill('evenodd');
                 ctx.stroke();
             }
+            console.timeEnd('draw');
         }
 
         canvas.onclick = function (e) {
-            if (!tileIndex) return;
+            if (!tileIndex || z === 14) return;
 
             var mouseX = e.layerX - 10,
                 mouseY = e.layerY - 10,
