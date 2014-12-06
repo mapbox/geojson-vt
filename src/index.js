@@ -92,13 +92,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             }
         }
 
-        if (z === maxZoom || tile.numPoints <= maxPoints || isClippedSquare(tile.features)) {
-            tile.source = features; // save original features for later on-demand tiling
+        if (!cz && (z === maxZoom || tile.numPoints <= maxPoints || isClippedSquare(tile.features)) || z === baseZoom) {
+            tile.source = features;
             continue; // stop tiling
         }
 
-        // clean up the original features since we'll have them in children tiles
-        tile.source = null;
+        if (cz) tile.source = features;
 
         if (debug > 1) console.time('clipping');
 
@@ -172,7 +171,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 };
 
 function isClippedSquare(features) {
-    if (features.length > 1) return false;
+    if (features.length !== 1) return false;
     var feature = features[0];
     if (feature.type !== 3) return false;
 
