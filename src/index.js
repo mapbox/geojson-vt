@@ -145,7 +145,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     var debug = this.options.debug;
 
-    if (debug) console.log('drilling down to z%d-%d-%d', z, x, y);
+    if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
     var z0 = z,
         x0 = x,
@@ -159,7 +159,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
         parent = this.tiles[toID(z0, x0, y0)];
     }
 
-    if (debug) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
+    if (debug > 1) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
 
     if (parent.source) {
         if (debug) console.time('drilling down');

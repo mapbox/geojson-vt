@@ -5,7 +5,7 @@
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        #canvas { border: 5px dashed #ccc; }
+        #canvas { border: 5px dashed #ccc; cursor: pointer; }
         #canvas.hover { border: 5px dashed #333; }
     </style>
 </head>
@@ -15,7 +15,7 @@
     <canvas id="canvas"></canvas>
     <script>
 
-        var maxZoom = 3,
+        var maxZoom = 4,
             debug = 1,
 
             extent = 4096,
@@ -41,6 +41,10 @@
             ctx.scale(2, 2);
         }
 
+        ctx.textAlign = 'center';
+        ctx.font = '48px Helvetica, Arial';
+        ctx.fillText("Drag a GeoJSON here", height / 2, height / 2);
+
         function humanFileSize(size) {
             var i = Math.floor(Math.log(size) / Math.log(1024));
             return Math.round(100 * (size / Math.pow(1024, i))) / 100 + ' ' + ['B', 'kB', 'MB', 'GB'][i];
@@ -50,6 +54,9 @@
         canvas.ondragend = function () { this.className = ''; return false; };
         canvas.ondrop = function (e) {
             this.className = '';
+
+            ctx.clearRect(0, 0, height, height);
+            ctx.fillText("Thanks!", height / 2, height / 2);
 
             var reader = new FileReader();
             reader.onload = function (event) {
@@ -72,8 +79,6 @@
         };
 
         ctx.lineWidth = 1;
-        ctx.strokeStyle = 'red';
-        ctx.fillStyle = 'rgba(255,0,0,0.05)';
 
         function drawTile() {
 
@@ -85,6 +90,18 @@
 
             console.time('draw');
             ctx.clearRect(0, 0, height, height);
+
+            ctx.strokeStyle = 'green';
+            ctx.strokeRect(pad, pad, height - 2 * pad, height - 2 * pad);
+            ctx.beginPath();
+            ctx.moveTo(pad, height / 2);
+            ctx.lineTo(height - pad, height / 2);
+            ctx.moveTo(height / 2, pad);
+            ctx.lineTo(height / 2, height - pad);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'red';
+            ctx.fillStyle = 'rgba(255,0,0,0.05)';
 
             var features = tile.features;
 

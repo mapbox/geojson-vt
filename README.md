@@ -18,3 +18,6 @@ var tileIndex = geojsonvt(geoJSON, {
 	debug: 0 // debug level: 1 = some timing info; 2 = individual tiles timing;
 });
 ```
+
+To see a **geojson-vt** in action, open `debug/index.html` in your browser and drag any GeoJSON on the page.
+It was tested on files up to 100Mb.
