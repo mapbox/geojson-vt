@@ -93,7 +93,8 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             }
         }
 
-        if (!cz && (z === maxZoom || tile.numPoints <= maxPoints || isClippedSquare(tile.features)) || z === baseZoom) {
+        if (!cz && (z === maxZoom || tile.numPoints <= maxPoints || isClippedSquare(tile.features)) ||
+                z === baseZoom || z === cz) {
             tile.source = features;
             continue; // stop tiling
         }
