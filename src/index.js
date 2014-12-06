@@ -46,6 +46,7 @@ function GeoJSONVT(data, options) {
 
     if (debug) {
         console.timeEnd('generate tiles');
+        console.log('features: %d, points: %d', data.features.length, this.tiles[0].numPoints);
         console.log('tiles generated:', this.total, this.stats);
     }
 }
