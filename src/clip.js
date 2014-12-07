@@ -18,8 +18,20 @@ function clip(features, scale, k1, k2, axis, intersect) {
 
     for (var i = 0; i < features.length; i++) {
 
-        var geometry = features[i].geometry,
-            type = features[i].type;
+        var feature = features[i],
+            geometry = feature.geometry,
+            type = feature.type,
+            min, max;
+
+        if (feature.min) {
+            min = feature.min[axis];
+            max = feature.max[axis];
+
+            if (min >= k1 && max <= k2) { // trivial accept
+                clipped.push(feature);
+                continue;
+            } else if (min > k2 || max < k1) continue; // trivial reject
+        }
 
         var slices = type === 1 ?
                 clipPoints(geometry, k1, k2, axis) :
@@ -63,21 +75,6 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
             dist = points.dist,
             len = points.length,
             a, j;
-
-        var inside = true;
-
-        for (j = 0; j < len; j++) {
-            a = points[j];
-            ak = a[axis];
-            if (ak < k1 || ak > k2) {
-                inside = false;
-                break;
-            }
-        }
-        if (inside) {
-            slices.push(points);
-            continue;
-        }
 
         var slice = [];
 
