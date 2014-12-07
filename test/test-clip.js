@@ -21,15 +21,17 @@ test('clips polylines', function (t) {
         {geometry: geom2, type: 2, tags: 2}
     ], 1, 10, 40, 0, intersectX);
 
-    t.same(clipped, [
+    var expected = [
         {geometry:[
             [[10,0],[40,0]],
             [[40,10],[20,10],[20,20],[30,20],[30,30],[40,30]],
             [[40,40],[25,40],[25,50],[10,50]],
-            [[10,60],[25,60]]], tags:1,type:2},
+            [[10,60],[25,60]]], type:2,tags:1},
         {geometry:[
             [[10,0],[40,0]],
-            [[40,10],[10,10]]], tags:2,type:2}]);
+            [[40,10],[10,10]]], type:2,tags:2}];
+
+    t.equal(JSON.stringify(clipped), JSON.stringify(expected));
 
     t.end();
 });
@@ -45,11 +47,13 @@ test('clips polygons', function (t) {
         {geometry: closed(geom2), type: 3, tags: 2}
     ], 1, 10, 40, 0, intersectX);
 
-    t.same(clipped, [
+    var expected = [
         {geometry:[[[10,0],[40,0],[40,10],[20,10],[20,20],[30,20],[30,30],[40,30],
                    [40,40],[25,40],[25,50],[10,50],[10,60],[25,60],[10,24],[10,0]]],type:3,tags:1},
         {geometry:[[[10,0],[40,0],[40,10],[10,10],[10,0]]],type:3,tags:2}
-    ]);
+    ];
+
+    t.equal(JSON.stringify(clipped), JSON.stringify(expected));
 
     t.end();
 });
