@@ -9,12 +9,16 @@
         #canvas { border-right: 1px dotted #aaa; border-bottom: 1px dotted #aaa;}
         #canvas.hover { background: #cfc; }
         #canvas.loaded { cursor: pointer; }
+        button { font-size: 16px; cursor: pointer; background: white; border: 1px solid #ccc;
+            position: absolute; top: 5px; left: 5px;}
+        button:hover { border-color: black; }
     </style>
 </head>
 
 <body>
     <script src='geojson-vt-dev.js'></script>
     <canvas id="canvas"></canvas>
+    <button id="back">&larr;</button>
     <script>
 
         var maxZoom = 4,
@@ -173,6 +177,15 @@
                 top = mouseY / height < 0.5;
             drawGrid();
             drawSquare(left, top);
+        }
+
+        document.getElementById('back').onclick = function (e) {
+            if (!tileIndex) return;
+            z--;
+            x = Math.floor(x / 2);
+            y = Math.floor(y / 2);
+
+            drawTile();
         }
 
         function toID(z, x, y) {
