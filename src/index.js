@@ -7,7 +7,6 @@ var clip = require('./clip'),
     createTile = require('./tile'),
 
     extent = 4096,
-    tolerance = 1 / extent, // simplification tolerance
     padding = 0.05, // padding on each side of tile in percentage
 
     minPx = Math.round(-padding * extent),
@@ -26,7 +25,7 @@ function GeoJSONVT(data, options) {
     if (debug) console.time('preprocess data');
 
     var z2 = 1 << options.baseZoom,
-        features = convert(data, tolerance / z2);
+        features = convert(data, options.tolerance / (z2 * extent));
 
     this.tiles = {};
 
@@ -50,6 +49,7 @@ GeoJSONVT.prototype.options = {
     maxZoom: 4,
     baseZoom: 14,
     maxPoints: 100,
+    tolerance: 3,
     debug: 0
 };
 
@@ -57,9 +57,6 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     var stack = [features, z, x, y],
         options = this.options,
-        maxZoom = options.maxZoom,
-        baseZoom = options.baseZoom,
-        maxPoints = options.maxPoints,
         debug = options.debug;
 
     while (stack.length) {
@@ -71,12 +68,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         var z2 = 1 << z,
             id = toID(z, x, y),
             tile = this.tiles[id],
-            tileTolerance = (z === baseZoom ? 0 : 2) * tolerance / z2;
+            tileTolerance = z === options.baseZoom ? 0 : options.tolerance / (z2 * extent);
 
         if (!tile) {
             if (debug > 1) console.time('creation');
 
-            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, extent);
+            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, extent, z === options.baseZoom);
 
             if (debug) {
                 if (debug > 1) {
@@ -89,8 +86,8 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             }
         }
 
-        if (!cz && (z === maxZoom || tile.numPoints <= maxPoints || isClippedSquare(tile.features)) ||
-                z === baseZoom || z === cz) {
+        if (!cz && (z === options.maxZoom || tile.numPoints <= options.maxPoints ||
+                isClippedSquare(tile.features)) || z === options.baseZoom || z === cz) {
             tile.source = features;
             continue; // stop tiling
         }

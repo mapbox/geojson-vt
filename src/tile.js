@@ -2,7 +2,7 @@
 
 module.exports = createTile;
 
-function createTile(features, z2, tx, ty, tolerance, extent) {
+function createTile(features, z2, tx, ty, tolerance, extent, noSimplify) {
     var tile = {
         features: [],
         numPoints: 0,
@@ -12,12 +12,12 @@ function createTile(features, z2, tx, ty, tolerance, extent) {
     };
     for (var i = 0; i < features.length; i++) {
         tile.numFeatures++;
-        addFeature(tile, features[i], z2, tx, ty, tolerance, extent);
+        addFeature(tile, features[i], z2, tx, ty, tolerance, extent, noSimplify);
     }
     return tile;
 }
 
-function addFeature(tile, feature, z2, tx, ty, tolerance, extent) {
+function addFeature(tile, feature, z2, tx, ty, tolerance, extent, noSimplify) {
 
     var geom = feature.geometry,
         type = feature.type,
@@ -39,8 +39,8 @@ function addFeature(tile, feature, z2, tx, ty, tolerance, extent) {
             ring = geom[i];
 
             // filter out tiny polylines & polygons
-            if ((type === 2 && ring.dist < tolerance * 4) ||
-                (type === 3 && ring.area < sqTolerance * 16)) {
+            if (!noSimplify && ((type === 2 && ring.dist < tolerance) ||
+                                (type === 3 && ring.area < sqTolerance))) {
                 tile.numPoints += ring.length;
                 continue;
             }
@@ -50,7 +50,7 @@ function addFeature(tile, feature, z2, tx, ty, tolerance, extent) {
             for (j = 0; j < ring.length; j++) {
                 p = ring[j];
                 // keep points with significance > tolerance and points introduced by clipping
-                if (p[2] === -1 || p[2] > sqTolerance) {
+                if (noSimplify || p[2] === -1 || p[2] > sqTolerance) {
                     transformedRing.push(transformPoint(p, z2, tx, ty, extent));
                     tile.numSimplified++;
                 }
