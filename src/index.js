@@ -19,25 +19,20 @@ function geojsonvt(data, options) {
 }
 
 function GeoJSONVT(data, options) {
-    this.options = extend(Object.create(this.options), options);
+    options = this.options = extend(Object.create(this.options), options);
 
-    var debug = this.options.debug;
+    var debug = options.debug;
 
     if (debug) console.time('preprocess data');
 
-    var features = [],
-        z2 = 1 << this.options.baseZoom;
-
-    for (var i = 0; i < data.features.length; i++) {
-        var feature = convert(data.features[i], tolerance / z2);
-        if (feature) features.push(feature);
-    }
+    var z2 = 1 << options.baseZoom,
+        features = convert(data, tolerance / z2);
 
     this.tiles = {};
 
     if (debug) {
         console.timeEnd('preprocess data');
-        console.time('generate tiles');
+        console.time('generate tiles up to z' + options.maxZoom);
         this.stats = [];
         this.total = 0;
     }
@@ -45,8 +40,8 @@ function GeoJSONVT(data, options) {
     this.splitTile(features, 0, 0, 0);
 
     if (debug) {
-        console.timeEnd('generate tiles');
-        console.log('features: %d, points: %d', data.features.length, this.tiles[0].numPoints);
+        console.log('features: %d, points: %d', this.tiles[0].numFeatures, this.tiles[0].numPoints);
+        console.timeEnd('generate tiles up to z' + options.maxZoom);
         console.log('tiles generated:', this.total, this.stats);
     }
 }
@@ -61,10 +56,11 @@ GeoJSONVT.prototype.options = {
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     var stack = [features, z, x, y],
-        maxZoom = this.options.maxZoom,
-        baseZoom = this.options.baseZoom,
-        maxPoints = this.options.maxPoints,
-        debug = this.options.debug;
+        options = this.options,
+        maxZoom = options.maxZoom,
+        baseZoom = options.baseZoom,
+        maxPoints = options.maxPoints,
+        debug = options.debug;
 
     while (stack.length) {
         features = stack.shift();

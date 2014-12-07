@@ -6,23 +6,44 @@ var simplify = require('./simplify');
 
 // converts GeoJSON feature into an intermediate JSON vector format with projection & simplification
 
-function convert(feature, tolerance) {
+function convert(data, tolerance) {
+    var features = [];
+
+    if (data.type === 'FeatureCollection') {
+        for (var i = 0; i < data.features.length; i++) {
+            convertFeature(features, data.features[i], tolerance);
+        }
+    } else if (data.type === 'Feature') {
+        convertFeature(features, data, tolerance);
+
+    } else {
+        convertFeature(features, {geometry: data}, tolerance);
+    }
+    return features;
+}
+
+function convertFeature(features, feature, tolerance) {
     var geom = feature.geometry,
         type = geom.type,
         coords = geom.coordinates,
         tags = feature.properties,
         i, j, rings;
 
-    if (type === 'Point') return create(tags, 1, [projectPoint(coords)]);
-    else if (type === 'MultiPoint') return create(tags, 1, project(coords));
-    else if (type === 'LineString') return create(tags, 2, [project(coords, tolerance)]);
+    if (type === 'Point') {
+        return features.push(create(tags, 1, [projectPoint(coords)]));
 
-    else if (type === 'MultiLineString' || type === 'Polygon') {
+    } else if (type === 'MultiPoint') {
+        return features.push(create(tags, 1, project(coords)));
+
+    } else if (type === 'LineString') {
+        return features.push(create(tags, 2, [project(coords, tolerance)]));
+
+    } else if (type === 'MultiLineString' || type === 'Polygon') {
         rings = [];
         for (i = 0; i < coords.length; i++) {
             rings.push(project(coords[i], tolerance));
         }
-        return create(tags, type === 'Polygon' ? 3 : 2, rings);
+        return features.push(create(tags, type === 'Polygon' ? 3 : 2, rings));
 
     } else if (type === 'MultiPolygon') {
         rings = [];
@@ -31,7 +52,15 @@ function convert(feature, tolerance) {
                 rings.push(project(coords[i][j], tolerance));
             }
         }
-        return create(tags, 3, rings);
+        return features.push(create(tags, 3, rings));
+
+    } else if (type === 'GeometryCollection') {
+        for (i = 0; i < geom.geometries.length; i++) {
+            convertFeature(features, {
+                geometry: geom.geometries[i],
+                properties: tags
+            }, tolerance);
+        }
 
     } else {
         console.warn('Unsupported GeoJSON type: ' + geom.type);
@@ -59,7 +88,7 @@ function project(lonlats, tolerance) {
     return projected;
 }
 
-// calculate length and size of the poly
+// calculate area and length of the poly
 function calcSize(points) {
     var sum = 0,
         dist = 0;
