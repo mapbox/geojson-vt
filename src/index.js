@@ -52,7 +52,7 @@ function GeoJSONVT(data, options) {
 }
 
 GeoJSONVT.prototype.options = {
-    maxZoom: 14,
+    maxZoom: 4,
     baseZoom: 14,
     maxPoints: 100,
     debug: 0

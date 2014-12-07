@@ -21,8 +21,11 @@
     <button id="back">&larr;</button>
     <script>
 
-        var maxZoom = 4,
-            debug = 1,
+        var options = {
+                maxZoom: 4,
+                maxPoints: 100,
+                debug: 1
+            },
 
             extent = 4096,
             totalExtent = 4096 * (1 + 0.05 * 2),
@@ -67,15 +70,11 @@
             var reader = new FileReader();
             reader.onload = function (event) {
                 console.log('data size', humanFileSize(event.target.result.length));
-                console.time('data parsed');
+                console.time('JSON.parse');
                 var data = JSON.parse(event.target.result);
-                console.timeEnd('data parsed');
+                console.timeEnd('JSON.parse');
 
-                tileIndex = geojsonvt(data, {
-                    maxZoom: maxZoom,
-                    debug: debug,
-                    maxPoints: 100
-                });
+                tileIndex = geojsonvt(data, options);
 
                 drawTile();
             };
