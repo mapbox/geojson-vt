@@ -166,10 +166,10 @@
             if (!left) x++;
             if (!top) y++;
 
-            if (z > 0) backButton.style.display = '';
-
             drawTile();
             drawSquare(left, top);
+
+            if (z > 0) backButton.style.display = '';
         };
 
         canvas.onmousemove = function (e) {

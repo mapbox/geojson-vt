@@ -168,6 +168,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     return this.tiles[id];
 };
 
+// checks whether a tile is a whole-area fill after clipping; if it is, there's no sense slicing it further
 function isClippedSquare(features) {
     if (features.length !== 1) return false;
 
