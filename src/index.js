@@ -158,6 +158,8 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     if (debug > 1) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
 
     if (parent.source) {
+        if (isClippedSquare(parent.features)) return parent;
+
         if (debug) console.time('drilling down');
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug) console.timeEnd('drilling down');
@@ -170,10 +172,10 @@ function isClippedSquare(features) {
     if (features.length !== 1) return false;
 
     var feature = features[0];
-    if (feature.type !== 3) return false;
+    if (feature.type !== 3 || feature.geometry.length > 1) return false;
 
-    for (var i = 0; i < feature.geometry.length; i++) {
-        var p = feature.geometry[i];
+    for (var i = 0; i < feature.geometry[0].length; i++) {
+        var p = feature.geometry[0][i];
         if ((p[0] !== minPx && p[0] !== maxPx) ||
             (p[1] !== minPx && p[1] !== maxPx)) return false;
     }
