@@ -8,8 +8,7 @@
         body { padding: 0; margin: 0; }
         #canvas { border-right: 1px dotted #aaa; border-bottom: 1px dotted #aaa;}
         #canvas.hover { background: #cfc; }
-        #canvas.loaded { cursor: pointer; }
-        button { font-size: 16px; cursor: pointer; background: white; border: 1px solid #ccc;
+        button { font-size: 16px; background: white; border: 1px solid #ccc;
             position: absolute; top: 5px; left: 5px;}
         button:hover { border-color: black; }
     </style>
@@ -113,7 +112,8 @@
             var tile = tileIndex.getTile(z, x, y);
 
             if (!tile) {
-                console.log('not found', tile);
+                console.log('tile empty');
+                zoomOut();
                 return;
             }
 
@@ -166,6 +166,8 @@
             if (!left) x++;
             if (!top) y++;
 
+            if (z > 0) backButton.style.display = '';
+
             drawTile();
             drawSquare(left, top);
         };
@@ -181,13 +183,21 @@
             drawSquare(left, top);
         }
 
-        document.getElementById('back').onclick = function (e) {
-            if (!tileIndex) return;
+        function zoomOut() {
             z--;
             x = Math.floor(x / 2);
             y = Math.floor(y / 2);
+        }
 
+        var backButton = document.getElementById('back');
+
+        backButton.style.display = 'none';
+
+        backButton.onclick = function (e) {
+            if (!tileIndex) return;
+            zoomOut();
             drawTile();
+            if (z === 0) backButton.style.display = 'none';
         }
 
         function toID(z, x, y) {
