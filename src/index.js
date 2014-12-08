@@ -93,6 +93,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         }
 
         if (cz) tile.source = features;
+        else tile.source = null;
 
         if (debug > 1) console.time('clipping');
 
@@ -167,13 +168,14 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
 function isClippedSquare(features) {
     if (features.length !== 1) return false;
+
     var feature = features[0];
     if (feature.type !== 3) return false;
 
     for (var i = 0; i < feature.geometry.length; i++) {
         var p = feature.geometry[i];
-        if (p[0] !== minPx && p[0] !== maxPx) return false;
-        if (p[1] !== minPx && p[1] !== maxPx) return false;
+        if ((p[0] !== minPx && p[0] !== maxPx) ||
+            (p[1] !== minPx && p[1] !== maxPx)) return false;
     }
     return true;
 }
@@ -183,11 +185,11 @@ function toID(z, x, y) {
 }
 
 function intersectX(a, b, x) {
-    return [x, (x - a[0]) * (b[1] - a[1]) / (b[0] - a[0]) + a[1], -1];
+    return [x, (x - a[0]) * (b[1] - a[1]) / (b[0] - a[0]) + a[1], 1];
 }
 
 function intersectY(a, b, y) {
-    return [(y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]) + a[0], y, -1];
+    return [(y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]) + a[0], y, 1];
 }
 
 function extend(dest, src) {

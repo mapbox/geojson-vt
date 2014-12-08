@@ -13,8 +13,8 @@ function simplify(points, tolerance) {
         stack = [],
         i, maxSqDist, sqDist, index;
 
-    points[first][2] = Number.MAX_VALUE;
-    points[last][2] = Number.MAX_VALUE;
+    points[first][2] = 1;
+    points[last][2] = 1;
 
     while (last) {
 

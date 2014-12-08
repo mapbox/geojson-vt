@@ -72,8 +72,8 @@ function create(tags, type, geometry) {
         geometry: geometry,
         type: type,
         tags: tags || null,
-        min: [Infinity, Infinity],
-        max: [-Infinity, -Infinity]
+        min: [1, 1],
+        max: [0, 0]
     };
     calcBBox(feature);
     return feature;
@@ -88,7 +88,6 @@ function project(lonlats, tolerance) {
         simplify(projected, tolerance);
         calcSize(projected);
     }
-
     return projected;
 }
 
