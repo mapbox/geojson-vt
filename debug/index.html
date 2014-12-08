@@ -28,7 +28,8 @@
             },
 
             extent = 4096,
-            totalExtent = 4096 * (1 + 0.05 * 2),
+            padding = 8 / 512,
+            totalExtent = 4096 * (1 + padding * 2),
 
             tileIndex,
 
@@ -36,7 +37,7 @@
             ctx = canvas.getContext('2d'),
             height = canvas.height = canvas.width = window.innerHeight - 5,
             ratio = height / totalExtent,
-            pad = 4096 * 0.05 * ratio,
+            pad = 4096 * padding * ratio,
 
             x = 0,
             y = 0,

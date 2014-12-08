@@ -7,7 +7,7 @@ var clip = require('./clip'),
     createTile = require('./tile'),
 
     extent = 4096,
-    padding = 0.05, // padding on each side of tile in percentage
+    padding = 8 / 512, // padding on each side of the tile (in percentage of extent)
 
     minPx = Math.round(-padding * extent),
     maxPx = Math.round((1 + padding) * extent);
