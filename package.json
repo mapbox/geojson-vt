@@ -17,6 +17,7 @@
   "main": "src/index.js",
   "devDependencies": {
     "benchmark": "^1.0.0",
+    "browserify": "^7.0.0",
     "faucet": "0.0.1",
     "jshint": "^2.5.10",
     "tape": "^3.0.3",
