@@ -25,7 +25,7 @@ var features = tileIndex.getTile(z, x, y).features;
 
 #### Demo
 
-To see a **geojson-vt** in action, run `npm run build-dev`,
+To see a **geojson-vt** in action, install [Browserify](http://browserify.org/#install), run  `npm run build-dev`,
 then open `debug/index.html` in your browser and drag any GeoJSON on the page.
 It was tested on files up to 100Mb:
 
