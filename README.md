@@ -1,4 +1,4 @@
-### GeoJSON Vector Tiles
+### geojson-vt &mdash; GeoJSON Vector Tiles
 
 A highly efficient JavaScript library for slicing GeoJSON data
 into [vector tiles](https://github.com/mapbox/vector-tile-spec/)
@@ -12,9 +12,9 @@ but can be useful for other data visualization purposes.
 
 ```js
 // build an initial index of tiles
-var tileIndex = geojsonvt(geoJSON, {
+var tileIndex = geojsonvt(geoJSON, { // all parameters are optional, wit sensible defaults
 	baseZoom: 14, // max zoom to preserve detail on
-	maxZoom: 14, // zoom to slice down on first pass
+	maxZoom: 4, // zoom to slice down on first pass
 	maxPoints: 100, // during first pass, stop slicing each tile below this number of points
 	debug: 0 // debug level: 1 = some timing info; 2 = individual tiles timing;
 });
@@ -25,8 +25,12 @@ var features = tileIndex.getTile(z, x, y).features;
 
 #### Demo
 
-To see a **geojson-vt** in action, install [Browserify](http://browserify.org/#install), run  `npm run build-dev`,
-then open `debug/index.html` in your browser and drag any GeoJSON on the page.
-It was tested on files up to 100Mb:
+Here's **geojson-vt** action in [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js),
+dynamically loading a 100Mb US zip codes GeoJSON with 5.4 million points:
 
-![](https://cloud.githubusercontent.com/assets/25395/5328953/4edebdac-7d64-11e4-8e99-dddfd00851fb.gif)
+![](https://cloud.githubusercontent.com/assets/25395/5360312/86028d8e-7f91-11e4-811f-87f24acb09ca.gif)
+
+There's a convenient page to test out **geojson-vt** on different data. Run `npm install` to install dependencies,
+then `npm run build-dev`. Now open `debug/index.html` in your browser and drag any GeoJSON on the page, watching the console.
+
+![](https://cloud.githubusercontent.com/assets/25395/5363235/41955c6e-7fa8-11e4-9575-a66ef54cb6d9.gif)
