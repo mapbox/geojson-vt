@@ -1,12 +1,16 @@
 ### geojson-vt &mdash; GeoJSON Vector Tiles
 
-A highly efficient JavaScript library for slicing GeoJSON data
+A highly efficient JavaScript library for **slicing GeoJSON data**
 into [vector tiles](https://github.com/mapbox/vector-tile-spec/)
-(or rather their JSON equivalent) on the fly,
+(JSON equivalent) **on the fly**,
 primarily for rendering purposes.
 
-Created to power GeoJSON rendering in [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js),
-but can be useful for other data visualization purposes.
+Created to power GeoJSON in [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js),
+but can be useful for handling **large amounts of geospatial data on the client** in other visualization platforms
+like [Leaflet](https://github.com/Leaflet/Leaflet) and [d3](https://github.com/mbostock/d3).
+Resulting tiles are simplified, retaining the minimum level of detail appropriate for each zoom level
+(simplifying shapes, filtering out tiny polygons and polylines),
+so that they can be rendered and interacted with really fast.
 
 #### Usage
 
