@@ -36,7 +36,9 @@ dynamically loading a 100Mb US zip codes GeoJSON with 5.4 million points:
 
 ![](https://cloud.githubusercontent.com/assets/25395/5360312/86028d8e-7f91-11e4-811f-87f24acb09ca.gif)
 
-There's a convenient page to test out **geojson-vt** on different data. Run `npm install` to install dependencies,
-then `npm run build-dev`. Now open `debug/index.html` in your browser and drag any GeoJSON on the page, watching the console.
+There's a convenient page to test out **geojson-vt** on different data.
+Run `npm install` to install dependencies,
+then `npm run build-dev` to generate a browser build of the library.
+Now open `debug/index.html` in your browser and drag any GeoJSON on the page, watching the console.
 
 ![](https://cloud.githubusercontent.com/assets/25395/5363235/41955c6e-7fa8-11e4-9575-a66ef54cb6d9.gif)
