@@ -7,6 +7,7 @@ on the browser side (without a server).
 Created to power GeoJSON in [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js),
 but can be useful in other visualization platforms
 like [Leaflet](https://github.com/Leaflet/Leaflet) and [d3](https://github.com/mbostock/d3).
+It can also be easily used on the server as well.
 
 Resulting tiles conform to the JSON equivalent
 of the [vector tile specification](https://github.com/mapbox/vector-tile-spec/).
@@ -29,7 +30,7 @@ var tileIndex = geojsonvt(geoJSON, { // all parameters are optional, with sensib
 var features = tileIndex.getTile(z, x, y).features;
 ```
 
-#### Building the library
+#### Browser builds
 
 ```bash
 npm install
