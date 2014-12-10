@@ -27,8 +27,8 @@
   "scripts": {
     "test": "jshint src/*.js test/test-*.js && tape test/test-*.js | faucet",
     "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
-    "build-dev": "browserify -d src/index.js -s geojsonvt -o debug/geojson-vt-dev.js",
-    "watch": "watchify -v -d src/index.js -s geojsonvt -o debug/geojson-vt-dev.js"
+    "build-dev": "browserify -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
+    "watch": "watchify -v -d src/index.js -s geojsonvt -o geojson-vt-dev.js"
   },
   "jshintConfig": {
     "undef": true,

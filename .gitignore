@@ -1,5 +1,5 @@
 debug/data/hrr.json
 debug/data/hsa.json
 debug/data/zips*.json
-debug/geojson-vt-dev.js
+geojson-vt-dev.js
 geojson-vt.js
