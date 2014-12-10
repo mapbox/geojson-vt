@@ -4,14 +4,7 @@ module.exports = geojsonvt;
 
 var convert = require('./convert'), // GeoJSON conversion and preprocessing
     clip = require('./clip'),       // stripe clipping algorithm
-    createTile = require('./tile'), // final simplified tile generation
-
-    extent = 4096,
-    padding = 8 / 512, // padding on each side of the tile (in percentage of extent)
-
-    // coordinates with values below are the tile boundary
-    minPx = Math.round(-padding * extent),
-    maxPx = Math.round((1 + padding) * extent);
+    createTile = require('./tile'); // final simplified tile generation
 
 
 function geojsonvt(data, options) {
@@ -26,7 +19,7 @@ function GeoJSONVT(data, options) {
     if (debug) console.time('preprocess data');
 
     var z2 = 1 << options.baseZoom, // 2^z
-        features = convert(data, options.tolerance / (z2 * extent));
+        features = convert(data, options.tolerance / (z2 * options.extent));
 
     this.tiles = {};
 
@@ -52,6 +45,8 @@ GeoJSONVT.prototype.options = {
     maxZoom: 4,     // zoom to slice down to on first pass
     maxPoints: 100, // stop slicing a tile below this number of points
     tolerance: 3,   // simplification tolerance (higher means simpler)
+    extent: 4096,   // tile extent
+    buffer: 64,     // tile buffer on each side
     debug: 0        // logging level (0, 1 or 2)
 };
 
@@ -59,7 +54,9 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     var stack = [features, z, x, y],
         options = this.options,
-        debug = options.debug;
+        debug = options.debug,
+        extent = options.extent,
+        buffer = options.buffer;
 
     // avoid recursion by using a processing queue
     while (stack.length) {
@@ -90,7 +87,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         }
 
         if (!cz && (z === options.maxZoom || tile.numPoints <= options.maxPoints ||
-                isClippedSquare(tile.features)) || z === options.baseZoom || z === cz) {
+                isClippedSquare(tile.features, extent, buffer)) || z === options.baseZoom || z === cz) {
             tile.source = features;
             continue; // stop tiling
         }
@@ -101,7 +98,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         if (debug > 1) console.time('clipping');
 
         // values we'll use for clipping
-        var k1 = 0.5 * padding,
+        var k1 = 0.5 * buffer / extent,
             k2 = 0.5 - k1,
             k3 = 0.5 + k1,
             k4 = 1 + k1,
@@ -143,7 +140,8 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     var id = toID(z, x, y);
     if (this.tiles[id]) return this.tiles[id];
 
-    var debug = this.options.debug;
+    var options = this.options,
+        debug = options.debug;
 
     if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -163,7 +161,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     // if we found a parent tile containing the original geometry, we can drill down from it
     if (parent.source) {
-        if (isClippedSquare(parent.features)) return parent;
+        if (isClippedSquare(parent.features, options.extent, options.buffer)) return parent;
 
         if (debug) console.time('drilling down');
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
@@ -174,7 +172,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 };
 
 // checks whether a tile is a whole-area fill after clipping; if it is, there's no sense slicing it further
-function isClippedSquare(features) {
+function isClippedSquare(features, extent, buffer) {
     if (features.length !== 1) return false;
 
     var feature = features[0];
@@ -182,8 +180,8 @@ function isClippedSquare(features) {
 
     for (var i = 0; i < feature.geometry[0].length; i++) {
         var p = feature.geometry[0][i];
-        if ((p[0] !== minPx && p[0] !== maxPx) ||
-            (p[1] !== minPx && p[1] !== maxPx)) return false;
+        if ((p[0] !== -buffer && p[0] !== extent + buffer) ||
+            (p[1] !== -buffer && p[1] !== extent + buffer)) return false;
     }
     return true;
 }

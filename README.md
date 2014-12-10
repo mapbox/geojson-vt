@@ -50,6 +50,8 @@ var tileIndes = geojsonvt(data, {
 	maxZoom: 4,     // zoom to slice down to on first pass
 	maxPoints: 100, // stop slicing each tile below this number of points
 	tolerance: 3,   // simplification tolerance (higher means simpler)
+	extent: 4096,   // tile extent (both width and height)
+	buffer: 64,		// tile buffer on each side
 	debug: 0        // logging level (0 to disable, 1 or 2)
 });
 ```
