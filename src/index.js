@@ -2,13 +2,14 @@
 
 module.exports = geojsonvt;
 
-var clip = require('./clip'),
-    convert = require('./convert'),
-    createTile = require('./tile'),
+var convert = require('./convert'), // GeoJSON conversion and preprocessing
+    clip = require('./clip'),       // stripe clipping algorithm
+    createTile = require('./tile'), // final simplified tile generation
 
     extent = 4096,
     padding = 8 / 512, // padding on each side of the tile (in percentage of extent)
 
+    // coordinates with values below are the tile boundary
     minPx = Math.round(-padding * extent),
     maxPx = Math.round((1 + padding) * extent);
 
@@ -24,7 +25,7 @@ function GeoJSONVT(data, options) {
 
     if (debug) console.time('preprocess data');
 
-    var z2 = 1 << options.baseZoom,
+    var z2 = 1 << options.baseZoom, // 2^z
         features = convert(data, options.tolerance / (z2 * extent));
 
     this.tiles = {};
@@ -36,6 +37,7 @@ function GeoJSONVT(data, options) {
         this.total = 0;
     }
 
+    // start slicing from the top tile down
     this.splitTile(features, 0, 0, 0);
 
     if (debug) {
@@ -46,11 +48,11 @@ function GeoJSONVT(data, options) {
 }
 
 GeoJSONVT.prototype.options = {
-    maxZoom: 4,
-    baseZoom: 14,
-    maxPoints: 100,
-    tolerance: 3,
-    debug: 0
+    baseZoom: 14,   // max zoom to preserve detail on
+    maxZoom: 4,     // zoom to slice down to on first pass
+    maxPoints: 100, // stop slicing a tile below this number of points
+    tolerance: 3,   // simplification tolerance (higher means simpler)
+    debug: 0        // logging level (0, 1 or 2)
 };
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
@@ -59,6 +61,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         options = this.options,
         debug = options.debug;
 
+    // avoid recursion by using a processing queue
     while (stack.length) {
         features = stack.shift();
         z = stack.shift();
@@ -97,6 +100,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         if (debug > 1) console.time('clipping');
 
+        // values we'll use for clipping
         var k1 = 0.5 * padding,
             k2 = 0.5 - k1,
             k3 = 0.5 + k1,
@@ -157,6 +161,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     if (debug > 1) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
 
+    // if we found a parent tile containing the original geometry, we can drill down from it
     if (parent.source) {
         if (isClippedSquare(parent.features)) return parent;
 
@@ -190,7 +195,6 @@ function toID(z, x, y) {
 function intersectX(a, b, x) {
     return [x, (x - a[0]) * (b[1] - a[1]) / (b[0] - a[0]) + a[1], 1];
 }
-
 function intersectY(a, b, y) {
     return [(y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]) + a[0], y, 1];
 }

@@ -4,7 +4,7 @@ module.exports = convert;
 
 var simplify = require('./simplify');
 
-// converts GeoJSON feature into an intermediate JSON vector format with projection & simplification
+// converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
 function convert(data, tolerance) {
     var features = [];
@@ -17,6 +17,7 @@ function convert(data, tolerance) {
         convertFeature(features, data, tolerance);
 
     } else {
+        // single geometry or a geometry collection
         convertFeature(features, {geometry: data}, tolerance);
     }
     return features;
@@ -72,8 +73,8 @@ function create(tags, type, geometry) {
         geometry: geometry,
         type: type,
         tags: tags || null,
-        min: [1, 1],
-        max: [0, 0]
+        min: [1, 1], // initial bbox values;
+        max: [0, 0]  // note that all coords are in [0..1] range
     };
     calcBBox(feature);
     return feature;
@@ -100,15 +101,19 @@ function projectPoint(p) {
 
 // calculate area and length of the poly
 function calcSize(points) {
-    var sum = 0,
+    var area = 0,
         dist = 0;
+
     for (var i = 0, a, b; i < points.length - 1; i++) {
         a = b || points[i];
         b = points[i + 1];
-        sum += a[0] * b[1] - b[0] * a[1];
-        dist += Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]); // Manhattan distance
+
+        area += a[0] * b[1] - b[0] * a[1];
+
+        // use Manhattan distance instead of Euclidian one to avoid expensive square root computation
+        dist += Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]);
     }
-    points.area = Math.abs(sum / 2);
+    points.area = Math.abs(area / 2);
     points.dist = dist;
 }
 
@@ -119,16 +124,16 @@ function calcBBox(feature) {
         max = feature.max;
 
     if (feature.type === 1) {
-        calcRingBBOX(min, max, geometry);
+        calcRingBBox(min, max, geometry);
     } else {
         for (var i = 0; i < geometry.length; i++) {
-            calcRingBBOX(min, max, geometry[i]);
+            calcRingBBox(min, max, geometry[i]);
         }
     }
     return feature;
 }
 
-function calcRingBBOX(min, max, points) {
+function calcRingBBox(min, max, points) {
     for (var i = 0, p; i < points.length; i++) {
         p = points[i];
         min[0] = Math.min(p[0], min[0]);

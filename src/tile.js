@@ -49,7 +49,7 @@ function addFeature(tile, feature, z2, tx, ty, tolerance, extent, noSimplify) {
 
             for (j = 0; j < ring.length; j++) {
                 p = ring[j];
-                // keep points with significance > tolerance and points introduced by clipping
+                // keep points with importance > tolerance
                 if (noSimplify || p[2] > sqTolerance) {
                     transformedRing.push(transformPoint(p, z2, tx, ty, extent));
                     tile.numSimplified++;

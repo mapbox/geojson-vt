@@ -13,9 +13,11 @@ function simplify(points, tolerance) {
         stack = [],
         i, maxSqDist, sqDist, index;
 
+    // always retain the endpoints (1 is the max value)
     points[first][2] = 1;
     points[last][2] = 1;
 
+    // avoid recursion by using a stack
     while (last) {
 
         maxSqDist = 0;
@@ -30,7 +32,7 @@ function simplify(points, tolerance) {
         }
 
         if (maxSqDist > sqTolerance) {
-            points[index][2] = maxSqDist;
+            points[index][2] = maxSqDist; // save the point importance in squared pixels as a z coordinate
             stack.push(first, index, index, last);
         }
 

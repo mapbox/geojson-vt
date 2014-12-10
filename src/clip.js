@@ -38,6 +38,8 @@ function clip(features, scale, k1, k2, axis, intersect) {
                 clipGeometry(geometry, k1, k2, axis, intersect, type === 3);
 
         if (slices.length) {
+            // if a feature got clipped, it will likely get clipped on the next zoom level as well,
+            // so there's no need to recalculate bboxes
             clipped.push({
                 geometry: slices,
                 type: type,
@@ -116,14 +118,13 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
             }
         }
 
+        // add the last point
         a = points[len - 1];
         ak = a[axis];
         if (ak >= k1 && ak <= k2) slice.push(a);
 
-        var sliceLen = slice.length;
-
         // close the polygon if its endpoints are not the same after clipping
-        if (closed && slice[0] !== slice[sliceLen - 1]) slice.push(slice[0]);
+        if (closed && slice[0] !== slice[slice.length - 1]) slice.push(slice[0]);
 
         // add the final slice
         newSlice(slices, slice, area, dist);
@@ -134,8 +135,11 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
 
 function newSlice(slices, slice, area, dist) {
     if (slice.length) {
+        // we don't recalculate the area/length of the unclipped geometry because the case where it goes
+        // below the visibility threshold as a result of clipping is rare, so we avoid doing unnecessary work
         slice.area = area;
         slice.dist = dist;
+
         slices.push(slice);
     }
     return [];

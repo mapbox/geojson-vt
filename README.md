@@ -20,10 +20,11 @@ retaining the minimum level of detail appropriate for each zoom level
 ```js
 // build an initial index of tiles
 var tileIndex = geojsonvt(geoJSON, { // all parameters are optional, with sensible defaults
-	baseZoom: 14, // max zoom to preserve detail on
-	maxZoom: 4, // zoom to slice down on first pass
-	maxPoints: 100, // during first pass, stop slicing each tile below this number of points
-	debug: 0 // debug level: 1 = some timing info; 2 = individual tiles timing;
+	baseZoom: 14,   // max zoom to preserve detail on
+	maxZoom: 4,     // zoom to slice down to on first pass
+	maxPoints: 100, // stop slicing each tile below this number of points
+	tolerance: 3,   // simplification tolerance (higher means simpler)
+	debug: 0        // logging level (0 to disable, 1 or 2)
 });
 
 // request a particular tile
