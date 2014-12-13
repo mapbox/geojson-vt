@@ -3,3 +3,4 @@ debug/data/hsa.json
 debug/data/zips*.json
 geojson-vt-dev.js
 geojson-vt.js
+node_modules
