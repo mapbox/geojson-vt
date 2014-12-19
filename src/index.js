@@ -26,7 +26,7 @@ function GeoJSONVT(data, options) {
     if (debug) {
         console.timeEnd('preprocess data');
         console.time('generate tiles up to z' + options.maxZoom);
-        this.stats = [];
+        this.stats = {};
         this.total = 0;
     }
 
@@ -36,7 +36,7 @@ function GeoJSONVT(data, options) {
     if (debug) {
         console.log('features: %d, points: %d', this.tiles[0].numFeatures, this.tiles[0].numPoints);
         console.timeEnd('generate tiles up to z' + options.maxZoom);
-        console.log('tiles generated:', this.total, this.stats);
+        console.log('tiles generated:', this.total, JSON.stringify(this.stats));
     }
 }
 
@@ -81,7 +81,8 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
                         z, x, y, tile.numFeatures, tile.numPoints, tile.numSimplified);
                     console.timeEnd('creation');
                 }
-                this.stats[z] = (this.stats[z] || 0) + 1;
+                var key = 'z' + z + ':';
+                this.stats[key] = (this.stats[key] || 0) + 1;
                 this.total++;
             }
         }
