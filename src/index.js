@@ -199,8 +199,6 @@ function intersectY(a, b, y) {
 }
 
 function extend(dest, src) {
-    for (var i in src) {
-        dest[i] = src[i];
-    }
+    for (var i in src) dest[i] = src[i];
     return dest;
 }

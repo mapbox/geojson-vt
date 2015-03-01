@@ -123,13 +123,9 @@ function calcBBox(feature) {
         min = feature.min,
         max = feature.max;
 
-    if (feature.type === 1) {
-        calcRingBBox(min, max, geometry);
-    } else {
-        for (var i = 0; i < geometry.length; i++) {
-            calcRingBBox(min, max, geometry[i]);
-        }
-    }
+    if (feature.type === 1) calcRingBBox(min, max, geometry);
+    else for (var i = 0; i < geometry.length; i++) calcRingBBox(min, max, geometry[i]);
+
     return feature;
 }
 

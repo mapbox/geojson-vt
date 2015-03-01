@@ -3,6 +3,7 @@
 var test = require('tape');
 var clip = require('../src/clip');
 
+/*eslint comma-spacing:0*/
 
 function intersectX(p0, p1, x) {
     return [x, (x - p0[0]) * (p1[1] - p0[1]) / (p1[0] - p0[0]) + p0[1]];
@@ -22,14 +23,14 @@ test('clips polylines', function (t) {
     ], 1, 10, 40, 0, intersectX);
 
     var expected = [
-        {geometry:[
+        {geometry: [
             [[10,0],[40,0]],
             [[40,10],[20,10],[20,20],[30,20],[30,30],[40,30]],
             [[40,40],[25,40],[25,50],[10,50]],
-            [[10,60],[25,60]]], type:2,tags:1},
-        {geometry:[
+            [[10,60],[25,60]]], type: 2, tags: 1},
+        {geometry: [
             [[10,0],[40,0]],
-            [[40,10],[10,10]]], type:2,tags:2}];
+            [[40,10],[10,10]]], type: 2, tags: 2}];
 
     t.equal(JSON.stringify(clipped), JSON.stringify(expected));
 
@@ -48,9 +49,9 @@ test('clips polygons', function (t) {
     ], 1, 10, 40, 0, intersectX);
 
     var expected = [
-        {geometry:[[[10,0],[40,0],[40,10],[20,10],[20,20],[30,20],[30,30],[40,30],
-                   [40,40],[25,40],[25,50],[10,50],[10,60],[25,60],[10,24],[10,0]]],type:3,tags:1},
-        {geometry:[[[10,0],[40,0],[40,10],[10,10],[10,0]]],type:3,tags:2}
+        {geometry: [[[10,0],[40,0],[40,10],[20,10],[20,20],[30,20],[30,30],[40,30],
+                   [40,40],[25,40],[25,50],[10,50],[10,60],[25,60],[10,24],[10,0]]], type: 3, tags: 1},
+        {geometry: [[[10,0],[40,0],[40,10],[10,10],[10,0]]], type: 3, tags: 2}
     ];
 
     t.equal(JSON.stringify(clipped), JSON.stringify(expected));
@@ -65,7 +66,7 @@ test('clips points', function (t) {
         {geometry: geom2[0], type: 1, tags: 2}
     ], 1, 10, 40, 0, intersectX);
 
-    t.same(clipped, [{geometry:[[20,10],[20,20],[30,20],[30,30],[25,40],[25,50],[25,60]],type:1,tags:1}]);
+    t.same(clipped, [{geometry: [[20,10],[20,20],[30,20],[30,30],[25,40],[25,50],[25,60]], type: 1, tags: 1}]);
 
     t.end();
 });
