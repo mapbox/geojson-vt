@@ -129,22 +129,26 @@
 
             for (var i = 0; i < features.length; i++) {
                 var feature = features[i],
-                    typeChanged = type !== feature.type,
                     type = feature.type;
 
                 ctx.beginPath();
 
                 for (var j = 0; j < feature.geometry.length; j++) {
-                    var ring = feature.geometry[j];
+                    var geom = feature.geometry[j];
 
-                    for (var k = 0; k < ring.length; k++) {
-                        var p = ring[k];
+                    if (type === 1) {
+                        ctx.arc(geom[0] * ratio + pad, geom[1] * ratio + pad, 2, 0, 2 * Math.PI, false);
+                        continue;
+                    }
+
+                    for (var k = 0; k < geom.length; k++) {
+                        var p = geom[k];
                         if (k) ctx.lineTo(p[0] * ratio + pad, p[1] * ratio + pad);
                         else ctx.moveTo(p[0] * ratio + pad, p[1] * ratio + pad);
                     }
                 }
 
-                if (type === 3) ctx.fill('evenodd');
+                if (type === 3 || type === 1) ctx.fill('evenodd');
                 ctx.stroke();
             }
             drawGrid();
