@@ -6,7 +6,6 @@ var options = {
         debug: 1
     },
 
-    extent = 4096,
     padding = 8 / 512,
     totalExtent = 4096 * (1 + padding * 2),
 
@@ -17,6 +16,8 @@ var options = {
     height = canvas.height = canvas.width = window.innerHeight - 5,
     ratio = height / totalExtent,
     pad = 4096 * padding * ratio,
+
+    backButton = document.getElementById('back'),
 
     x = 0,
     y = 0,
@@ -32,20 +33,26 @@ if (devicePixelRatio > 1) {
 
 ctx.textAlign = 'center';
 ctx.font = '48px Helvetica, Arial';
-ctx.fillText("Drag a GeoJSON here", height / 2, height / 2);
+ctx.fillText('Drag a GeoJSON here', height / 2, height / 2);
 
 function humanFileSize(size) {
     var i = Math.floor(Math.log(size) / Math.log(1024));
     return Math.round(100 * (size / Math.pow(1024, i))) / 100 + ' ' + ['B', 'kB', 'MB', 'GB'][i];
-};
+}
 
-canvas.ondragover = function () { this.className = 'hover'; return false; };
-canvas.ondragend = function () { this.className = ''; return false; };
+canvas.ondragover = function () {
+    this.className = 'hover';
+    return false;
+};
+canvas.ondragend = function () {
+    this.className = '';
+    return false;
+};
 canvas.ondrop = function (e) {
     this.className = 'loaded';
 
     ctx.clearRect(0, 0, height, height);
-    ctx.fillText("Thanks! Loading...", height / 2, height / 2);
+    ctx.fillText('Thanks! Loading...', height / 2, height / 2);
 
     var reader = new FileReader();
     reader.onload = function (event) {
@@ -54,7 +61,7 @@ canvas.ondrop = function (e) {
         var data = JSON.parse(event.target.result);
         console.timeEnd('JSON.parse');
 
-        tileIndex = geojsonvt(data, options);
+        tileIndex = geojsonvt(data, options); //eslint-disable-line
 
         drawTile();
     };
@@ -81,10 +88,7 @@ function drawGrid() {
 
 function drawSquare(left, top) {
     ctx.strokeStyle = 'blue';
-
-    var x = left ? pad : halfHeight;
-    var y = top ? pad : halfHeight;
-    ctx.strokeRect(x, y, halfHeight - pad, halfHeight - pad);
+    ctx.strokeRect(left ? pad : halfHeight, top ? pad : halfHeight, halfHeight - pad, halfHeight - pad);
 }
 
 function drawTile() {
@@ -165,7 +169,7 @@ canvas.onmousemove = function (e) {
         top = mouseY / height < 0.5;
     drawGrid();
     drawSquare(left, top);
-}
+};
 
 function zoomOut() {
     z--;
@@ -173,17 +177,11 @@ function zoomOut() {
     y = Math.floor(y / 2);
 }
 
-var backButton = document.getElementById('back');
-
 backButton.style.display = 'none';
 
-backButton.onclick = function (e) {
+backButton.onclick = function () {
     if (!tileIndex) return;
     zoomOut();
     drawTile();
     if (z === 0) backButton.style.display = 'none';
-}
-
-function toID(z, x, y) {
-    return (((1 << z) * y + x) * 32) + z;
-}
+};
