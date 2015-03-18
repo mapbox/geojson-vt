@@ -33,11 +33,13 @@ function simplify(points, tolerance) {
 
         if (maxSqDist > sqTolerance) {
             points[index][2] = maxSqDist; // save the point importance in squared pixels as a z coordinate
-            stack.push(first, index, index, last);
-        }
+            stack.push(first, index);
+            first = index;
 
-        last = stack.pop();
-        first = stack.pop();
+        } else {
+            last = stack.pop();
+            first = stack.pop();
+        }
     }
 }
 
