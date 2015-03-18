@@ -17,51 +17,17 @@
   "main": "src/index.js",
   "devDependencies": {
     "benchmark": "^1.0.0",
-    "browserify": "^7.0.0",
-    "eslint": "^0.16.2",
+    "browserify": "^9.0.3",
+    "eslint": "^0.17.1",
     "faucet": "0.0.1",
-    "tape": "^3.0.3",
-    "uglify-js": "^2.4.16",
-    "watchify": "^2.1.1"
+    "tape": "^3.5.0",
+    "uglify-js": "^2.4.17",
+    "watchify": "^2.4.0"
   },
   "scripts": {
     "test": "eslint src/*.js test/test-*.js debug/viz.js && tape test/test-*.js | faucet",
     "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
     "build-dev": "browserify -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
     "watch": "watchify -v -d src/index.js -s geojsonvt -o geojson-vt-dev.js"
-  },
-  "eslintConfig": {
-    "rules": {
-      "no-use-before-define": [
-        2,
-        "nofunc"
-      ],
-      "camelcase": 2,
-      "space-after-function-name": 2,
-      "space-in-parens": 2,
-      "space-before-blocks": 2,
-      "space-after-keywords": 2,
-      "comma-style": 2,
-      "no-lonely-if": 2,
-      "no-else-return": 2,
-      "new-cap": 2,
-      "no-empty": 2,
-      "no-new": 2,
-      "key-spacing": 2,
-      "no-multi-spaces": 0,
-      "space-in-brackets": 2,
-      "brace-style": 2,
-      "indent": 2,
-      "quotes": [
-        2,
-        "single"
-      ],
-      "curly": 0,
-      "no-constant-condition": 0
-    },
-    "env": {
-      "node": true,
-      "browser": true
-    }
   }
 }
