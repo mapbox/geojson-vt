@@ -87,14 +87,29 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             }
         }
 
-        if (!cz && (z === options.maxZoom || tile.numPoints <= options.maxPoints ||
-                isClippedSquare(tile.features, extent, buffer)) || z === options.baseZoom || z === cz) {
-            tile.source = features;
-            continue; // stop tiling
+        // save reference to original geometry in tile so that we can drill down later if we stop now
+        tile.source = features;
+
+        // stop tiling if the tile is degenerate
+        if (isClippedSquare(tile.features, extent, buffer)) continue;
+
+        // if it's the first-pass tiling
+        if (!cz) {
+            // stop tiling if we reached max zoom, or if the tile is too simple
+            if (z === options.maxZoom || tile.numPoints <= options.maxPoints) continue;
+
+        // if a drilldown to a specific tile
+        } else {
+            // stop tiling if we reached base zoom or our target tile zoom
+            if (z === options.baseZoom || z === cz) continue;
+
+            // stop tiling if it's not an ancestor of the target tile
+            var m = 1 << (cz - z);
+            if (x !== Math.floor(cx / m) && y !== Math.floor(cy / m)) continue;
         }
 
-        if (cz) tile.source = features;
-        else tile.source = null;
+        // if we slice further down, no need to keep source geometry
+        tile.source = null;
 
         if (debug > 1) console.time('clipping');
 
@@ -103,29 +118,21 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             k2 = 0.5 - k1,
             k3 = 0.5 + k1,
             k4 = 1 + k1,
+            tl, bl, tr, br, left, right;
 
-            tl, bl, tr, br, left, right,
-            m, goLeft, goTop;
+        tl = bl = tr = br = null;
 
-        if (cz) { // if we have a specific tile to drill down to, calculate where to go
-            m = 1 << (cz - z);
-            goLeft = cx / m - x < 0.5;
-            goTop = cy / m - y < 0.5;
-        }
-
-        tl = bl = tr = br = left = right = null;
-
-        if (!cz ||  goLeft) left  = clip(features, z2, x - k1, x + k3, 0, intersectX);
-        if (!cz || !goLeft) right = clip(features, z2, x + k2, x + k4, 0, intersectX);
+        left  = clip(features, z2, x - k1, x + k3, 0, intersectX);
+        right = clip(features, z2, x + k2, x + k4, 0, intersectX);
 
         if (left) {
-            if (!cz ||  goTop) tl = clip(left, z2, y - k1, y + k3, 1, intersectY);
-            if (!cz || !goTop) bl = clip(left, z2, y + k2, y + k4, 1, intersectY);
+            tl = clip(left, z2, y - k1, y + k3, 1, intersectY);
+            bl = clip(left, z2, y + k2, y + k4, 1, intersectY);
         }
 
         if (right) {
-            if (!cz ||  goTop) tr = clip(right, z2, y - k1, y + k3, 1, intersectY);
-            if (!cz || !goTop) br = clip(right, z2, y + k2, y + k4, 1, intersectY);
+            tr = clip(right, z2, y - k1, y + k3, 1, intersectY);
+            br = clip(right, z2, y + k2, y + k4, 1, intersectY);
         }
 
         if (debug > 1) console.timeEnd('clipping');

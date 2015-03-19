@@ -187,3 +187,21 @@ backButton.onclick = function () {
     drawTile();
     if (z === 0) backButton.style.display = 'none';
 };
+
+/*eslint-disable no-unused-vars */
+function drillDown() {
+    var i, j;
+    console.time('drill down');
+    for (i = 0; i < 10; i++) {
+        for (j = 0; j < 10; j++) {
+            tileIndex.getTile(7, 30 + i, 45 + j);
+        }
+    }
+    for (i = 0; i < 10; i++) {
+        for (j = 0; j < 10; j++) {
+            tileIndex.getTile(8, 70 + i, 100 + j);
+        }
+    }
+    console.timeEnd('drill down');
+}
+/*eslint-enable no-unused-vars */
