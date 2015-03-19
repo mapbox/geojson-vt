@@ -6,9 +6,20 @@ var data = require('./data/hrr.json');
 console.timeEnd('load data');
 
 var tileIndex = geojsonvt(data, {
-	maxZoom: 14,
+	maxZoom: 4,
 	debug: 1
 });
+
+console.time('drill down');
+for (var i = 0; i < 10; i++) {
+    for (var j = 0; j < 10; j++) {
+        tileIndex.getTile(7, 30 + i, 45 + j);
+    }
+}
+console.timeEnd('drill down');
+
+console.log('tiles after drilldown', Object.keys(tileIndex.tiles).length);
+
 
 // tileIndex.maxZoom = 14;
 // tileIndex.getTile(14, 4100, 6200);
