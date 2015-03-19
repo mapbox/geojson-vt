@@ -73,7 +73,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         if (!tile) {
             if (debug > 1) console.time('creation');
 
-            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, extent, z === options.baseZoom);
+            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, z === options.baseZoom);
 
             if (debug) {
                 if (debug > 1) {
@@ -145,11 +145,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 };
 
 GeoJSONVT.prototype.getTile = function (z, x, y) {
-    var id = toID(z, x, y);
-    if (this.tiles[id]) return this.tiles[id];
-
     var options = this.options,
+        extent = options.extent,
         debug = options.debug;
+
+    var id = toID(z, x, y);
+    if (this.tiles[id]) return transformTile(this.tiles[id], extent);
 
     if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -169,14 +170,49 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     // if we found a parent tile containing the original geometry, we can drill down from it
     if (parent.source) {
-        if (isClippedSquare(parent.features, options.extent, options.buffer)) return parent;
+        if (isClippedSquare(parent.features, options.extent, options.buffer)) return transformTile(parent, extent);
 
         if (debug > 1) console.time('drilling down');
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
     }
 
-    return this.tiles[id];
+    return transformTile(this.tiles[id], extent);
+};
+
+function transformTile(tile, extent) {
+    if (!tile || tile.transformed) return tile;
+
+    var z2 = tile.z2,
+        tx = tile.x,
+        ty = tile.y;
+
+    for (var i = 0; i < tile.features.length; i++) {
+        var feature = tile.features[i],
+            geom = feature.geometry,
+            type = feature.type,
+            transformed = [];
+
+        if (type === 1) {
+            for (var j = 0; j < geom.length; j++) geom[j] = transformPoint(geom[j], extent, z2, tx, ty);
+
+        } else {
+            for (var j = 0; j < geom.length; j++) {
+                var ring = geom[j];
+                for (var k = 0; k < ring.length; k++) ring[k] = transformPoint(ring[k], extent, z2, tx, ty);
+            }
+        }
+    }
+
+    tile.transformed = true;
+
+    return tile;
+}
+
+function transformPoint(p, extent, z2, tx, ty) {
+    var x = Math.round(extent * (p[0] * z2 - tx)),
+        y = Math.round(extent * (p[1] * z2 - ty));
+    return [x, y];
 };
 
 // checks whether a tile is a whole-area fill after clipping; if it is, there's no sense slicing it further
