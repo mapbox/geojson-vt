@@ -93,7 +93,9 @@ function drawSquare(left, top) {
 
 function drawTile() {
 
+    console.time('getting tile z' + z + '-' + x + '-' + y);
     var tile = tileIndex.getTile(z, x, y);
+    console.timeEnd('getting tile z' + z + '-' + x + '-' + y);
 
     if (!tile) {
         console.log('tile empty');

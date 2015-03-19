@@ -81,7 +81,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
                         z, x, y, tile.numFeatures, tile.numPoints, tile.numSimplified);
                     console.timeEnd('creation');
                 }
-                var key = 'z' + z + ':';
+                var key = 'z' + z;
                 this.stats[key] = (this.stats[key] || 0) + 1;
                 this.total++;
             }
@@ -164,9 +164,9 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     if (parent.source) {
         if (isClippedSquare(parent.features, options.extent, options.buffer)) return parent;
 
-        if (debug) console.time('drilling down');
+        if (debug > 1) console.time('drilling down');
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
-        if (debug) console.timeEnd('drilling down');
+        if (debug > 1) console.timeEnd('drilling down');
     }
 
     return this.tiles[id];

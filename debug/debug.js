@@ -16,6 +16,11 @@ for (var i = 0; i < 10; i++) {
         tileIndex.getTile(7, 30 + i, 45 + j);
     }
 }
+for (var i = 0; i < 10; i++) {
+    for (var j = 0; j < 10; j++) {
+        tileIndex.getTile(8, 70 + i, 100 + j);
+    }
+}
 console.timeEnd('drill down');
 
 console.log('tiles after drilldown', Object.keys(tileIndex.tiles).length);
