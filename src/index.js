@@ -18,14 +18,15 @@ function GeoJSONVT(data, options) {
 
     if (debug) console.time('preprocess data');
 
-    var z2 = 1 << options.baseZoom, // 2^z
+    var z2 = 1 << options.maxZoom, // 2^z
         features = convert(data, options.tolerance / (z2 * options.extent));
 
     this.tiles = {};
 
     if (debug) {
         console.timeEnd('preprocess data');
-        console.time('generate tiles up to z' + options.maxZoom);
+        console.log('index: maxZoom: %d, maxPoints: %d', options.indexMaxZoom, options.indexMaxPoints);
+        console.time('generate tiles');
         this.stats = {};
         this.total = 0;
     }
@@ -35,19 +36,19 @@ function GeoJSONVT(data, options) {
 
     if (debug) {
         console.log('features: %d, points: %d', this.tiles[0].numFeatures, this.tiles[0].numPoints);
-        console.timeEnd('generate tiles up to z' + options.maxZoom);
+        console.timeEnd('generate tiles');
         console.log('tiles generated:', this.total, JSON.stringify(this.stats));
     }
 }
 
 GeoJSONVT.prototype.options = {
-    baseZoom: 14,   // max zoom to preserve detail on
-    maxZoom: 4,     // zoom to slice down to on first pass
-    maxPoints: 100, // stop slicing a tile below this number of points
-    tolerance: 3,   // simplification tolerance (higher means simpler)
-    extent: 4096,   // tile extent
-    buffer: 64,     // tile buffer on each side
-    debug: 0        // logging level (0, 1 or 2)
+    maxZoom: 14,         // max zoom to preserve detail on
+    indexMaxZoom: 4,     // max zoom in the tile index
+    indexMaxPoints: 100, // max number of points per tile in the tile index
+    tolerance: 3,        // simplification tolerance (higher means simpler)
+    extent: 4096,        // tile extent
+    buffer: 64,          // tile buffer on each side
+    debug: 0             // logging level (0, 1 or 2)
 };
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
@@ -68,12 +69,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         var z2 = 1 << z,
             id = toID(z, x, y),
             tile = this.tiles[id],
-            tileTolerance = z === options.baseZoom ? 0 : options.tolerance / (z2 * extent);
+            tileTolerance = z === options.maxZoom ? 0 : options.tolerance / (z2 * extent);
 
         if (!tile) {
             if (debug > 1) console.time('creation');
 
-            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, z === options.baseZoom);
+            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, z === options.maxZoom);
 
             if (debug) {
                 if (debug > 1) {
@@ -96,12 +97,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         // if it's the first-pass tiling
         if (!cz) {
             // stop tiling if we reached max zoom, or if the tile is too simple
-            if (z === options.maxZoom || tile.numPoints <= options.maxPoints) continue;
+            if (z === options.indexMaxZoom || tile.numPoints <= options.indexMaxPoints) continue;
 
         // if a drilldown to a specific tile
         } else {
             // stop tiling if we reached base zoom or our target tile zoom
-            if (z === options.baseZoom || z === cz) continue;
+            if (z === options.maxZoom || z === cz) continue;
 
             // stop tiling if it's not an ancestor of the target tile
             var m = 1 << (cz - z);
