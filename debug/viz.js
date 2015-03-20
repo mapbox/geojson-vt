@@ -1,8 +1,6 @@
 'use strict';
 
 var options = {
-        maxZoom: 4,
-        maxPoints: 100,
         debug: 1
     },
 
