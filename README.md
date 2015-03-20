@@ -1,4 +1,4 @@
-### geojson-vt &mdash; GeoJSON Vector Tiles
+## geojson-vt &mdash; GeoJSON Vector Tiles
 
 A highly efficient JavaScript library for **slicing GeoJSON data into vector tiles on the fly**,
 primarily designed to enable rendering and interacting with large geospatial datasets
@@ -15,7 +15,7 @@ To make data rendering and interaction fast, the tiles are simplified,
 retaining the minimum level of detail appropriate for each zoom level
 (simplifying shapes, filtering out tiny polygons and polylines).
 
-#### Demo
+### Demo
 
 Here's **geojson-vt** action in [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js),
 dynamically loading a 100Mb US zip codes GeoJSON with 5.4 million points:
@@ -29,7 +29,7 @@ and drag any GeoJSON on the page, watching the console.
 
 ![](https://cloud.githubusercontent.com/assets/25395/5363235/41955c6e-7fa8-11e4-9575-a66ef54cb6d9.gif)
 
-#### Usage
+### Usage
 
 ```js
 // build an initial index of tiles
@@ -39,27 +39,46 @@ var tileIndex = geojsonvt(geoJSON);
 var features = tileIndex.getTile(z, x, y).features;
 ```
 
-#### Options
+### Options
 
 You can fine-tune the results with an options object,
 although the defaults are sensible and work well for most use cases.
 
 ```js
 var tileIndes = geojsonvt(data, {
-	baseZoom: 14,   // max zoom to preserve detail on
-	maxZoom: 4,     // zoom to slice down to on first pass
-	maxPoints: 100, // stop slicing each tile below this number of points
-	tolerance: 3,   // simplification tolerance (higher means simpler)
-	extent: 4096,   // tile extent (both width and height)
-	buffer: 64,		// tile buffer on each side
-	debug: 0        // logging level (0 to disable, 1 or 2)
+	maxZoom: 14,  // max zoom to preserve detail on
+	tolerance: 3, // simplification tolerance (higher means simpler)
+	extent: 4096, // tile extent (both width and height)
+	buffer: 64,	  // tile buffer on each side
+	debug: 0      // logging level (0 to disable, 1 or 2)
+
+	indexMaxZoom: 4,        // max zoom in the initial tile index
+	indexMaxPoints: 100000, // max number of points per tile in the index
 });
 ```
 
-#### Browser builds
+### Browser builds
 
 ```bash
 npm install
 npm run build-dev # development build, used by the debug page
 npm run build-min # minified production build
 ```
+
+### Changelog
+
+##### 2.0.0 (Mar 20, 2015)
+
+- **Breaking**: `maxZoom` renamed to `indexMaxZoom`, `maxPoints` to `indexMaxPoints`, `baseZoom` to `maxZoom`.
+- Improved performance of both indexing and on-demand tile requests.
+- Improved memory footprint.
+- Better indexing defaults.
+- Fixed a bug where unnecessary memory was retained in some cases.
+
+##### 1.1.0 (Mar 2, 2015)
+
+- Add `buffer` and `extent` options.
+
+##### 1.0.0 (Dec 8, 2014)
+
+- Initial release.
