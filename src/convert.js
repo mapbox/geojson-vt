@@ -73,8 +73,8 @@ function create(tags, type, geometry) {
         geometry: geometry,
         type: type,
         tags: tags || null,
-        min: [1, 1], // initial bbox values;
-        max: [0, 0]  // note that all coords are in [0..1] range
+        min: [2, 1], // initial bbox values;
+        max: [-1, 0]  // note that coords are usually in [0..1] range
     };
     calcBBox(feature);
     return feature;

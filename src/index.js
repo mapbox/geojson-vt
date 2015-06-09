@@ -123,17 +123,17 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         tl = bl = tr = br = null;
 
-        left  = clip(features, z2, x - k1, x + k3, 0, intersectX);
-        right = clip(features, z2, x + k2, x + k4, 0, intersectX);
+        left  = clip(features, z2, x - k1, x + k3, 0, intersectX, tile.min[0], tile.max[0]);
+        right = clip(features, z2, x + k2, x + k4, 0, intersectX, tile.min[0], tile.max[0]);
 
         if (left) {
-            tl = clip(left, z2, y - k1, y + k3, 1, intersectY);
-            bl = clip(left, z2, y + k2, y + k4, 1, intersectY);
+            tl = clip(left, z2, y - k1, y + k3, 1, intersectY, tile.min[1], tile.max[1]);
+            bl = clip(left, z2, y + k2, y + k4, 1, intersectY, tile.min[1], tile.max[1]);
         }
 
         if (right) {
-            tr = clip(right, z2, y - k1, y + k3, 1, intersectY);
-            br = clip(right, z2, y + k2, y + k4, 1, intersectY);
+            tr = clip(right, z2, y - k1, y + k3, 1, intersectY, tile.min[1], tile.max[1]);
+            br = clip(right, z2, y + k2, y + k4, 1, intersectY, tile.min[1], tile.max[1]);
         }
 
         if (debug > 1) console.timeEnd('clipping');

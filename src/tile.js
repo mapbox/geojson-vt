@@ -12,11 +12,21 @@ function createTile(features, z2, tx, ty, tolerance, noSimplify) {
         x: tx,
         y: ty,
         z2: z2,
-        transformed: false
+        transformed: false,
+        min: [2, 1],
+        max: [-1, 0]
     };
     for (var i = 0; i < features.length; i++) {
         tile.numFeatures++;
         addFeature(tile, features[i], tolerance, noSimplify);
+
+        var min = features[i].min,
+            max = features[i].max;
+
+        if (min[0] < tile.min[0]) tile.min[0] = min[0];
+        if (min[1] < tile.min[1]) tile.min[1] = min[1];
+        if (max[0] > tile.max[0]) tile.max[0] = max[0];
+        if (max[1] > tile.max[1]) tile.max[1] = max[1];
     }
     return tile;
 }

@@ -9,10 +9,13 @@ module.exports = clip;
  *     |        |
  */
 
-function clip(features, scale, k1, k2, axis, intersect) {
+function clip(features, scale, k1, k2, axis, intersect, minAll, maxAll) {
 
     k1 /= scale;
     k2 /= scale;
+
+    if (minAll >= k1 && maxAll <= k2) return features; // trivial accept
+    else if (minAll > k2 || maxAll < k1) return null; // trivial reject
 
     var clipped = [];
 
@@ -23,15 +26,13 @@ function clip(features, scale, k1, k2, axis, intersect) {
             type = feature.type,
             min, max;
 
-        if (feature.min) {
-            min = feature.min[axis];
-            max = feature.max[axis];
+        min = feature.min[axis];
+        max = feature.max[axis];
 
-            if (min >= k1 && max <= k2) { // trivial accept
-                clipped.push(feature);
-                continue;
-            } else if (min > k2 || max < k1) continue; // trivial reject
-        }
+        if (min >= k1 && max <= k2) { // trivial accept
+            clipped.push(feature);
+            continue;
+        } else if (min > k2 || max < k1) continue; // trivial reject
 
         var slices = type === 1 ?
                 clipPoints(geometry, k1, k2, axis) :
@@ -43,7 +44,9 @@ function clip(features, scale, k1, k2, axis, intersect) {
             clipped.push({
                 geometry: slices,
                 type: type,
-                tags: features[i].tags || null
+                tags: features[i].tags || null,
+                min: feature.min,
+                max: feature.max
             });
         }
     }
