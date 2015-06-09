@@ -67,6 +67,11 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.0.1 (June 9, 2015)
+
+- 10-20% faster tile indexing.
+- Fixed latitude extremes not being clamped.
+
 ##### 2.0.0 (Mar 20, 2015)
 
 - **Breaking**: `maxZoom` renamed to `indexMaxZoom`, `maxPoints` to `indexMaxPoints`, `baseZoom` to `maxZoom`.
