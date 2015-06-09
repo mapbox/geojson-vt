@@ -24,6 +24,7 @@
     "uglify-js": "^2.4.17",
     "watchify": "^2.4.0"
   },
+  "license": "ISC",
   "scripts": {
     "test": "eslint src/*.js test/test-*.js debug/viz.js && tape test/test-*.js | faucet",
     "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
