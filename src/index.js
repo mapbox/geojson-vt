@@ -4,6 +4,7 @@ module.exports = geojsonvt;
 
 var convert = require('./convert'), // GeoJSON conversion and preprocessing
     clip = require('./clip'),       // stripe clipping algorithm
+    wrap = require('./wrap'),       // date line processing
     createTile = require('./tile'); // final simplified tile generation
 
 
@@ -30,6 +31,8 @@ function GeoJSONVT(data, options) {
         this.stats = {};
         this.total = 0;
     }
+
+    features = wrap(features, options.buffer / options.extent, intersectX);
 
     // start slicing from the top tile down
     this.splitTile(features, 0, 0, 0);
@@ -149,6 +152,9 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     var options = this.options,
         extent = options.extent,
         debug = options.debug;
+
+    var z2 = 1 << z;
+    x = ((x % z2) + z2) % z2; // wrap tile x coordinate
 
     var id = toID(z, x, y);
     if (this.tiles[id]) return transformTile(this.tiles[id], extent);
