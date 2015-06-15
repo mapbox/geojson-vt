@@ -70,6 +70,10 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.1.0 (June 15, 2015)
+
+- Added proper handling for features crossing or near the date line.
+
 ##### 2.0.1 (June 9, 2015)
 
 - 10-20% faster tile indexing.
