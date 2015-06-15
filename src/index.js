@@ -153,6 +153,9 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
         extent = options.extent,
         debug = options.debug;
 
+    var z2 = 1 << z;
+    x = ((x % z2) + z2) % z2; // wrap tile x coordinate
+
     var id = toID(z, x, y);
     if (this.tiles[id]) return transformTile(this.tiles[id], extent);
 
