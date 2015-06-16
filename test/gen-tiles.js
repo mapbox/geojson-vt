@@ -16,8 +16,8 @@ if (require.main === module) { // if called directly
 
 function genTiles(data, maxZoom, maxPoints) {
     var index = geojsonvt(data, {
-        indexMaxZoom: maxZoom,
-        indexMaxPoints: maxPoints
+        indexMaxZoom: maxZoom || 0,
+        indexMaxPoints: maxPoints || 10000
     });
 
     var output = {};

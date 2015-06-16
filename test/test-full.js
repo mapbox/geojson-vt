@@ -6,7 +6,9 @@ var path = require('path');
 var genTiles = require('./gen-tiles');
 
 testTiles('us-states.json', 'us-states-tiles.json', 7, 200);
-testTiles('dateline.json', 'dateline-tiles.json', 7, 200);
+testTiles('dateline.json', 'dateline-tiles.json');
+testTiles('feature.json', 'feature-tiles.json');
+testTiles('collection.json', 'collection-tiles.json');
 
 function testTiles(inputFile, expectedFile, maxZoom, maxPoints) {
     test('full tiling test: ' + inputFile, function (t) {
