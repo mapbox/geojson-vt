@@ -64,7 +64,7 @@ function convertFeature(features, feature, tolerance) {
         }
 
     } else {
-        console.warn('Unsupported GeoJSON type: ' + geom.type);
+        throw new Error('Input data is not a valid GeoJSON object.');
     }
 }
 

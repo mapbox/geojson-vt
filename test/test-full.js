@@ -10,6 +10,13 @@ testTiles('dateline.json', 'dateline-tiles.json');
 testTiles('feature.json', 'feature-tiles.json');
 testTiles('collection.json', 'collection-tiles.json');
 
+test('throws on invalid GeoJSON', function (t) {
+    t.throws(function () {
+        genTiles({type: 'Pologon'});
+    });
+    t.end();
+});
+
 function testTiles(inputFile, expectedFile, maxZoom, maxPoints) {
     test('full tiling test: ' + inputFile, function (t) {
         t.same(genTiles(getJSON(inputFile), maxZoom, maxPoints), getJSON(expectedFile));
