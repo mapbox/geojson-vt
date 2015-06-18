@@ -70,6 +70,10 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.1.1 (June 18, 2015)
+
+- Fixed duplicate points in polygons.
+
 ##### 2.1.0 (June 15, 2015)
 
 - Added proper handling for features crossing or near the date line.

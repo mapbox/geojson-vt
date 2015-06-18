@@ -79,7 +79,7 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
             area = points.area,
             dist = points.dist,
             len = points.length,
-            a, j;
+            a, j, last;
 
         var slice = [];
 
@@ -127,13 +127,9 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
         if (ak >= k1 && ak <= k2) slice.push(a);
 
         // close the polygon if its endpoints are not the same after clipping
-        if (closed && slice.length) {
-            var first = slice[0];
-            var last = slice[slice.length - 1];
-            if (first[0] !== last[0] || first[1] !== last[1]) {
-                slice.push(first);
-            }
-        }
+
+        last = slice[slice.length - 1];
+        if (closed && last && (slice[0][0] !== last[0] || slice[0][1] !== last[1])) slice.push(slice[0]);
 
         // add the final slice
         newSlice(slices, slice, area, dist);
