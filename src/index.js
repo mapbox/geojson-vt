@@ -94,9 +94,6 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         // save reference to original geometry in tile so that we can drill down later if we stop now
         tile.source = features;
 
-        // stop tiling if the tile is degenerate
-        if (isClippedSquare(tile.features, extent, buffer)) continue;
-
         // if it's the first-pass tiling
         if (!cz) {
             // stop tiling if we reached max zoom, or if the tile is too simple
@@ -177,8 +174,6 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     // if we found a parent tile containing the original geometry, we can drill down from it
     if (parent.source) {
-        if (isClippedSquare(parent.features, options.extent, options.buffer)) return transformTile(parent, extent);
-
         if (debug > 1) console.time('drilling down');
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
@@ -220,21 +215,6 @@ function transformPoint(p, extent, z2, tx, ty) {
     var x = Math.round(extent * (p[0] * z2 - tx)),
         y = Math.round(extent * (p[1] * z2 - ty));
     return [x, y];
-}
-
-// checks whether a tile is a whole-area fill after clipping; if it is, there's no sense slicing it further
-function isClippedSquare(features, extent, buffer) {
-    if (features.length !== 1) return false;
-
-    var feature = features[0];
-    if (feature.type !== 3 || feature.geometry.length > 1) return false;
-
-    for (var i = 0; i < feature.geometry[0].length; i++) {
-        var p = feature.geometry[0][i];
-        if ((p[0] !== -buffer && p[0] !== extent + buffer) ||
-            (p[1] !== -buffer && p[1] !== extent + buffer)) return false;
-    }
-    return true;
 }
 
 function toID(z, x, y) {
