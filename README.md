@@ -57,6 +57,7 @@ var tileIndes = geojsonvt(data, {
 
 	indexMaxZoom: 4,        // max zoom in the initial tile index
 	indexMaxPoints: 100000, // max number of points per tile in the index
+	solidChildren: false    // whether to include solid tile children in the index
 });
 ```
 
@@ -69,6 +70,11 @@ npm run build-min # minified production build
 ```
 
 ### Changelog
+
+##### 2.1.3 (Aug 14, 2015)
+
+- Added `solidChildren` option that includes children of solid filled square tiles in the index (off by default).
+- Added back solid tile heuristics (not tiling solid filled square tiles further).
 
 ##### 2.1.2 (Aug 13, 2015)
 

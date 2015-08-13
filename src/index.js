@@ -48,6 +48,7 @@ GeoJSONVT.prototype.options = {
     maxZoom: 14,            // max zoom to preserve detail on
     indexMaxZoom: 5,        // max zoom in the tile index
     indexMaxPoints: 100000, // max number of points per tile in the tile index
+    solidChildren: false,   // whether to tile solid square tiles further
     tolerance: 3,           // simplification tolerance (higher means simpler)
     extent: 4096,           // tile extent
     buffer: 64,             // tile buffer on each side
@@ -60,7 +61,8 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         options = this.options,
         debug = options.debug,
         extent = options.extent,
-        buffer = options.buffer;
+        buffer = options.buffer,
+        solidChildren = options.solidChildren;
 
     // avoid recursion by using a processing queue
     while (stack.length) {
@@ -93,6 +95,9 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         // save reference to original geometry in tile so that we can drill down later if we stop now
         tile.source = features;
+
+        // stop tiling if the tile is solid clipped square
+        if (!solidChildren && isClippedSquare(tile, extent, buffer)) continue;
 
         // if it's the first-pass tiling
         if (!cz) {
@@ -174,6 +179,8 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     // if we found a parent tile containing the original geometry, we can drill down from it
     if (parent.source) {
+        if (isClippedSquare(parent, extent, options.buffer)) return transformTile(parent, extent);
+
         if (debug > 1) console.time('drilling down');
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
@@ -231,4 +238,25 @@ function intersectY(a, b, y) {
 function extend(dest, src) {
     for (var i in src) dest[i] = src[i];
     return dest;
+}
+
+// checks whether a tile is a whole-area fill after clipping; if it is, there's no sense slicing it further
+function isClippedSquare(tile, extent, buffer) {
+
+    var features = tile.source;
+    if (features.length !== 1) return false;
+
+    var feature = features[0];
+    if (feature.type !== 3 || feature.geometry.length > 1) return false;
+
+    var len = feature.geometry[0].length;
+    if (len !== 5) return false;
+
+    for (var i = 0; i < len; i++) {
+        var p = transformPoint(feature.geometry[0][i], extent, tile.z2, tile.x, tile.y);
+        if ((p[0] !== -buffer && p[0] !== extent + buffer) ||
+            (p[1] !== -buffer && p[1] !== extent + buffer)) return false;
+    }
+
+    return true;
 }
