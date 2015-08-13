@@ -70,6 +70,11 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.1.2 (Aug 13, 2015)
+
+- Fixed a crazy slowdown (~30x) when generating a huge number of tiles on the first run.
+- Removed clipped solid square heuristics (that actually didn't work since 2.0.0).
+
 ##### 2.1.1 (June 18, 2015)
 
 - Fixed duplicate points in polygons.
