@@ -64,10 +64,10 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     // avoid recursion by using a processing queue
     while (stack.length) {
-        features = stack.shift();
-        z = stack.shift();
-        x = stack.shift();
-        y = stack.shift();
+        y = stack.pop();
+        x = stack.pop();
+        z = stack.pop();
+        features = stack.pop();
 
         var z2 = 1 << z,
             id = toID(z, x, y),
