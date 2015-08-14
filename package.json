@@ -17,14 +17,14 @@
   "main": "src/index.js",
   "devDependencies": {
     "benchmark": "^1.0.0",
-    "browserify": "^10.2.4",
-    "coveralls": "^2.11.2",
-    "eslint": "^0.22.1",
+    "browserify": "^11.0.1",
+    "coveralls": "^2.11.4",
+    "eslint": "^1.1.0",
     "faucet": "0.0.1",
-    "istanbul": "^0.3.15",
-    "tape": "^4.0.0",
-    "uglify-js": "^2.4.23",
-    "watchify": "^3.2.2"
+    "istanbul": "^0.3.17",
+    "tape": "^4.1.0",
+    "uglify-js": "^2.4.24",
+    "watchify": "^3.3.1"
   },
   "license": "ISC",
   "scripts": {
