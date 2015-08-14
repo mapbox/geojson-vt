@@ -40,6 +40,9 @@ var tileIndex = geojsonvt(geoJSON);
 
 // request a particular tile
 var features = tileIndex.getTile(z, x, y).features;
+
+// show an array of tile coordinates created so far
+console.log(tileIndex.tileCoords); // [{z: 0, x: 0, y: 0}, ...]
 ```
 
 ### Options
@@ -70,6 +73,10 @@ npm run build-min # minified production build
 ```
 
 ### Changelog
+
+##### 2.1.5 (Aug 14, 2015)
+
+- Added `tileCoords` property with an array of coordinates of all tiles created so far.
 
 ##### 2.1.4 (Aug 14, 2015)
 

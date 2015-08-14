@@ -23,6 +23,7 @@ function GeoJSONVT(data, options) {
         features = convert(data, options.tolerance / (z2 * options.extent));
 
     this.tiles = {};
+    this.tileCoords = [];
 
     if (debug) {
         console.timeEnd('preprocess data');
@@ -59,10 +60,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     var stack = [features, z, x, y],
         options = this.options,
-        debug = options.debug,
-        extent = options.extent,
-        buffer = options.buffer,
-        solidChildren = options.solidChildren;
+        debug = options.debug;
 
     // avoid recursion by using a processing queue
     while (stack.length) {
@@ -74,12 +72,13 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         var z2 = 1 << z,
             id = toID(z, x, y),
             tile = this.tiles[id],
-            tileTolerance = z === options.maxZoom ? 0 : options.tolerance / (z2 * extent);
+            tileTolerance = z === options.maxZoom ? 0 : options.tolerance / (z2 * options.extent);
 
         if (!tile) {
             if (debug > 1) console.time('creation');
 
             tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, z === options.maxZoom);
+            this.tileCoords.push({z: z, x: x, y: y});
 
             if (debug) {
                 if (debug > 1) {
@@ -97,7 +96,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         tile.source = features;
 
         // stop tiling if the tile is solid clipped square
-        if (!solidChildren && isClippedSquare(tile, extent, buffer)) continue;
+        if (!options.solidChildren && isClippedSquare(tile, options.extent, options.buffer)) continue;
 
         // if it's the first-pass tiling
         if (!cz) {
@@ -120,7 +119,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         if (debug > 1) console.time('clipping');
 
         // values we'll use for clipping
-        var k1 = 0.5 * buffer / extent,
+        var k1 = 0.5 * options.buffer / options.extent,
             k2 = 0.5 - k1,
             k3 = 0.5 + k1,
             k4 = 1 + k1,
