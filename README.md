@@ -71,7 +71,11 @@ npm run build-min # minified production build
 
 ### Changelog
 
-##### 2.1.3 (Aug 14, 2015)
+##### 2.1.4 (Aug 14, 2015)
+
+- Improved `getTile` to always return `null` on non-existing or invalid tiles.
+
+##### 2.1.3 (Aug 13, 2015)
 
 - Added `solidChildren` option that includes children of solid filled square tiles in the index (off by default).
 - Added back solid tile heuristics (not tiling solid filled square tiles further).

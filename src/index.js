@@ -175,6 +175,8 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
         parent = this.tiles[toID(z0, x0, y0)];
     }
 
+    if (!parent) return null;
+
     if (debug > 1) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
 
     // if we found a parent tile containing the original geometry, we can drill down from it
@@ -186,11 +188,13 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
         if (debug > 1) console.timeEnd('drilling down');
     }
 
+    if (!this.tiles[id]) return null;
+
     return transformTile(this.tiles[id], extent);
 };
 
 function transformTile(tile, extent) {
-    if (!tile || tile.transformed) return tile;
+    if (tile.transformed) return tile;
 
     var z2 = tile.z2,
         tx = tile.x,
