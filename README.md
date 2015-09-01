@@ -9,14 +9,18 @@ on the browser side (without a server).
 
 Created to power GeoJSON in [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js),
 but can be useful in other visualization platforms
-like [Leaflet](https://github.com/Leaflet/Leaflet) and [d3](https://github.com/mbostock/d3).
-It can also be easily used on the server as well.
+like [Leaflet](https://github.com/Leaflet/Leaflet) and [d3](https://github.com/mbostock/d3),
+as well as Node.js server applications.
 
 Resulting tiles conform to the JSON equivalent
 of the [vector tile specification](https://github.com/mapbox/vector-tile-spec/).
 To make data rendering and interaction fast, the tiles are simplified,
 retaining the minimum level of detail appropriate for each zoom level
 (simplifying shapes, filtering out tiny polygons and polylines).
+
+Read more on how the library works [on the Mapbox blog](https://www.mapbox.com/blog/introducing-geojson-vt/).
+
+There's a C++11 port: [geojson-vt-cpp](https://github.com/mapbox/geojson-vt-cpp)
 
 ### Demo
 
