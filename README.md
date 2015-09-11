@@ -53,7 +53,7 @@ You can fine-tune the results with an options object,
 although the defaults are sensible and work well for most use cases.
 
 ```js
-var tileIndes = geojsonvt(data, {
+var tileIndex = geojsonvt(data, {
 	maxZoom: 14,  // max zoom to preserve detail on
 	tolerance: 3, // simplification tolerance (higher means simpler)
 	extent: 4096, // tile extent (both width and height)
