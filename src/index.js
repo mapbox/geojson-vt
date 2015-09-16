@@ -22,7 +22,7 @@ function GeoJSONVT(data, options) {
     var z2 = 1 << options.maxZoom, // 2^z
         features = convert(data, options.tolerance / (z2 * options.extent));
 
-    this.tiles = cache({max: 100});
+    this.tiles = cache({max: options.cacheSize});
     this.tileCoords = [];
 
     if (debug) {
@@ -53,7 +53,8 @@ GeoJSONVT.prototype.options = {
     tolerance: 3,           // simplification tolerance (higher means simpler)
     extent: 4096,           // tile extent
     buffer: 64,             // tile buffer on each side
-    debug: 0                // logging level (0, 1 or 2)
+    debug: 0,               // logging level (0, 1 or 2),
+    cacheSize: 100          // number of tiles to cache
 };
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
