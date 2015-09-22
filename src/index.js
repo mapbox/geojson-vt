@@ -110,7 +110,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
             // stop tiling if it's not an ancestor of the target tile
             var m = 1 << (cz - z);
-            if (x !== Math.floor(cx / m) && y !== Math.floor(cy / m)) continue;
+            if (x !== Math.floor(cx / m) || y !== Math.floor(cy / m)) continue;
         }
 
         // if we slice further down, no need to keep source geometry

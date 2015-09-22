@@ -27,6 +27,8 @@ test('getTile: us-states.json', function (t) {
     t.equal(index.getTile(11, 800, 400), null, 'non-existing tile');
     t.equal(index.getTile(-5, 123.25, 400.25), null, 'invalid tile');
 
+    t.equal(index.total, 29);
+
     t.end();
 });
 
