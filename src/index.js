@@ -36,10 +36,10 @@ function GeoJSONVT(data, options) {
     features = wrap(features, options.buffer / options.extent, intersectX);
 
     // start slicing from the top tile down
-    this.splitTile(features, 0, 0, 0);
+    if (features.length) this.splitTile(features, 0, 0, 0);
 
     if (debug) {
-        console.log('features: %d, points: %d', this.tiles[0].numFeatures, this.tiles[0].numPoints);
+        if (features.length) console.log('features: %d, points: %d', this.tiles[0].numFeatures, this.tiles[0].numPoints);
         console.timeEnd('generate tiles');
         console.log('tiles generated:', this.total, JSON.stringify(this.stats));
     }

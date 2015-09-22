@@ -24,6 +24,11 @@ function testTiles(inputFile, expectedFile, maxZoom, maxPoints) {
     });
 }
 
+test('empty geojson', function (t) {
+    t.same(genTiles(getJSON('empty.json')), {});
+    t.end();
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
 }
