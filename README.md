@@ -76,6 +76,11 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.1.6 (Sep 22, 2015)
+
+- Fixed a bug where `getTile` could generate a lot of unnecessary tiles.
+- Fixed a bug where an empty GeoJSON generated tiles.
+
 ##### 2.1.5 (Aug 14, 2015)
 
 - Added `tileCoords` property with an array of coordinates of all tiles created so far.
