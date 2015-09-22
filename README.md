@@ -1,6 +1,6 @@
 ## geojson-vt &mdash; GeoJSON Vector Tiles
 
-[![Build Status](https://travis-ci.org/mapbox/geojson-vt.svg)](https://travis-ci.org/mapbox/geojson-vt)
+[![Build Status](https://travis-ci.org/mapbox/geojson-vt.svg?branch=master)](https://travis-ci.org/mapbox/geojson-vt)
 [![Coverage Status](https://coveralls.io/repos/mapbox/geojson-vt/badge.svg)](https://coveralls.io/r/mapbox/geojson-vt)
 
 A highly efficient JavaScript library for **slicing GeoJSON data into vector tiles on the fly**,
