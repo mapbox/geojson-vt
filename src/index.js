@@ -2,10 +2,11 @@
 
 module.exports = geojsonvt;
 
-var convert = require('./convert'), // GeoJSON conversion and preprocessing
-    clip = require('./clip'),       // stripe clipping algorithm
-    wrap = require('./wrap'),       // date line processing
-    createTile = require('./tile'); // final simplified tile generation
+var convert = require('./convert'),     // GeoJSON conversion and preprocessing
+    transform = require('./transform'), // coordinate transformation
+    clip = require('./clip'),           // stripe clipping algorithm
+    wrap = require('./wrap'),           // date line processing
+    createTile = require('./tile');     // final simplified tile generation
 
 
 function geojsonvt(data, options) {
@@ -158,7 +159,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     x = ((x % z2) + z2) % z2; // wrap tile x coordinate
 
     var id = toID(z, x, y);
-    if (this.tiles[id]) return transformTile(this.tiles[id], extent);
+    if (this.tiles[id]) return transform.tile(this.tiles[id], extent);
 
     if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -180,7 +181,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     // if we found a parent tile containing the original geometry, we can drill down from it
     if (parent.source) {
-        if (isClippedSquare(parent, extent, options.buffer)) return transformTile(parent, extent);
+        if (isClippedSquare(parent, extent, options.buffer)) return transform.tile(parent, extent);
 
         if (debug > 1) console.time('drilling down');
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
@@ -189,43 +190,8 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     if (!this.tiles[id]) return null;
 
-    return transformTile(this.tiles[id], extent);
+    return transform.tile(this.tiles[id], extent);
 };
-
-function transformTile(tile, extent) {
-    if (tile.transformed) return tile;
-
-    var z2 = tile.z2,
-        tx = tile.x,
-        ty = tile.y,
-        i, j, k;
-
-    for (i = 0; i < tile.features.length; i++) {
-        var feature = tile.features[i],
-            geom = feature.geometry,
-            type = feature.type;
-
-        if (type === 1) {
-            for (j = 0; j < geom.length; j++) geom[j] = transformPoint(geom[j], extent, z2, tx, ty);
-
-        } else {
-            for (j = 0; j < geom.length; j++) {
-                var ring = geom[j];
-                for (k = 0; k < ring.length; k++) ring[k] = transformPoint(ring[k], extent, z2, tx, ty);
-            }
-        }
-    }
-
-    tile.transformed = true;
-
-    return tile;
-}
-
-function transformPoint(p, extent, z2, tx, ty) {
-    var x = Math.round(extent * (p[0] * z2 - tx)),
-        y = Math.round(extent * (p[1] * z2 - ty));
-    return [x, y];
-}
 
 function toID(z, x, y) {
     return (((1 << z) * y + x) * 32) + z;
@@ -256,7 +222,7 @@ function isClippedSquare(tile, extent, buffer) {
     if (len !== 5) return false;
 
     for (var i = 0; i < len; i++) {
-        var p = transformPoint(feature.geometry[0][i], extent, tile.z2, tile.x, tile.y);
+        var p = transform.point(feature.geometry[0][i], extent, tile.z2, tile.x, tile.y);
         if ((p[0] !== -buffer && p[0] !== extent + buffer) ||
             (p[1] !== -buffer && p[1] !== extent + buffer)) return false;
     }
