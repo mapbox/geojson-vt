@@ -66,6 +66,29 @@ var tileIndex = geojsonvt(data, {
 });
 ```
 
+### Usage: Single Tile
+
+Alternatively, you can make a single tile directly:
+
+```js
+var tile = geojsonvt.createTile(geoJSON, z, x, y);
+
+// get features
+var features = tile.features
+```
+
+`createTile` takes an optional options object as the last parameter,
+respecting `buffer`, `tolerance`, and `extent` exactly as described above, and
+using the same defaults:
+
+```js
+var tiles = geojsonvt.createTile(geoJSON, z, x, y, {
+  tolerance: 3,
+  extent: 4096,
+  buffer: 64
+});
+```
+
 ### Browser builds
 
 ```bash

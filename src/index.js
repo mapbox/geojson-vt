@@ -1,6 +1,7 @@
 'use strict';
 
 module.exports = geojsonvt;
+module.exports.createTile = createSingleTile;
 
 var convert = require('./convert'),     // GeoJSON conversion and preprocessing
     transform = require('./transform'), // coordinate transformation
@@ -228,4 +229,21 @@ function isClippedSquare(tile, extent, buffer) {
     }
 
     return true;
+}
+
+// Create a single tile from the given geojson data.
+// Respects extent, buffer, and tolerance options like the main function,
+function createSingleTile(data, z, x, y, options) {
+    options = extend(Object.create(GeoJSONVT.prototype.options), options);
+    var z2 = 1 << z;
+    var features = convert(data, options.tolerance / (z2 * options.extent));
+    features = wrap(features, options.buffer / options.extent);
+    var tileTolerance = options.tolerance / (z2 * options.extent);
+    // unlike in splitTile, do this before clipping since it takes care of getting
+    // the min/max feature coords.
+    var tile = createTile(features, z2, x, y, tileTolerance, tileTolerance === 0);
+    var buf = 0.5 * options.buffer / options.extent;
+    tile.features = clip(tile.features, z2, x - buf, x + 1 + buf, 0, intersectX, tile.min[0], tile.max[0]);
+    tile.features = clip(tile.features, z2, y - buf, y + 1 + buf, 0, intersectY, tile.min[1], tile.max[1]);
+    return transform.tile(tile, options.extent);
 }
