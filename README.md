@@ -76,6 +76,10 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.1.7 (Oct 16, 2015)
+
+- Expose transform methods in a separate file (`transform.js`).
+
 ##### 2.1.6 (Sep 22, 2015)
 
 - Fixed a bug where `getTile` could generate a lot of unnecessary tiles.
