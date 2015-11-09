@@ -76,6 +76,10 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.1.8 (Nov 9, 2015)
+
+- Fixed a bug where `getTile` would initially return `null` when requesting a child of a solid clipped square tile.
+
 ##### 2.1.7 (Oct 16, 2015)
 
 - Expose transform methods in a separate file (`transform.js`).

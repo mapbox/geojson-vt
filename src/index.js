@@ -61,7 +61,8 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     var stack = [features, z, x, y],
         options = this.options,
-        debug = options.debug;
+        debug = options.debug,
+        solid = null;
 
     // avoid recursion by using a processing queue
     while (stack.length) {
@@ -96,9 +97,6 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         // save reference to original geometry in tile so that we can drill down later if we stop now
         tile.source = features;
 
-        // stop tiling if the tile is solid clipped square
-        if (!options.solidChildren && isClippedSquare(tile, options.extent, options.buffer)) continue;
-
         // if it's the first-pass tiling
         if (!cz) {
             // stop tiling if we reached max zoom, or if the tile is too simple
@@ -112,6 +110,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             // stop tiling if it's not an ancestor of the target tile
             var m = 1 << (cz - z);
             if (x !== Math.floor(cx / m) || y !== Math.floor(cy / m)) continue;
+        }
+
+        // stop tiling if the tile is solid clipped square
+        if (!options.solidChildren && isClippedSquare(tile, options.extent, options.buffer)) {
+            if (cz) solid = z; // and remember the zoom if we're drilling down
+            continue;
         }
 
         // if we slice further down, no need to keep source geometry
@@ -148,6 +152,8 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         if (tr) stack.push(tr, z + 1, x * 2 + 1, y * 2);
         if (br) stack.push(br, z + 1, x * 2 + 1, y * 2 + 1);
     }
+
+    return solid;
 };
 
 GeoJSONVT.prototype.getTile = function (z, x, y) {
@@ -175,22 +181,25 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
         parent = this.tiles[toID(z0, x0, y0)];
     }
 
-    if (!parent) return null;
-
-    if (debug > 1) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
+    if (!parent || !parent.source) return null;
 
     // if we found a parent tile containing the original geometry, we can drill down from it
-    if (parent.source) {
-        if (isClippedSquare(parent, extent, options.buffer)) return transform.tile(parent, extent);
+    if (debug > 1) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
 
-        if (debug > 1) console.time('drilling down');
-        this.splitTile(parent.source, z0, x0, y0, z, x, y);
-        if (debug > 1) console.timeEnd('drilling down');
+    // it parent tile is a solid clipped square, return it instead since it's identical
+    if (isClippedSquare(parent, extent, options.buffer)) return transform.tile(parent, extent);
+
+    if (debug > 1) console.time('drilling down');
+    var solid = this.splitTile(parent.source, z0, x0, y0, z, x, y);
+    if (debug > 1) console.timeEnd('drilling down');
+
+    // one of the parent tiles was a solid clipped square
+    if (solid !== null) {
+        var m = 1 << (z - solid);
+        id = toID(solid, Math.floor(x / m), Math.floor(y / m));
     }
 
-    if (!this.tiles[id]) return null;
-
-    return transform.tile(this.tiles[id], extent);
+    return this.tiles[id] ? transform.tile(this.tiles[id], extent) : null;
 };
 
 function toID(z, x, y) {
