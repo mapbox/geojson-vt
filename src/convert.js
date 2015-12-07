@@ -97,7 +97,7 @@ function projectPoint(p) {
         x = (p[0] / 360 + 0.5),
         y = (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI);
 
-    y = y < -1 ? -1 :
+    y = y < 0 ? 0 :
         y > 1 ? 1 : y;
 
     return [x, y, 0];
