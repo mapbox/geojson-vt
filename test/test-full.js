@@ -9,6 +9,7 @@ testTiles('us-states.json', 'us-states-tiles.json', 7, 200);
 testTiles('dateline.json', 'dateline-tiles.json');
 testTiles('feature.json', 'feature-tiles.json');
 testTiles('collection.json', 'collection-tiles.json');
+testTiles('single-geom.json', 'single-geom-tiles.json');
 
 test('throws on invalid GeoJSON', function (t) {
     t.throws(function () {
@@ -19,13 +20,14 @@ test('throws on invalid GeoJSON', function (t) {
 
 function testTiles(inputFile, expectedFile, maxZoom, maxPoints) {
     test('full tiling test: ' + inputFile, function (t) {
-        t.same(genTiles(getJSON(inputFile), maxZoom, maxPoints), getJSON(expectedFile));
+        var tiles = genTiles(getJSON(inputFile), maxZoom, maxPoints);
+        t.same(getJSON(expectedFile), tiles);
         t.end();
     });
 }
 
 test('empty geojson', function (t) {
-    t.same(genTiles(getJSON('empty.json')), {});
+    t.same({}, genTiles(getJSON('empty.json')));
     t.end();
 });
 
