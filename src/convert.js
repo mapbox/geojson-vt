@@ -15,8 +15,36 @@ function convert(data, tolerance) {
         }
     } else if (data.type === 'Feature') {
         convertFeature(features, data, tolerance);
-
-    } else {
+    } 
+    else if (data.type === 'Topology') {
+        if( topojson == null ) {
+            console.log('topojson is null, have you included topojson.js ? Returning empty features from convert()');
+            return features;            
+        }
+        else {
+            var topoNameArray = Object.keys(data.objects);
+            if(topoNameArray.length <= 0) {
+                console.log('topoNameArray is empty, Returning empty features from convert()');
+                return features;
+            }
+            else if(topoNameArray.length > 1) {
+                console.log('topo.json data.objects has more than 1 objects, using the first one. topoNameArray: ');
+                console.log(topoNameArray);
+            }
+            var topoName = topoNameArray[0];               
+            //var geojsonFeature = topojson.feature(data, data.objects.SA3_2011_AUST);
+            var geojsonFeature = topojson.feature(data, data.objects[topoName]);
+            
+            if(geojsonFeature.type === 'FeatureCollection' || geojsonFeature.type === 'Feature') {
+                return convert(geojsonFeature, tolerance);
+            }
+            else {
+                console.log('converting TopoJson to GeoJson: only FeatureCollection & Feature are supported, ' + data.type + ' is not supported. Returning empty features from convert()');
+                return features;
+            }     
+        }  
+    }    
+    else {
         // single geometry or a geometry collection
         convertFeature(features, {geometry: data}, tolerance);
     }
@@ -29,7 +57,7 @@ function convertFeature(features, feature, tolerance) {
         coords = geom.coordinates,
         tags = feature.properties,
         i, j, rings;
-
+        
     if (type === 'Point') {
         features.push(create(tags, 1, [projectPoint(coords)]));
 
