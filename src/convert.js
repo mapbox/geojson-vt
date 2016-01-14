@@ -24,6 +24,11 @@ function convert(data, tolerance) {
 }
 
 function convertFeature(features, feature, tolerance) {
+    if (feature.geometry === null) {
+        // ignore features with null geometry
+        return;
+    }
+
     var geom = feature.geometry,
         type = geom.type,
         coords = geom.coordinates,
