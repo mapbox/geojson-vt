@@ -1,0 +1,7 @@
+{ "type": "Feature",
+ "geometry": null,
+ "properties": {
+   "prop0": "value0",
+   "prop1": {"this": "that"}
+   }
+ }

@@ -31,6 +31,12 @@ test('empty geojson', function (t) {
     t.end();
 });
 
+test('null geometry', function (t) {
+    // should ignore features with null geometry
+    t.same({}, genTiles(getJSON('feature-null-geometry.json')));
+    t.end();
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
 }
