@@ -1,0 +1,4 @@
+debug
+coverage
+test
+.travis.yml

@@ -27,6 +27,9 @@
     "uglify-js": "^2.6.2",
     "watchify": "^3.7.0"
   },
+  "eslintConfig": {
+    "extends": "mourner"
+  },
   "license": "ISC",
   "scripts": {
     "test": "eslint src/*.js test/*.js debug/viz.js && tape test/test-*.js | faucet",
@@ -34,6 +37,7 @@
     "coveralls": "npm run cov && coveralls < ./coverage/lcov.info",
     "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
     "build-dev": "browserify -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
-    "watch": "watchify -v -d src/index.js -s geojsonvt -o geojson-vt-dev.js"
+    "watch": "watchify -v -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
+    "prepublish": "npm run build-dev && npm run build-min"
   }
 }
