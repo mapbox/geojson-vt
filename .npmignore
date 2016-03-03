@@ -1,0 +1,6 @@
+debug
+node_modules
+coverage
+.eslintrc
+test
+.travis.yml

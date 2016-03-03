@@ -1,6 +1,6 @@
 {
   "name": "geojson-vt",
-  "version": "2.1.8",
+  "version": "2.1.9",
   "description": "Slice GeoJSON data into vector tiles efficiently",
   "homepage": "https://github.com/mapbox/geojson-vt",
   "keywords": [
@@ -14,7 +14,7 @@
     "type": "git",
     "url": "git://github.com/mapbox/geojson-vt.git"
   },
-  "main": "src/index.js",
+  "main": "geojson-vt-dev.js",
   "devDependencies": {
     "benchmark": "^1.0.0",
     "browserify": "^12.0.1",
@@ -34,6 +34,7 @@
     "coveralls": "npm run cov && coveralls < ./coverage/lcov.info",
     "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
     "build-dev": "browserify -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
-    "watch": "watchify -v -d src/index.js -s geojsonvt -o geojson-vt-dev.js"
+    "watch": "watchify -v -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
+    "prepublish": "npm run build-dev && npm run build-min"
   }
 }
