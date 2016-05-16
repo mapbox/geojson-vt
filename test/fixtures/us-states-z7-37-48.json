@@ -21,6 +21,7 @@
       ]
     ],
     "type": 3,
+    "id": "09",
     "tags": {
       "name": "Connecticut",
       "density": 739.1
@@ -84,6 +85,7 @@
       ]
     ],
     "type": 3,
+    "id": "10",
     "tags": {
       "name": "Delaware",
       "density": 464.3
@@ -127,6 +129,7 @@
       ]
     ],
     "type": 3,
+    "id": "24",
     "tags": {
       "name": "Maryland",
       "density": 596.3
@@ -254,6 +257,7 @@
       ]
     ],
     "type": 3,
+    "id": "34",
     "tags": {
       "name": "New Jersey",
       "density": 1189
@@ -321,6 +325,7 @@
       ]
     ],
     "type": 3,
+    "id": "36",
     "tags": {
       "name": "New York",
       "density": 412.3
@@ -400,6 +405,7 @@
       ]
     ],
     "type": 3,
+    "id": "42",
     "tags": {
       "name": "Pennsylvania",
       "density": 284.3
