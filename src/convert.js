@@ -30,6 +30,7 @@ function convertFeature(features, feature, tolerance) {
     }
 
     var geom = feature.geometry,
+        id = feature.id,
         type = geom.type,
         coords = geom.coordinates,
         tags = feature.properties,
@@ -75,13 +76,15 @@ function convertFeature(features, feature, tolerance) {
 
 function create(tags, type, geometry, id) {
     var feature = {
-        id: feature.id,
         geometry: geometry,
         type: type,
         tags: tags || null,
         min: [2, 1], // initial bbox values;
         max: [-1, 0]  // note that coords are usually in [0..1] range
     };
+    if (typeof id !== 'undefined') {
+        feature.id = id;
+    }
     calcBBox(feature);
     return feature;
 }
