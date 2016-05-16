@@ -38,6 +38,7 @@ function shiftFeatureCoords(features, offset) {
         }
 
         newFeatures.push({
+            id: feature.id,
             geometry: newGeometry,
             type: type,
             tags: feature.tags,
