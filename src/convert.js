@@ -30,26 +30,27 @@ function convertFeature(features, feature, tolerance) {
     }
 
     var geom = feature.geometry,
+        id = feature.id,
         type = geom.type,
         coords = geom.coordinates,
         tags = feature.properties,
         i, j, rings;
 
     if (type === 'Point') {
-        features.push(create(tags, 1, [projectPoint(coords)]));
+        features.push(create(tags, 1, [projectPoint(coords)], id));
 
     } else if (type === 'MultiPoint') {
         features.push(create(tags, 1, project(coords)));
 
     } else if (type === 'LineString') {
-        features.push(create(tags, 2, [project(coords, tolerance)]));
+        features.push(create(tags, 2, [project(coords, tolerance)], id));
 
     } else if (type === 'MultiLineString' || type === 'Polygon') {
         rings = [];
         for (i = 0; i < coords.length; i++) {
             rings.push(project(coords[i], tolerance));
         }
-        features.push(create(tags, type === 'Polygon' ? 3 : 2, rings));
+        features.push(create(tags, type === 'Polygon' ? 3 : 2, rings, id));
 
     } else if (type === 'MultiPolygon') {
         rings = [];
@@ -58,7 +59,7 @@ function convertFeature(features, feature, tolerance) {
                 rings.push(project(coords[i][j], tolerance));
             }
         }
-        features.push(create(tags, 3, rings));
+        features.push(create(tags, 3, rings, id));
 
     } else if (type === 'GeometryCollection') {
         for (i = 0; i < geom.geometries.length; i++) {
@@ -73,7 +74,7 @@ function convertFeature(features, feature, tolerance) {
     }
 }
 
-function create(tags, type, geometry) {
+function create(tags, type, geometry, id) {
     var feature = {
         geometry: geometry,
         type: type,
@@ -81,6 +82,9 @@ function create(tags, type, geometry) {
         min: [2, 1], // initial bbox values;
         max: [-1, 0]  // note that coords are usually in [0..1] range
     };
+    if (typeof id !== 'undefined') {
+        feature.id = id;
+    }
     calcBBox(feature);
     return feature;
 }
