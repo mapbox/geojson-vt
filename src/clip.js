@@ -42,6 +42,7 @@ function clip(features, scale, k1, k2, axis, intersect, minAll, maxAll) {
             // if a feature got clipped, it will likely get clipped on the next zoom level as well,
             // so there's no need to recalculate bboxes
             clipped.push({
+                id: feature.id,
                 geometry: slices,
                 type: type,
                 tags: features[i].tags || null,

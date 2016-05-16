@@ -36,20 +36,20 @@ function convertFeature(features, feature, tolerance) {
         i, j, rings;
 
     if (type === 'Point') {
-        features.push(create(tags, 1, [projectPoint(coords)]));
+        features.push(create(tags, 1, [projectPoint(coords)], id));
 
     } else if (type === 'MultiPoint') {
         features.push(create(tags, 1, project(coords)));
 
     } else if (type === 'LineString') {
-        features.push(create(tags, 2, [project(coords, tolerance)]));
+        features.push(create(tags, 2, [project(coords, tolerance)], id));
 
     } else if (type === 'MultiLineString' || type === 'Polygon') {
         rings = [];
         for (i = 0; i < coords.length; i++) {
             rings.push(project(coords[i], tolerance));
         }
-        features.push(create(tags, type === 'Polygon' ? 3 : 2, rings));
+        features.push(create(tags, type === 'Polygon' ? 3 : 2, rings, id));
 
     } else if (type === 'MultiPolygon') {
         rings = [];
@@ -58,7 +58,7 @@ function convertFeature(features, feature, tolerance) {
                 rings.push(project(coords[i][j], tolerance));
             }
         }
-        features.push(create(tags, 3, rings));
+        features.push(create(tags, 3, rings, id));
 
     } else if (type === 'GeometryCollection') {
         for (i = 0; i < geom.geometries.length; i++) {
@@ -73,8 +73,9 @@ function convertFeature(features, feature, tolerance) {
     }
 }
 
-function create(tags, type, geometry) {
+function create(tags, type, geometry, id) {
     var feature = {
+        id: feature.id,
         geometry: geometry,
         type: type,
         tags: tags || null,
