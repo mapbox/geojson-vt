@@ -16,16 +16,16 @@
   },
   "main": "src/index.js",
   "devDependencies": {
-    "benchmark": "^1.0.0",
-    "browserify": "^12.0.1",
-    "coveralls": "^2.11.4",
-    "eslint": "^1.9.0",
-    "eslint-config-mourner": "^1.0.1",
+    "benchmark": "^2.1.0",
+    "browserify": "^13.0.1",
+    "coveralls": "^2.11.9",
+    "eslint": "^2.10.2",
+    "eslint-config-mourner": "^2.0.1",
     "faucet": "0.0.1",
-    "istanbul": "^0.4.0",
-    "tape": "^4.2.2",
-    "uglify-js": "^2.5.0",
-    "watchify": "^3.6.0"
+    "istanbul": "^0.4.3",
+    "tape": "^4.5.1",
+    "uglify-js": "^2.6.2",
+    "watchify": "^3.7.0"
   },
   "license": "ISC",
   "scripts": {
