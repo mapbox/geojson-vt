@@ -33,7 +33,7 @@ function convertFeature(features, feature, tolerance) {
         type = geom.type,
         coords = geom.coordinates,
         tags = feature.properties,
-        i, j, rings;
+        i, j, rings, projectedRing;
 
     if (type === 'Point') {
         features.push(create(tags, 1, [projectPoint(coords)]));
@@ -47,7 +47,9 @@ function convertFeature(features, feature, tolerance) {
     } else if (type === 'MultiLineString' || type === 'Polygon') {
         rings = [];
         for (i = 0; i < coords.length; i++) {
-            rings.push(project(coords[i], tolerance));
+            projectedRing = project(coords[i], tolerance);
+            if (type === 'Polygon') projectedRing.outer = (i === 0);
+            rings.push(projectedRing);
         }
         features.push(create(tags, type === 'Polygon' ? 3 : 2, rings));
 
@@ -55,7 +57,9 @@ function convertFeature(features, feature, tolerance) {
         rings = [];
         for (i = 0; i < coords.length; i++) {
             for (j = 0; j < coords[i].length; j++) {
-                rings.push(project(coords[i][j], tolerance));
+                projectedRing = project(coords[i][j], tolerance);
+                projectedRing.outer = (j === 0);
+                rings.push(projectedRing);
             }
         }
         features.push(create(tags, 3, rings));
