@@ -1,6 +1,6 @@
 {
   "name": "geojson-vt",
-  "version": "2.1.8",
+  "version": "2.2.0",
   "description": "Slice GeoJSON data into vector tiles efficiently",
   "homepage": "https://github.com/mapbox/geojson-vt",
   "keywords": [
