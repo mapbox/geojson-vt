@@ -76,6 +76,11 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.2.0 (Jun 9, 2015)
+
+- Fixed ring winding order for polygons and multipolygons in accordance with vector tile specification 2.0.
+- Fixed handling of features with null geometry (now ignored instead of throwing an error).
+
 ##### 2.1.8 (Nov 9, 2015)
 
 - Fixed a bug where `getTile` would initially return `null` when requesting a child of a solid clipped square tile.
