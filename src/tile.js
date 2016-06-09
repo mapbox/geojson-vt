@@ -71,6 +71,8 @@ function addFeature(tile, feature, tolerance, noSimplify) {
                 tile.numPoints++;
             }
 
+            if (type === 3) rewind(simplifiedRing, ring.outer);
+
             simplified.push(simplifiedRing);
         }
     }
@@ -82,4 +84,19 @@ function addFeature(tile, feature, tolerance, noSimplify) {
             tags: feature.tags || null
         });
     }
+}
+
+function rewind(ring, clockwise) {
+    var area = signedArea(ring);
+    if (area < 0 === clockwise) ring.reverse();
+}
+
+function signedArea(ring) {
+    var sum = 0;
+    for (var i = 0, len = ring.length, j = len - 1, p1, p2; i < len; j = i++) {
+        p1 = ring[i];
+        p2 = ring[j];
+        sum += (p2[0] - p1[0]) * (p1[1] + p2[1]);
+    }
+    return sum;
 }

@@ -78,6 +78,7 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
             points = geometry[i],
             area = points.area,
             dist = points.dist,
+            outer = points.outer,
             len = points.length,
             a, j, last;
 
@@ -93,7 +94,7 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
 
                 if ((bk > k2)) { // ---|-----|-->
                     slice.push(intersect(a, b, k1), intersect(a, b, k2));
-                    if (!closed) slice = newSlice(slices, slice, area, dist);
+                    if (!closed) slice = newSlice(slices, slice, area, dist, outer);
 
                 } else if (bk >= k1) slice.push(intersect(a, b, k1)); // ---|-->  |
 
@@ -101,7 +102,7 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
 
                 if ((bk < k1)) { // <--|-----|---
                     slice.push(intersect(a, b, k2), intersect(a, b, k1));
-                    if (!closed) slice = newSlice(slices, slice, area, dist);
+                    if (!closed) slice = newSlice(slices, slice, area, dist, outer);
 
                 } else if (bk <= k2) slice.push(intersect(a, b, k2)); // |  <--|---
 
@@ -111,11 +112,11 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
 
                 if (bk < k1) { // <--|---  |
                     slice.push(intersect(a, b, k1));
-                    if (!closed) slice = newSlice(slices, slice, area, dist);
+                    if (!closed) slice = newSlice(slices, slice, area, dist, outer);
 
                 } else if (bk > k2) { // |  ---|-->
                     slice.push(intersect(a, b, k2));
-                    if (!closed) slice = newSlice(slices, slice, area, dist);
+                    if (!closed) slice = newSlice(slices, slice, area, dist, outer);
                 }
                 // | --> |
             }
@@ -132,18 +133,19 @@ function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
         if (closed && last && (slice[0][0] !== last[0] || slice[0][1] !== last[1])) slice.push(slice[0]);
 
         // add the final slice
-        newSlice(slices, slice, area, dist);
+        newSlice(slices, slice, area, dist, outer);
     }
 
     return slices;
 }
 
-function newSlice(slices, slice, area, dist) {
+function newSlice(slices, slice, area, dist, outer) {
     if (slice.length) {
         // we don't recalculate the area/length of the unclipped geometry because the case where it goes
         // below the visibility threshold as a result of clipping is rare, so we avoid doing unnecessary work
         slice.area = area;
         slice.dist = dist;
+        if (outer !== undefined) slice.outer = outer;
 
         slices.push(slice);
     }
