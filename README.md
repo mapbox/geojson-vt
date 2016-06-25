@@ -76,7 +76,7 @@ npm run build-min # minified production build
 
 ### Changelog
 
-##### 2.2.0 (Jun 9, 2015)
+##### 2.2.0 (Jun 9, 2016)
 
 - Fixed ring winding order for polygons and multipolygons in accordance with vector tile specification 2.0.
 - Fixed handling of features with null geometry (now ignored instead of throwing an error).
