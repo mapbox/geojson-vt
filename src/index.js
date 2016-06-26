@@ -147,10 +147,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         if (debug > 1) console.timeEnd('clipping');
 
-        if (tl) stack.push(tl, z + 1, x * 2,     y * 2);
-        if (bl) stack.push(bl, z + 1, x * 2,     y * 2 + 1);
-        if (tr) stack.push(tr, z + 1, x * 2 + 1, y * 2);
-        if (br) stack.push(br, z + 1, x * 2 + 1, y * 2 + 1);
+        if (features.length) {
+            stack.push(tl || [], z + 1, x * 2,     y * 2);
+            stack.push(bl || [], z + 1, x * 2,     y * 2 + 1);
+            stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
+            stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
+        }
     }
 
     return solid;
