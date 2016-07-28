@@ -5,7 +5,7 @@ var leftPoint = {
   type: 'Feature',
   properties: {},
   geometry: {
-    coordinates: [-460, 0],
+    coordinates: [-540, 0],
     type: 'Point'
   }
 };
@@ -14,14 +14,16 @@ var rightPoint = {
   type: 'Feature',
   properties: {},
   geometry: {
-    coordinates: [460, 0],
+    coordinates: [540, 0],
     type: 'Point'
   }
 };
 
 test('handle point only in the rightside world', function(t) {
   try {
-    geojsonvt(rightPoint);
+    var vt = geojsonvt(rightPoint);
+    t.equal(vt.tiles[0].features[0].geometry[0][0], 1);
+    t.equal(vt.tiles[0].features[0].geometry[0][1], .5);
   }
   catch (err) {
     t.ifError(err);
@@ -31,7 +33,9 @@ test('handle point only in the rightside world', function(t) {
 
 test('handle point only in the leftside world', function(t) {
   try {
-    geojsonvt(leftPoint);
+    var vt = geojsonvt(leftPoint);
+    t.equal(vt.tiles[0].features[0].geometry[0][0], 0);
+    t.equal(vt.tiles[0].features[0].geometry[0][1], .5);
   }
   catch (err) {
     t.ifError(err);
@@ -45,29 +49,12 @@ test('handle points in the leftside world and the rightside world', function(t) 
       type: 'FeatureCollection',
       features: [leftPoint, rightPoint]
     });
-  }
-  catch (err) {
-    t.ifError(err);
-  }
-  t.end();
-});
 
-test('handle a point from a world far far away', function(t) {
-  var point = {
-    type: 'Feature',
-    properties: {},
-    geometry: {
-      coordinates: [-3680, 0],
-      type: 'Point'
-    }
-  };
+    t.equal(vt.tiles[0].features[0].geometry[0][0], 0);
+    t.equal(vt.tiles[0].features[0].geometry[0][1], .5);
 
-  try {
-    var vt = geojsonvt(point);
-    var lng = vt.tiles[0].features[0].geometry[0][0];
-    // should be very close to .22222222
-    t.equal(lng < .2223, true);
-    t.equal(lng > .2221, true);
+    t.equal(vt.tiles[0].features[1].geometry[0][0], 1);
+    t.equal(vt.tiles[0].features[1].geometry[0][1], .5);
   }
   catch (err) {
     t.ifError(err);
