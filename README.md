@@ -76,6 +76,11 @@ npm run build-min # minified production build
 
 ### Changelog
 
+##### 2.3.0 (Jul 29, 2016)
+
+- Improved tiling algorithm to avoid redundant clipping when tiles are requested in an empty area.
+- Fixed issues with GeoJSON that only has data above 180 or below -180 longitude.
+
 ##### 2.2.0 (Jun 9, 2016)
 
 - Fixed ring winding order for polygons and multipolygons in accordance with vector tile specification 2.0.
