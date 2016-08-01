@@ -56,8 +56,14 @@ canvas.ondrop = function (e) {
     reader.onload = function (event) {
         console.log('data size', humanFileSize(event.target.result.length));
         console.time('JSON.parse');
+
         var data = JSON.parse(event.target.result);
         console.timeEnd('JSON.parse');
+
+        if (data.type === 'Topology') {
+            var firstKey = Object.keys(data.objects)[0];
+            data = topojson.feature(data, data.objects[firstKey]);
+        }
 
         tileIndex = geojsonvt(data, options); //eslint-disable-line
 
