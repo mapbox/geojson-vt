@@ -8,7 +8,8 @@ var geojsonvt = require('../src/index');
 var square = [{
     geometry: [[[-64, 4160], [-64, -64], [4160, -64], [4160, 4160], [-64, 4160]]],
     type: 3,
-    tags: {name: 'Pennsylvania', density: 284.3}
+    tags: {name: 'Pennsylvania', density: 284.3},
+    id: '42'
 }];
 
 test('getTile: us-states.json', function (t) {
