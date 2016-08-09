@@ -78,11 +78,15 @@ function addFeature(tile, feature, tolerance, noSimplify) {
     }
 
     if (simplified.length) {
-        tile.features.push({
+        var tileFeature = {
             geometry: simplified,
             type: type,
             tags: feature.tags || null
-        });
+        };
+        if (feature.id !== null) {
+            tileFeature.id = feature.id;
+        }
+        tile.features.push(tileFeature);
     }
 }
 

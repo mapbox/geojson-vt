@@ -2,6 +2,8 @@
 
 module.exports = clip;
 
+var createFeature = require('./feature');
+
 /* clip features between two axis-parallel lines:
  *     |        |
  *  ___|___     |     /
@@ -41,13 +43,7 @@ function clip(features, scale, k1, k2, axis, intersect, minAll, maxAll) {
         if (slices.length) {
             // if a feature got clipped, it will likely get clipped on the next zoom level as well,
             // so there's no need to recalculate bboxes
-            clipped.push({
-                geometry: slices,
-                type: type,
-                tags: features[i].tags || null,
-                min: feature.min,
-                max: feature.max
-            });
+            clipped.push(createFeature(feature.tags, type, slices, feature.id));
         }
     }
 
