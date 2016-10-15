@@ -28,7 +28,10 @@
     "watchify": "^3.7.0"
   },
   "eslintConfig": {
-    "extends": "mourner"
+    "extends": "mourner",
+    "globals": {
+      "topojson": true
+    }
   },
   "license": "ISC",
   "scripts": {
