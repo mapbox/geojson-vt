@@ -72,9 +72,9 @@ function addFeature(tile, feature, tolerance, noSimplify) {
             }
 
              if (type === 3) {
-                rewind(simplifiedRing, ring.outer);
-                simplifiedRing.outer = ring.outer; // -- keep the info about outer in the simplified ring
-            }
+                 rewind(simplifiedRing, ring.outer);
+                 simplifiedRing.outer = ring.outer; // -- keep the info about outer in the simplified ring
+             }
 
             simplified.push(simplifiedRing);
         }
