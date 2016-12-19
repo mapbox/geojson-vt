@@ -71,7 +71,7 @@ function addFeature(tile, feature, tolerance, noSimplify) {
                 tile.numPoints++;
             }
 
-             if (type === 3) {
+            if (type === 3) {
                  rewind(simplifiedRing, ring.outer);
                  simplifiedRing.outer = ring.outer; // -- keep the info about outer in the simplified ring
              }
