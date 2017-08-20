@@ -6,3 +6,4 @@ geojson-vt-dev.js
 geojson-vt.js
 node_modules
 coverage
+.nyc_output

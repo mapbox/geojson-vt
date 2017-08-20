@@ -16,16 +16,16 @@
   },
   "main": "src/index.js",
   "devDependencies": {
-    "benchmark": "^2.1.0",
-    "browserify": "^13.0.1",
-    "coveralls": "^2.11.9",
-    "eslint": "^2.10.2",
+    "benchmark": "^2.1.4",
+    "browserify": "^14.4.0",
+    "coveralls": "^2.13.1",
+    "eslint": "^4.5.0",
     "eslint-config-mourner": "^2.0.1",
     "faucet": "0.0.1",
-    "istanbul": "^0.4.3",
-    "tape": "^4.5.1",
-    "uglify-js": "^2.6.2",
-    "watchify": "^3.7.0"
+    "nyc": "^11.1.0",
+    "tape": "^4.8.0",
+    "uglify-js": "^3.0.28",
+    "watchify": "^3.9.0"
   },
   "eslintConfig": {
     "extends": "mourner",
@@ -36,7 +36,7 @@
   "license": "ISC",
   "scripts": {
     "test": "eslint src/*.js test/*.js debug/viz.js && tape test/test-*.js | faucet",
-    "cov": "istanbul cover tape test/test*.js",
+    "cov": "nyc tape test/test*.js",
     "coveralls": "npm run cov && coveralls < ./coverage/lcov.info",
     "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
     "build-dev": "browserify -d src/index.js -s geojsonvt -o geojson-vt-dev.js",

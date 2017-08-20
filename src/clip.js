@@ -37,8 +37,8 @@ function clip(features, scale, k1, k2, axis, intersect, minAll, maxAll) {
         } else if (min > k2 || max < k1) continue; // trivial reject
 
         var slices = type === 1 ?
-                clipPoints(geometry, k1, k2, axis) :
-                clipGeometry(geometry, k1, k2, axis, intersect, type === 3);
+            clipPoints(geometry, k1, k2, axis) :
+            clipGeometry(geometry, k1, k2, axis, intersect, type === 3);
 
         if (slices.length) {
             // if a feature got clipped, it will likely get clipped on the next zoom level as well,
