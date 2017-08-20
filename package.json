@@ -36,7 +36,7 @@
   "license": "ISC",
   "scripts": {
     "test": "eslint src/*.js test/*.js debug/viz.js && tape test/test-*.js | faucet",
-    "cov": "nyc tape test/test*.js",
+    "cov": "nyc --reporter=lcov --reporter=text-summary tape test/test*.js",
     "coveralls": "npm run cov && coveralls < ./coverage/lcov.info",
     "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
     "build-dev": "browserify -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
