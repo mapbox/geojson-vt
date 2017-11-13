@@ -54,7 +54,7 @@ although the defaults are sensible and work well for most use cases.
 
 ```js
 var tileIndex = geojsonvt(data, {
-	maxZoom: 14,  // max zoom to preserve detail on
+	maxZoom: 14,  // max zoom to preserve detail on; can't be higher than 24
 	tolerance: 3, // simplification tolerance (higher means simpler)
 	extent: 4096, // tile extent (both width and height)
 	buffer: 64,	  // tile buffer on each side
@@ -67,6 +67,8 @@ var tileIndex = geojsonvt(data, {
 ```
 
 By default, tiles at zoom levels above `indexMaxZoom` are generated on the fly, but you can pre-generate all possible tiles for `data` by setting `indexMaxZoom` and `maxZoom` to the same value, setting `indexMaxPoints` to `0`, and then accessing the resulting tile coordinates from the `tileCoords` property of `tileIndex`.
+
+GeoJSON-VT only operates on zoom levels up to 24.
 
 ### Browser builds
 

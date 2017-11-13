@@ -20,6 +20,8 @@ function GeoJSONVT(data, options) {
 
     if (debug) console.time('preprocess data');
 
+    if (options.maxZoom < 0 || options.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
+
     var z2 = 1 << options.maxZoom, // 2^z
         features = convert(data, options.tolerance / (z2 * options.extent));
 
@@ -162,6 +164,8 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     var options = this.options,
         extent = options.extent,
         debug = options.debug;
+
+    if (z < 0 || z > 24) return null;
 
     var z2 = 1 << z;
     x = ((x % z2) + z2) % z2; // wrap tile x coordinate
