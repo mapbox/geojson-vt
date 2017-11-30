@@ -25,17 +25,17 @@ function convert(data, tolerance) {
     return features;
 }
 
-function convertFeature(features, feature, tolerance) {
-    var coords = feature.geometry.coordinates;
-    var type = feature.geometry.type;
+function convertFeature(features, geojson, tolerance) {
+    var coords = geojson.geometry.coordinates;
+    var type = geojson.geometry.type;
 
     var geometry = [];
 
-    var converted = {
-        id: feature.id,
-        type: type,
+    var feature = {
+        id: geojson.id || null,
+        type: 0,
         geometry: geometry,
-        tags: feature.properties,
+        tags: geojson.properties,
         minX: Infinity,
         minY: Infinity,
         maxX: -Infinity,
@@ -45,28 +45,37 @@ function convertFeature(features, feature, tolerance) {
     var tol = tolerance * tolerance;
 
     if (type === 'Point') {
-        convertPoint(converted, coords, geometry);
+        convertPoint(feature, coords, geometry);
+        feature.type = 1;
 
     } else if (type === 'MultiPoint') {
         for (var i = 0; i < coords.length; i++) {
-            convertPoint(converted, coords[i], geometry);
+            convertPoint(feature, coords[i], geometry);
         }
+        feature.type = 1;
 
     } else if (type === 'LineString') {
-        convertRing(converted, coords, geometry, tol, false);
+        convertLine(feature, coords, geometry, tol, false);
+        feature.type = 2;
 
-    } else if (type === 'Polygon' || type === 'MultiLineString') {
-        convertRings(converted, coords, geometry, tol, type === 'Polygon');
+    } else if (type === 'MultiLineString') {
+        convertLines(feature, coords, geometry, tol, false);
+        feature.type = 2;
+
+    } else if (type === 'Polygon') {
+        convertLines(feature, coords, geometry, tol, true);
+        feature.type = 3;
 
     } else if (type === 'MultiPolygon') {
         for (i = 0; i < coords.length; i++) {
             var polygon = [];
+            convertLines(feature, coords[i], polygon, tol, true);
             geometry.push(polygon);
-            convertRings(converted, coords[i], polygon, tol, true);
         }
+        feature.type = 3;
     }
 
-    features.push(converted);
+    features.push(feature);
 }
 
 function convertPoint(feature, coords, out) {
@@ -83,7 +92,7 @@ function convertPoint(feature, coords, out) {
     out.push(0);
 }
 
-function convertRing(feature, ring, out, tol, isPolygon) {
+function convertLine(feature, ring, out, tol, isPolygon) {
     var x0, y0;
     var size = 0;
 
@@ -119,11 +128,11 @@ function convertRing(feature, ring, out, tol, isPolygon) {
     out.size = Math.abs(size);
 }
 
-function convertRings(feature, rings, out, tol, isPolygon) {
+function convertLines(feature, rings, out, tol, isPolygon) {
     for (var i = 0; i < rings.length; i++) {
         var geom = [];
+        convertLine(feature, rings[i], geom, tol, isPolygon);
         out.push(geom);
-        convertRing(feature, rings[i], geom, tol, isPolygon);
     }
 }
 
