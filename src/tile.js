@@ -80,7 +80,8 @@ function addFeature(tile, feature, tolerance, noSimplify) {
             for (var j = 0; j < ring.length; j += 3) {
                 // keep points with importance > tolerance
                 if (noSimplify || ring[j + 2] > sqTolerance) {
-                    simplifiedRing.push([ring[j], ring[j + 1]]);
+                    simplifiedRing.push(ring[j]);
+                    simplifiedRing.push(ring[j + 1]);
                     tile.numSimplified++;
                 }
                 tile.numPoints++;
@@ -110,7 +111,8 @@ function addFeature(tile, feature, tolerance, noSimplify) {
                 for (var j = 0; j < ring.length; j += 3) {
                     // keep points with importance > tolerance
                     if (noSimplify || ring[j + 2] > sqTolerance) {
-                        simplifiedRing.push([ring[j], ring[j + 1]]);
+                        simplifiedRing.push(ring[j]);
+                        simplifiedRing.push(ring[j + 1]);
                         tile.numSimplified++;
                     }
                     tile.numPoints++;
