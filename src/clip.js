@@ -194,14 +194,14 @@ function addPoint(out, x, y, z) {
     out.push(z);
 }
 
-function intersectX(out, ax, bx, ay, by, x) {
+function intersectX(out, ax, ay, bx, by, x) {
     out.push(x);
-    out.push((x - ax) * (by - ay) / (bx - ax) + ay);
+    out.push(ay + (x - ax) * (by - ay) / (bx - ax));
     out.push(1);
 }
 
-function intersectY(out, ax, bx, ay, by, y) {
-    out.push((y - ay) * (bx - ax) / (by - ay) + ax);
+function intersectY(out, ax, ay, bx, by, y) {
+    out.push(ax + (y - ay) * (bx - ax) / (by - ay));
     out.push(y);
     out.push(1);
 }

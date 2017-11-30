@@ -115,9 +115,9 @@ function convertLine(feature, ring, out, tol, isPolygon) {
     }
 
     var last = out.length - 3;
-    out[0] = 1;
+    out[2] = 1;
     simplify(out, 0, last, tol);
-    out[last] = 1;
+    out[last + 2] = 1;
 
     out.size = Math.abs(size);
 }

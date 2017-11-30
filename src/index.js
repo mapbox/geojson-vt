@@ -113,10 +113,10 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         }
 
         // stop tiling if the tile is solid clipped square
-        if (!options.solidChildren && isClippedSquare(tile, options.extent, options.buffer)) {
-            if (cz) solid = z; // and remember the zoom if we're drilling down
-            continue;
-        }
+        // if (!options.solidChildren && isClippedSquare(tile, options.extent, options.buffer)) {
+        //     if (cz) solid = z; // and remember the zoom if we're drilling down
+        //     continue;
+        // }
 
         // if we slice further down, no need to keep source geometry
         tile.source = null;
