@@ -1,17 +1,16 @@
 'use strict';
 
 var clip = require('./clip');
-var createFeature = require('./feature');
 
 module.exports = wrap;
 
-function wrap(features, buffer, intersectX) {
+function wrap(features, buffer) {
     var merged = features,
-        left  = clip(features, 1, -1 - buffer, buffer,     0, intersectX, -1, 2), // left world copy
-        right = clip(features, 1,  1 - buffer, 2 + buffer, 0, intersectX, -1, 2); // right world copy
+        left  = clip(features, 1, -1 - buffer, buffer,     0, -1, 2), // left world copy
+        right = clip(features, 1,  1 - buffer, 2 + buffer, 0, -1, 2); // right world copy
 
     if (left || right) {
-        merged = clip(features, 1, -buffer, 1 + buffer, 0, intersectX, -1, 2) || []; // center world copy
+        merged = clip(features, 1, -buffer, 1 + buffer, 0, -1, 2) || []; // center world copy
 
         if (left) merged = shiftFeatureCoords(left, 1).concat(merged); // merge left into center
         if (right) merged = merged.concat(shiftFeatureCoords(right, -1)); // merge right into center

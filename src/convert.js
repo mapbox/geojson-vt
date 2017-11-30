@@ -33,7 +33,7 @@ function convertFeature(features, geojson, tolerance) {
 
     var feature = {
         id: geojson.id || null,
-        type: 0,
+        type: type,
         geometry: geometry,
         tags: geojson.properties,
         minX: Infinity,
@@ -46,25 +46,20 @@ function convertFeature(features, geojson, tolerance) {
 
     if (type === 'Point') {
         convertPoint(feature, coords, geometry);
-        feature.type = 1;
 
     } else if (type === 'MultiPoint') {
         for (var i = 0; i < coords.length; i++) {
             convertPoint(feature, coords[i], geometry);
         }
-        feature.type = 1;
 
     } else if (type === 'LineString') {
         convertLine(feature, coords, geometry, tol, false);
-        feature.type = 2;
 
     } else if (type === 'MultiLineString') {
         convertLines(feature, coords, geometry, tol, false);
-        feature.type = 2;
 
     } else if (type === 'Polygon') {
         convertLines(feature, coords, geometry, tol, true);
-        feature.type = 3;
 
     } else if (type === 'MultiPolygon') {
         for (i = 0; i < coords.length; i++) {
@@ -72,7 +67,6 @@ function convertFeature(features, geojson, tolerance) {
             convertLines(feature, coords[i], polygon, tol, true);
             geometry.push(polygon);
         }
-        feature.type = 3;
     }
 
     features.push(feature);

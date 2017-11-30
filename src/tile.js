@@ -13,20 +13,24 @@ function createTile(features, z2, tx, ty, tolerance, noSimplify) {
         y: ty,
         z2: z2,
         transformed: false,
-        min: [2, 1],
-        max: [-1, 0]
+        minX: 2,
+        minY: 1,
+        maxX: -1,
+        maxY: 0
     };
     for (var i = 0; i < features.length; i++) {
         tile.numFeatures++;
         addFeature(tile, features[i], tolerance, noSimplify);
 
-        var min = features[i].min,
-            max = features[i].max;
+        var minX = features[i].minX;
+        var minY = features[i].minY;
+        var maxX = features[i].maxX;
+        var maxY = features[i].maxY;
 
-        if (min[0] < tile.min[0]) tile.min[0] = min[0];
-        if (min[1] < tile.min[1]) tile.min[1] = min[1];
-        if (max[0] > tile.max[0]) tile.max[0] = max[0];
-        if (max[1] > tile.max[1]) tile.max[1] = max[1];
+        if (minX < tile.minX) tile.minX = minX;
+        if (minY < tile.minY) tile.minY = minY;
+        if (maxX > tile.maxX) tile.maxX = maxX;
+        if (maxY > tile.maxY) tile.maxY = maxY;
     }
     return tile;
 }
