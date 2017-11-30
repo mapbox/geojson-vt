@@ -45,31 +45,31 @@ function convertFeature(features, feature, tolerance) {
     var tol = tolerance * tolerance;
 
     if (type === 'Point') {
-        convertPoint(converted, coords);
+        convertPoint(converted, coords, geometry);
 
     } else if (type === 'MultiPoint') {
         for (var i = 0; i < coords.length; i++) {
-            convertPoint(converted, coords[i]);
+            convertPoint(converted, coords[i], geometry);
         }
 
     } else if (type === 'LineString') {
-        convertRing(feature, coords, tol);
+        convertRing(converted, coords, geometry, tol, false);
 
     } else if (type === 'Polygon' || type === 'MultiLineString') {
-        convertRings(converted, coords, tol);
+        convertRings(converted, coords, geometry, tol, type === 'Polygon');
 
     } else if (type === 'MultiPolygon') {
         for (i = 0; i < coords.length; i++) {
-            geometry.push(coords[i].length);
-            convertRings(converted, coords[i], tol);
+            var polygon = [];
+            geometry.push(polygon);
+            convertRings(converted, coords[i], polygon, tol, true);
         }
     }
 
     features.push(converted);
 }
 
-function convertPoint(feature, coords) {
-    var geom = feature.geometry;
+function convertPoint(feature, coords, out) {
     var x = projectX(coords[0]);
     var y = projectY(coords[1]);
 
@@ -78,18 +78,14 @@ function convertPoint(feature, coords) {
     if (x > feature.maxX) feature.maxX = x;
     if (y > feature.maxY) feature.maxY = y;
 
-    geom.push(x);
-    geom.push(y);
-    geom.push(0);
+    out.push(x);
+    out.push(y);
+    out.push(0);
 }
 
-function convertRing(feature, ring, tol) {
+function convertRing(feature, ring, out, tol, isPolygon) {
     var x0, y0;
-    var area = 0;
-    var dist = 0;
-
-    var geom = feature.geometry;
-    var first = geom.length;
+    var size = 0;
 
     for (var j = 0; j < ring.length; j++) {
         var x = projectX(ring[j][0]);
@@ -100,31 +96,34 @@ function convertRing(feature, ring, tol) {
         if (x > feature.maxX) feature.maxX = x;
         if (y > feature.maxY) feature.maxY = y;
 
-        geom.push(x);
-        geom.push(y);
-        geom.push(0);
+        out.push(x);
+        out.push(y);
+        out.push(0);
 
-        if (j > 1) {
-            area += x0 * y - x * y0;
-            dist += Math.abs(x - x0) + Math.abs(y - y0);
+        if (j > 0) {
+            if (isPolygon) {
+                size += x0 * y - x * y0; // area
+            } else {
+                size += Math.sqrt(Math.pow(x - x0, 2) + Math.pow(y - y0, 2)); // length
+            }
         }
         x0 = x;
         y0 = y;
     }
 
-    var last = geom.length - 3;
-    geom[first] = 1;
-    simplify(geom, first, last, tol);
-    geom[last] = 1;
+    var last = out.length - 3;
+    out[0] = 1;
+    simplify(out, 0, last, tol);
+    out[last] = 1;
 
-    geom.push(area);
-    geom.push(dist);
+    out.size = Math.abs(size);
 }
 
-function convertRings(feature, rings, tol) {
+function convertRings(feature, rings, out, tol, isPolygon) {
     for (var i = 0; i < rings.length; i++) {
-        feature.geometry.push(rings[i].length);
-        convertRing(feature, rings[i], tol);
+        var geom = [];
+        out.push(geom);
+        convertRing(feature, rings[i], geom, tol, isPolygon);
     }
 }
 
