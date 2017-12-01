@@ -28,16 +28,35 @@ function shiftFeatureCoords(features, offset) {
 
         var newGeometry;
 
-        if (type === 1) {
+        if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
             newGeometry = shiftCoords(feature.geometry, offset);
-        } else {
+
+        } else if (type === 'MultiLineString' || type === 'Polygon') {
             newGeometry = [];
             for (var j = 0; j < feature.geometry.length; j++) {
                 newGeometry.push(shiftCoords(feature.geometry[j], offset));
             }
+        } else if (type === 'MultiPolygon') {
+            newGeometry = [];
+            for (var j = 0; j < feature.geometry.length; j++) {
+                var newPolygon = [];
+                for (var k = 0; k < feature.geometry[j].length; k++) {
+                    newGeometry.push(shiftCoords(feature.geometry[j][k], offset));
+                }
+                newGeometry.push(newPolygon);
+            }
         }
 
-        newFeatures.push(createFeature(feature.tags, type, newGeometry, feature.id));
+        newFeatures.push({
+            id: feature.id,
+            type: type,
+            geometry: newGeometry,
+            tags: feature.tags,
+            minX: feature.minX + offset,
+            minY: feature.minY,
+            maxX: feature.maxX + offset,
+            maxY: feature.maxY
+        });
     }
 
     return newFeatures;
@@ -45,11 +64,10 @@ function shiftFeatureCoords(features, offset) {
 
 function shiftCoords(points, offset) {
     var newPoints = [];
-    newPoints.area = points.area;
-    newPoints.dist = points.dist;
+    newPoints.size = points.size;
 
-    for (var i = 0; i < points.length; i++) {
-        newPoints.push([points[i][0] + offset, points[i][1], points[i][2]]);
+    for (var i = 0; i < points.length; i += 3) {
+        newPoints.push(points[i] + offset, points[i + 1], points[i + 2]);
     }
     return newPoints;
 }

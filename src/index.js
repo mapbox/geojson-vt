@@ -34,7 +34,7 @@ function GeoJSONVT(data, options) {
         this.total = 0;
     }
 
-    // features = wrap(features, options.buffer / options.extent);
+    features = wrap(features, options.buffer / options.extent);
 
     // start slicing from the top tile down
     if (features.length) this.splitTile(features, 0, 0, 0);
