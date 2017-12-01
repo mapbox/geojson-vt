@@ -120,40 +120,23 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {
         var sliced = false;
 
         if (a < k1) {
-
-            if (b >= k1) { // ---|-->  |
-                intersect(slice, ax, ay, bx, by, k1);
-
-                if (b > k2) { // ---|-----|-->
-                    intersect(slice, ax, ay, bx, by, k2);
-                    sliced = true;
-                }
-            }
-
+            // ---|-->  |
+            if (b >= k1) intersect(slice, ax, ay, bx, by, k1);
         } else if (a > k2) {
-
-            if (b <= k2) { // |  <--|---
-                intersect(slice, ax, ay, bx, by, k2);
-
-                if ((b < k1)) { // <--|-----|---
-                    intersect(slice, ax, ay, bx, by, k1);
-                    sliced = true;
-                }
-            }
-
+            // |  <--|---
+            if (b <= k2) intersect(slice, ax, ay, bx, by, k2);
         } else {
-
             addPoint(slice, ax, ay, az)
-
-            if (b < k1) { // <--|---  |
-                intersect(slice, ax, ay, bx, by, k1);
-                sliced = true;
-
-            } else if (b > k2) { // |  ---|-->
-                intersect(slice, ax, ay, bx, by, k2);
-                sliced = true;
-            }
-            // | --> |
+        }
+        if (b < k1 && a >= k1) {
+            // <--|---  | or <--|-----|---
+            intersect(slice, ax, ay, bx, by, k1);
+            sliced = true;
+        }
+        if (b > k2 && a <= k2) {
+            // |  ---|--> or ---|-----|-->
+            intersect(slice, ax, ay, bx, by, k2);
+            sliced = true;
         }
 
         if (!isPolygon && sliced) {
