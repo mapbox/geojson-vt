@@ -130,7 +130,8 @@ function addFeature(tile, feature, tolerance, noSimplify) {
         var tileFeature = {
             id: feature.id || null,
             geometry: simplified,
-            type: type === 'Polygon' || type === 'MultiPolygon' ? 3 : 2,
+            type: type === 'Polygon' || type === 'MultiPolygon' ? 3 :
+                type === 'LineString' || type === 'MultiLineString' ? 2 : 1,
             tags: feature.tags || null
         };
         tile.features.push(tileFeature);
