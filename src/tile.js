@@ -39,8 +39,7 @@ function addFeature(tile, feature, tolerance, noSimplify) {
 
     var geom = feature.geometry,
         type = feature.type,
-        simplified = [],
-        sqTolerance = tolerance * tolerance;
+        simplified = [];
 
     if (type === 'Point' || type === 'MultiPoint') {
         for (var i = 0; i < geom.length; i += 3) {
@@ -51,51 +50,13 @@ function addFeature(tile, feature, tolerance, noSimplify) {
         }
 
     } else if (type === 'LineString') {
-        if (!noSimplify && geom.size < tolerance) {
-            tile.numPoints += geom.length / 3;
-            return;
-        }
-
-        var simplifiedRing = [];
-
-        for (i = 0; i < geom.length; i += 3) {
-            if (noSimplify || geom[i + 2] > sqTolerance) {
-                tile.numSimplified++;
-                simplifiedRing.push(geom[i]);
-                simplifiedRing.push(geom[i + 1]);
-            }
-            tile.numPoints++;
-        }
-        simplified.push(simplifiedRing);
+        addLine(simplified, geom, tile, tolerance, noSimplify, false);
 
     } else if (type === 'Polygon') {
 
         // simplify projected coordinates for tile geometry
         for (i = 0; i < geom.length; i++) {
-            var ring = geom[i];
-
-            // filter out tiny polygons
-            if (!noSimplify && ring.size < sqTolerance) {
-                tile.numPoints += ring.length / 3;
-                continue;
-            }
-
-            simplifiedRing = [];
-
-            for (var j = 0; j < ring.length; j += 3) {
-                // keep points with importance > tolerance
-                if (noSimplify || ring[j + 2] > sqTolerance) {
-                    simplifiedRing.push(ring[j]);
-                    simplifiedRing.push(ring[j + 1]);
-                    tile.numSimplified++;
-                }
-                tile.numPoints++;
-            }
-
-            // if (simplifiedRing.length > 0)
-            // simplifiedRing.push(simplifiedRing[0]);
-
-            simplified.push(simplifiedRing);
+            addLine(simplified, geom[i], tile, tolerance, noSimplify, true);
         }
 
     } else if (type === 'MultiPolygon') {
@@ -103,30 +64,7 @@ function addFeature(tile, feature, tolerance, noSimplify) {
         for (var k = 0; k < geom.length; k++) {
             var polygon = geom[k];
             for (i = 0; i < polygon.length; i++) {
-                ring = polygon[i];
-
-                // filter out tiny polygons
-                if (!noSimplify && ring.size < sqTolerance) {
-                    tile.numPoints += ring.length / 3;
-                    continue;
-                }
-
-                simplifiedRing = [];
-
-                for (j = 0; j < ring.length; j += 3) {
-                    // keep points with importance > tolerance
-                    if (noSimplify || ring[j + 2] > sqTolerance) {
-                        simplifiedRing.push(ring[j]);
-                        simplifiedRing.push(ring[j + 1]);
-                        tile.numSimplified++;
-                    }
-                    tile.numPoints++;
-                }
-
-                // if (simplifiedRing.length > 0)
-                // simplifiedRing.push(simplifiedRing[0]);
-
-                simplified.push(simplifiedRing);
+                addLine(simplified, polygon[i], tile, tolerance, noSimplify, true);
             }
         }
     }
@@ -143,6 +81,28 @@ function addFeature(tile, feature, tolerance, noSimplify) {
         }
         tile.features.push(tileFeature);
     }
+}
+
+function addLine(result, geom, tile, tolerance, noSimplify, isPolygon) {
+    var sqTolerance = tolerance * tolerance;
+
+    if (!noSimplify && geom.size < (isPolygon ? sqTolerance : tolerance)) {
+        tile.numPoints += geom.length / 3;
+        return;
+    }
+
+    var ring = [];
+
+    for (var i = 0; i < geom.length; i += 3) {
+        if (noSimplify || geom[i + 2] > sqTolerance) {
+            tile.numSimplified++;
+            ring.push(geom[i]);
+            ring.push(geom[i + 1]);
+        }
+        tile.numPoints++;
+    }
+
+    result.push(ring);
 }
 
 // function rewind(ring, clockwise) {
