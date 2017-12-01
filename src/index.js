@@ -113,6 +113,8 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         // if we slice further down, no need to keep source geometry
         tile.source = null;
 
+        if (features.length === 0) continue;
+
         if (debug > 1) console.time('clipping');
 
         // values we'll use for clipping
