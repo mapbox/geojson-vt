@@ -98,7 +98,7 @@ function addFeature(tile, feature, tolerance, noSimplify) {
         for (var k = 0; k < geom.length; k++) {
             var polygon = geom[k];
             for (i = 0; i < polygon.length; i++) {
-                var ring = polygon[i];
+                ring = polygon[i];
 
                 // filter out tiny polygons
                 if (!noSimplify && ring.size < sqTolerance) {
@@ -106,9 +106,9 @@ function addFeature(tile, feature, tolerance, noSimplify) {
                     continue;
                 }
 
-                var simplifiedRing = [];
+                simplifiedRing = [];
 
-                for (var j = 0; j < ring.length; j += 3) {
+                for (j = 0; j < ring.length; j += 3) {
                     // keep points with importance > tolerance
                     if (noSimplify || ring[j + 2] > sqTolerance) {
                         simplifiedRing.push(ring[j]);
@@ -128,12 +128,14 @@ function addFeature(tile, feature, tolerance, noSimplify) {
 
     if (simplified.length) {
         var tileFeature = {
-            id: feature.id || null,
             geometry: simplified,
             type: type === 'Polygon' || type === 'MultiPolygon' ? 3 :
                 type === 'LineString' || type === 'MultiLineString' ? 2 : 1,
             tags: feature.tags || null
         };
+        if (feature.id !== null) {
+            tileFeature.id = feature.id;
+        }
         tile.features.push(tileFeature);
     }
 }

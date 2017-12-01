@@ -26,6 +26,8 @@ function convert(data, tolerance) {
 }
 
 function convertFeature(features, geojson, tolerance) {
+    if (!geojson.geometry) return;
+
     var coords = geojson.geometry.coordinates;
     var type = geojson.geometry.type;
 

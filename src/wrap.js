@@ -38,7 +38,7 @@ function shiftFeatureCoords(features, offset) {
             }
         } else if (type === 'MultiPolygon') {
             newGeometry = [];
-            for (var j = 0; j < feature.geometry.length; j++) {
+            for (j = 0; j < feature.geometry.length; j++) {
                 var newPolygon = [];
                 for (var k = 0; k < feature.geometry[j].length; k++) {
                     newGeometry.push(shiftCoords(feature.geometry[j][k], offset));
@@ -48,7 +48,7 @@ function shiftFeatureCoords(features, offset) {
         }
 
         newFeatures.push({
-            id: feature.id,
+            id: feature.id || null,
             type: type,
             geometry: newGeometry,
             tags: feature.tags,

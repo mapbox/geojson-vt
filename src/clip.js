@@ -49,24 +49,24 @@ function clip(features, scale, k1, k2, axis, minAll, maxAll) {
             minY: feature.minY,
             maxX: feature.maxX,
             maxY: feature.maxY
-        }
+        };
 
         if (type === 'Point' || type === 'MultiPoint') {
-            clipPoints(feature.geometry, newFeature, k1, k2, axis);
+            clipPoints(geometry, newFeature, k1, k2, axis);
 
         } else if (type === 'LineString') {
-            clipLine(feature.geometry, newGeometry, k1, k2, axis, false);
+            clipLine(geometry, newGeometry, k1, k2, axis, false);
 
         } else if (type === 'MultiLineString') {
-            clipLines(feature.geometry, newGeometry, k1, k2, axis, false);
+            clipLines(geometry, newGeometry, k1, k2, axis, false);
 
         } else if (type === 'Polygon') {
-            clipLines(feature.geometry, newGeometry, k1, k2, axis, true);
+            clipLines(geometry, newGeometry, k1, k2, axis, true);
 
         } else if (type === 'MultiPolygon') {
-            for (var j = 0; j < feature.geometry.length; j++) {
+            for (var j = 0; j < geometry.length; j++) {
                 var polygon = [];
-                clipLines(feature.geometry[j], polygon, k1, k2, axis, true);
+                clipLines(geometry[j], polygon, k1, k2, axis, true);
                 newGeometry.push(polygon);
             }
         }
@@ -89,7 +89,7 @@ function clip(features, scale, k1, k2, axis, minAll, maxAll) {
 }
 
 function clipPoints(geom, feature, k1, k2, axis) {
-    var out = newGeometry.geometry;
+    var out = feature.geometry;
 
     for (var i = 0; i < geom.length; i += 3) {
         var a = geom[i + axis];
@@ -161,8 +161,10 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {
     }
 
     // add the final slice
-    slice.size = geom.size;
-    newGeom.push(slice);
+    if (slice.length) {
+        slice.size = geom.size;
+        newGeom.push(slice);
+    }
 }
 
 function clipLines(geom, newGeom, k1, k2, axis, isPolygon) {

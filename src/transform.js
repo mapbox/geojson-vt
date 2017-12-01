@@ -41,7 +41,7 @@ function transformTile(tile, extent) {
 }
 
 function transformPoint(x, y, extent, z2, tx, ty) {
-    var x = Math.round(extent * (x * z2 - tx)),
-        y = Math.round(extent * (y * z2 - ty));
-    return [x, y];
+    return [
+        Math.round(extent * (x * z2 - tx)),
+        Math.round(extent * (y * z2 - ty))];
 }
