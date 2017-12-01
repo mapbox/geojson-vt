@@ -134,25 +134,26 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX);
         right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX);
+        features = null;
 
         if (left) {
             tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY);
             bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY);
+            left = null;
         }
 
         if (right) {
             tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY);
             br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY);
+            right = null;
         }
 
         if (debug > 1) console.timeEnd('clipping');
 
-        if (features.length) {
-            stack.push(tl || [], z + 1, x * 2,     y * 2);
-            stack.push(bl || [], z + 1, x * 2,     y * 2 + 1);
-            stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
-            stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
-        }
+        stack.push(tl || [], z + 1, x * 2,     y * 2);
+        stack.push(bl || [], z + 1, x * 2,     y * 2 + 1);
+        stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
+        stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
     }
 
     return solid;

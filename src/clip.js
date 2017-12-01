@@ -126,7 +126,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {
             // |  <--|---
             if (b <= k2) intersect(slice, ax, ay, bx, by, k2);
         } else {
-            addPoint(slice, ax, ay, az)
+            addPoint(slice, ax, ay, az);
         }
         if (b < k1 && a >= k1) {
             // <--|---  | or <--|-----|---
