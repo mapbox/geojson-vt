@@ -69,6 +69,16 @@ function convertFeature(features, geojson, tolerance) {
             convertLines(feature, coords[i], polygon, tol, true);
             geometry.push(polygon);
         }
+    } else if (type === 'GeometryCollection') {
+        for (i = 0; i < geojson.geometry.geometries.length; i++) {
+            convertFeature(features, {
+                geometry: geojson.geometry.geometries[i],
+                properties: geojson.properties
+            }, tolerance);
+        }
+        return;
+    } else {
+        throw new Error('Input data is not a valid GeoJSON object.');
     }
 
     features.push(feature);

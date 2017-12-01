@@ -44,7 +44,8 @@ function addFeature(tile, feature, tolerance, noSimplify) {
 
     if (type === 'Point' || type === 'MultiPoint') {
         for (var i = 0; i < geom.length; i += 3) {
-            simplified.push([geom[i], geom[i + 1]]);
+            simplified.push(geom[i]);
+            simplified.push(geom[i + 1]);
             tile.numPoints++;
             tile.numSimplified++;
         }
@@ -55,13 +56,17 @@ function addFeature(tile, feature, tolerance, noSimplify) {
             return;
         }
 
+        var simplifiedRing = [];
+
         for (i = 0; i < geom.length; i += 3) {
             if (noSimplify || geom[i + 2] > sqTolerance) {
                 tile.numSimplified++;
-                simplified.push([geom[i], geom[i + 1]]);
+                simplifiedRing.push(geom[i]);
+                simplifiedRing.push(geom[i + 1]);
             }
             tile.numPoints++;
         }
+        simplified.push(simplifiedRing);
 
     } else if (type === 'Polygon') {
 
@@ -75,7 +80,7 @@ function addFeature(tile, feature, tolerance, noSimplify) {
                 continue;
             }
 
-            var simplifiedRing = [];
+            simplifiedRing = [];
 
             for (var j = 0; j < ring.length; j += 3) {
                 // keep points with importance > tolerance

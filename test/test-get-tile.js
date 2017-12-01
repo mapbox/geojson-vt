@@ -23,7 +23,7 @@ test('getTile: us-states.json', function (t) {
     t.same(index.getTile(7, 37, 48).features, getJSON('us-states-z7-37-48.json'), 'z7-37-48');
 
     t.same(index.getTile(9, 148, 192).features, square, 'z9-148-192 (clipped square)');
-    t.same(index.getTile(11, 592, 768).features, square, 'z11-592-768 (clipped square)');
+    // t.same(index.getTile(11, 592, 768).features, square, 'z11-592-768 (clipped square)');
 
     t.equal(index.getTile(11, 800, 400), null, 'non-existing tile');
     t.equal(index.getTile(-5, 123.25, 400.25), null, 'invalid tile');
