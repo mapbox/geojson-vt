@@ -50,13 +50,11 @@ function addFeature(tile, feature, tolerance, noSimplify) {
         }
 
     } else if (type === 'LineString') {
-        addLine(simplified, geom, tile, tolerance, noSimplify, false);
+        addLine(simplified, geom, tile, tolerance, noSimplify, false, false);
 
-    } else if (type === 'Polygon') {
-
-        // simplify projected coordinates for tile geometry
+    } else if (type === 'MultiLineString' || type === 'Polygon') {
         for (i = 0; i < geom.length; i++) {
-            addLine(simplified, geom[i], tile, tolerance, noSimplify, true);
+            addLine(simplified, geom[i], tile, tolerance, noSimplify, type === 'Polygon', i === 0);
         }
 
     } else if (type === 'MultiPolygon') {
@@ -64,7 +62,7 @@ function addFeature(tile, feature, tolerance, noSimplify) {
         for (var k = 0; k < geom.length; k++) {
             var polygon = geom[k];
             for (i = 0; i < polygon.length; i++) {
-                addLine(simplified, polygon[i], tile, tolerance, noSimplify, true);
+                addLine(simplified, polygon[i], tile, tolerance, noSimplify, true, i === 0);
             }
         }
     }
@@ -83,10 +81,10 @@ function addFeature(tile, feature, tolerance, noSimplify) {
     }
 }
 
-function addLine(result, geom, tile, tolerance, noSimplify, isPolygon) {
+function addLine(result, geom, tile, tolerance, noSimplify, isPolygon, isOuter) {
     var sqTolerance = tolerance * tolerance;
 
-    if (!noSimplify && geom.size < (isPolygon ? sqTolerance : tolerance)) {
+    if (!noSimplify && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
         tile.numPoints += geom.length / 3;
         return;
     }
@@ -102,20 +100,24 @@ function addLine(result, geom, tile, tolerance, noSimplify, isPolygon) {
         tile.numPoints++;
     }
 
+    if (isPolygon) rewind(ring, isOuter);
+
     result.push(ring);
 }
 
-// function rewind(ring, clockwise) {
-//     var area = signedArea(ring);
-//     if (area < 0 === clockwise) ring.reverse();
-// }
-
-// function signedArea(ring) {
-//     var sum = 0;
-//     for (var i = 0, len = ring.length, j = len - 1, p1, p2; i < len; j = i++) {
-//         p1 = ring[i];
-//         p2 = ring[j];
-//         sum += (p2[0] - p1[0]) * (p1[1] + p2[1]);
-//     }
-//     return sum;
-// }
+function rewind(ring, clockwise) {
+    var area = 0;
+    for (var i = 0, len = ring.length, j = len - 2; i < len; j = i, i += 2) {
+        area += (ring[i] - ring[j]) * (ring[i + 1] + ring[j + 1]);
+    }
+    if (area > 0 === clockwise) {
+        for (i = 0, len = ring.length; i < len / 2; i += 2) {
+            var x = ring[i];
+            var y = ring[i + 1];
+            ring[i] = ring[len - 2 - i];
+            ring[i + 1] = ring[len - 1 - i];
+            ring[len - 2 - i] = x;
+            ring[len - 1 - i] = y;
+        }
+    }
+}

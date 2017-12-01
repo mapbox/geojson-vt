@@ -67,7 +67,9 @@ function clip(features, scale, k1, k2, axis, minAll, maxAll) {
             for (var j = 0; j < geometry.length; j++) {
                 var polygon = [];
                 clipLines(geometry[j], polygon, k1, k2, axis, true);
-                newGeometry.push(polygon);
+                if (polygon.length) {
+                    newGeometry.push(polygon);
+                }
             }
         }
 

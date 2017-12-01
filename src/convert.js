@@ -117,7 +117,7 @@ function convertLine(feature, ring, out, tol, isPolygon) {
 
         if (j > 0) {
             if (isPolygon) {
-                size += x0 * y - x * y0; // area
+                size += (x0 * y - x * y0) / 2; // area
             } else {
                 size += Math.sqrt(Math.pow(x - x0, 2) + Math.pow(y - y0, 2)); // length
             }

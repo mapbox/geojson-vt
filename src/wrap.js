@@ -41,7 +41,7 @@ function shiftFeatureCoords(features, offset) {
             for (j = 0; j < feature.geometry.length; j++) {
                 var newPolygon = [];
                 for (var k = 0; k < feature.geometry[j].length; k++) {
-                    newGeometry.push(shiftCoords(feature.geometry[j][k], offset));
+                    newPolygon.push(shiftCoords(feature.geometry[j][k], offset));
                 }
                 newGeometry.push(newPolygon);
             }
