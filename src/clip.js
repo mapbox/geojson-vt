@@ -121,24 +121,24 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {
 
         if (a < k1) {
 
-            if (b > k2) { // ---|-----|-->
+            if (b >= k1) { // ---|-->  |
                 intersect(slice, ax, ay, bx, by, k1);
-                intersect(slice, ax, ay, bx, by, k2);
-                sliced = true;
 
-            } else if (b >= k1) { // ---|-->  |
-                intersect(slice, ax, ay, bx, by, k1);
+                if (b > k2) { // ---|-----|-->
+                    intersect(slice, ax, ay, bx, by, k2);
+                    sliced = true;
+                }
             }
 
         } else if (a > k2) {
 
-            if ((b < k1)) { // <--|-----|---
+            if (b <= k2) { // |  <--|---
                 intersect(slice, ax, ay, bx, by, k2);
-                intersect(slice, ax, ay, bx, by, k1);
-                sliced = true;
 
-            } else if (b <= k2) { // |  <--|---
-                intersect(slice, ax, ay, bx, by, k2);
+                if ((b < k1)) { // <--|-----|---
+                    intersect(slice, ax, ay, bx, by, k1);
+                    sliced = true;
+                }
             }
 
         } else {
