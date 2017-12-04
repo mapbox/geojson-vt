@@ -2,6 +2,8 @@
 
 module.exports = clip;
 
+var createFeature = require('./feature');
+
 /* clip features between two axis-parallel lines:
  *     |        |
  *  ___|___     |     /
@@ -37,22 +39,8 @@ function clip(features, scale, k1, k2, axis, minAll, maxAll) {
 
         var newGeometry = [];
 
-        var newFeature = {
-            id: feature.id || null,
-            type: type,
-            geometry: newGeometry,
-
-            // if a feature got clipped, it will likely get clipped on the next zoom level as well,
-            // so there's no need to recalculate bboxes
-            tags: feature.tags,
-            minX: feature.minX,
-            minY: feature.minY,
-            maxX: feature.maxX,
-            maxY: feature.maxY
-        };
-
         if (type === 'Point' || type === 'MultiPoint') {
-            clipPoints(geometry, newFeature, k1, k2, axis);
+            clipPoints(geometry, newGeometry, k1, k2, axis);
 
         } else if (type === 'LineString') {
             clipLine(geometry, newGeometry, k1, k2, axis, false);
@@ -76,34 +64,33 @@ function clip(features, scale, k1, k2, axis, minAll, maxAll) {
         if (newGeometry.length) {
             if (type === 'LineString' || type === 'MultiLineString') {
                 if (newGeometry.length === 1) {
-                    newFeature.type = 'LineString';
-                    newFeature.geometry = newGeometry[0];
+                    type = 'LineString';
+                    newGeometry = newGeometry[0];
                 } else {
-                    newFeature.type = 'MultiLineString';
+                    type = 'MultiLineString';
                 }
             }
+            if (type === 'Point' || type === 'MultiPoint') {
+                type = newGeometry.length === 3 ? 'Point' : 'MultiPoint';
+            }
 
-            clipped.push(newFeature);
+            clipped.push(createFeature(feature.id, type, newGeometry, feature.tags));
         }
     }
 
     return clipped.length ? clipped : null;
 }
 
-function clipPoints(geom, feature, k1, k2, axis) {
-    var out = feature.geometry;
-
+function clipPoints(geom, newGeom, k1, k2, axis) {
     for (var i = 0; i < geom.length; i += 3) {
         var a = geom[i + axis];
 
         if (a >= k1 && a <= k2) {
-            out.push(geom[i]);
-            out.push(geom[i + 1]);
-            out.push(geom[i + 2]);
+            newGeom.push(geom[i]);
+            newGeom.push(geom[i + 1]);
+            newGeom.push(geom[i + 2]);
         }
     }
-
-    feature.type = out.length === 3 ? 'Point' : 'MultiPoint';
 }
 
 function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {

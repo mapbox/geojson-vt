@@ -1,6 +1,7 @@
 'use strict';
 
 var clip = require('./clip');
+var createFeature = require('./feature');
 
 module.exports = wrap;
 
@@ -47,16 +48,7 @@ function shiftFeatureCoords(features, offset) {
             }
         }
 
-        newFeatures.push({
-            id: feature.id || null,
-            type: type,
-            geometry: newGeometry,
-            tags: feature.tags,
-            minX: feature.minX + offset,
-            minY: feature.minY,
-            maxX: feature.maxX + offset,
-            maxY: feature.maxY
-        });
+        newFeatures.push(createFeature(feature.id, type, newGeometry, feature.tags));
     }
 
     return newFeatures;
