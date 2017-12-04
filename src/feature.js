@@ -2,42 +2,47 @@
 
 module.exports = createFeature;
 
-function createFeature(tags, type, geom, id) {
+function createFeature(id, type, geom, tags) {
     var feature = {
         id: id || null,
         type: type,
         geometry: geom,
-        tags: tags || null,
-        min: [Infinity, Infinity], // initial bbox values
-        max: [-Infinity, -Infinity]
+        tags: tags,
+        minX: Infinity,
+        minY: Infinity,
+        maxX: -Infinity,
+        maxY: -Infinity
     };
     calcBBox(feature);
     return feature;
 }
 
-// calculate the feature bounding box for faster clipping later
 function calcBBox(feature) {
-    var geometry = feature.geometry,
-        min = feature.min,
-        max = feature.max;
+    var geom = feature.geometry;
+    var type = feature.type;
 
-    if (feature.type === 1) {
-        calcRingBBox(min, max, geometry);
-    } else {
-        for (var i = 0; i < geometry.length; i++) {
-            calcRingBBox(min, max, geometry[i]);
+    if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
+        calcLineBBox(feature, geom);
+
+    } else if (type === 'Polygon' || type === 'MultiLineString') {
+        for (var i = 0; i < geom.length; i++) {
+            calcLineBBox(feature, geom[i]);
+        }
+
+    } else if (type === 'MultiPolygon') {
+        for (i = 0; i < geom.length; i++) {
+            for (var j = 0; j < geom[i].length; j++) {
+                calcLineBBox(feature, geom[i][j]);
+            }
         }
     }
-
-    return feature;
 }
 
-function calcRingBBox(min, max, points) {
-    for (var i = 0, p; i < points.length; i++) {
-        p = points[i];
-        min[0] = Math.min(p[0], min[0]);
-        max[0] = Math.max(p[0], max[0]);
-        min[1] = Math.min(p[1], min[1]);
-        max[1] = Math.max(p[1], max[1]);
+function calcLineBBox(feature, geom) {
+    for (var i = 0; i < geom.length; i += 3) {
+        feature.minX = Math.min(feature.minX, geom[i]);
+        feature.minY = Math.min(feature.minY, geom[i + 1]);
+        feature.maxX = Math.max(feature.maxX, geom[i]);
+        feature.maxY = Math.max(feature.maxY, geom[i + 1]);
     }
 }

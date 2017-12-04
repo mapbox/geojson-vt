@@ -36,7 +36,7 @@ function GeoJSONVT(data, options) {
         this.total = 0;
     }
 
-    features = wrap(features, options.buffer / options.extent, intersectX);
+    features = wrap(features, options.buffer / options.extent);
 
     // start slicing from the top tile down
     if (features.length) this.splitTile(features, 0, 0, 0);
@@ -52,7 +52,6 @@ GeoJSONVT.prototype.options = {
     maxZoom: 14,            // max zoom to preserve detail on
     indexMaxZoom: 5,        // max zoom in the tile index
     indexMaxPoints: 100000, // max number of points per tile in the tile index
-    solidChildren: false,   // whether to tile solid square tiles further
     tolerance: 3,           // simplification tolerance (higher means simpler)
     extent: 4096,           // tile extent
     buffer: 64,             // tile buffer on each side
@@ -63,8 +62,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     var stack = [features, z, x, y],
         options = this.options,
-        debug = options.debug,
-        solid = null;
+        debug = options.debug;
 
     // avoid recursion by using a processing queue
     while (stack.length) {
@@ -114,14 +112,10 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             if (x !== Math.floor(cx / m) || y !== Math.floor(cy / m)) continue;
         }
 
-        // stop tiling if the tile is solid clipped square
-        if (!options.solidChildren && isClippedSquare(tile, options.extent, options.buffer)) {
-            if (cz) solid = z; // and remember the zoom if we're drilling down
-            continue;
-        }
-
         // if we slice further down, no need to keep source geometry
         tile.source = null;
+
+        if (features.length === 0) continue;
 
         if (debug > 1) console.time('clipping');
 
@@ -134,30 +128,29 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         tl = bl = tr = br = null;
 
-        left  = clip(features, z2, x - k1, x + k3, 0, intersectX, tile.min[0], tile.max[0]);
-        right = clip(features, z2, x + k2, x + k4, 0, intersectX, tile.min[0], tile.max[0]);
+        left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX);
+        right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX);
+        features = null;
 
         if (left) {
-            tl = clip(left, z2, y - k1, y + k3, 1, intersectY, tile.min[1], tile.max[1]);
-            bl = clip(left, z2, y + k2, y + k4, 1, intersectY, tile.min[1], tile.max[1]);
+            tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY);
+            bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY);
+            left = null;
         }
 
         if (right) {
-            tr = clip(right, z2, y - k1, y + k3, 1, intersectY, tile.min[1], tile.max[1]);
-            br = clip(right, z2, y + k2, y + k4, 1, intersectY, tile.min[1], tile.max[1]);
+            tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY);
+            br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY);
+            right = null;
         }
 
         if (debug > 1) console.timeEnd('clipping');
 
-        if (features.length) {
-            stack.push(tl || [], z + 1, x * 2,     y * 2);
-            stack.push(bl || [], z + 1, x * 2,     y * 2 + 1);
-            stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
-            stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
-        }
+        stack.push(tl || [], z + 1, x * 2,     y * 2);
+        stack.push(bl || [], z + 1, x * 2,     y * 2 + 1);
+        stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
+        stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
     }
-
-    return solid;
 };
 
 GeoJSONVT.prototype.getTile = function (z, x, y) {
@@ -192,18 +185,9 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     // if we found a parent tile containing the original geometry, we can drill down from it
     if (debug > 1) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
 
-    // it parent tile is a solid clipped square, return it instead since it's identical
-    if (isClippedSquare(parent, extent, options.buffer)) return transform.tile(parent, extent);
-
     if (debug > 1) console.time('drilling down');
-    var solid = this.splitTile(parent.source, z0, x0, y0, z, x, y);
+    this.splitTile(parent.source, z0, x0, y0, z, x, y);
     if (debug > 1) console.timeEnd('drilling down');
-
-    // one of the parent tiles was a solid clipped square
-    if (solid !== null) {
-        var m = 1 << (z - solid);
-        id = toID(solid, Math.floor(x / m), Math.floor(y / m));
-    }
 
     return this.tiles[id] ? transform.tile(this.tiles[id], extent) : null;
 };
@@ -212,35 +196,7 @@ function toID(z, x, y) {
     return (((1 << z) * y + x) * 32) + z;
 }
 
-function intersectX(a, b, x) {
-    return [x, (x - a[0]) * (b[1] - a[1]) / (b[0] - a[0]) + a[1], 1];
-}
-function intersectY(a, b, y) {
-    return [(y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]) + a[0], y, 1];
-}
-
 function extend(dest, src) {
     for (var i in src) dest[i] = src[i];
     return dest;
-}
-
-// checks whether a tile is a whole-area fill after clipping; if it is, there's no sense slicing it further
-function isClippedSquare(tile, extent, buffer) {
-
-    var features = tile.source;
-    if (features.length !== 1) return false;
-
-    var feature = features[0];
-    if (feature.type !== 3 || feature.geometry.length > 1) return false;
-
-    var len = feature.geometry[0].length;
-    if (len !== 5) return false;
-
-    for (var i = 0; i < len; i++) {
-        var p = transform.point(feature.geometry[0][i], extent, tile.z2, tile.x, tile.y);
-        if ((p[0] !== -buffer && p[0] !== extent + buffer) ||
-            (p[1] !== -buffer && p[1] !== extent + buffer)) return false;
-    }
-
-    return true;
 }

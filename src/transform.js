@@ -18,13 +18,19 @@ function transformTile(tile, extent) {
             geom = feature.geometry,
             type = feature.type;
 
-        if (type === 1) {
-            for (j = 0; j < geom.length; j++) geom[j] = transformPoint(geom[j], extent, z2, tx, ty);
+        feature.geometry = [];
 
+        if (type === 1) {
+            for (j = 0; j < geom.length; j += 2) {
+                feature.geometry.push(transformPoint(geom[j], geom[j + 1], extent, z2, tx, ty));
+            }
         } else {
             for (j = 0; j < geom.length; j++) {
-                var ring = geom[j];
-                for (k = 0; k < ring.length; k++) ring[k] = transformPoint(ring[k], extent, z2, tx, ty);
+                var ring = [];
+                for (k = 0; k < geom[j].length; k += 2) {
+                    ring.push(transformPoint(geom[j][k], geom[j][k + 1], extent, z2, tx, ty));
+                }
+                feature.geometry.push(ring);
             }
         }
     }
@@ -34,8 +40,8 @@ function transformTile(tile, extent) {
     return tile;
 }
 
-function transformPoint(p, extent, z2, tx, ty) {
-    var x = Math.round(extent * (p[0] * z2 - tx)),
-        y = Math.round(extent * (p[1] * z2 - ty));
-    return [x, y];
+function transformPoint(x, y, extent, z2, tx, ty) {
+    return [
+        Math.round(extent * (x * z2 - tx)),
+        Math.round(extent * (y * z2 - ty))];
 }

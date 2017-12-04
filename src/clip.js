@@ -11,7 +11,7 @@ var createFeature = require('./feature');
  *     |        |
  */
 
-function clip(features, scale, k1, k2, axis, intersect, minAll, maxAll) {
+function clip(features, scale, k1, k2, axis, minAll, maxAll) {
 
     k1 /= scale;
     k2 /= scale;
@@ -23,127 +23,159 @@ function clip(features, scale, k1, k2, axis, intersect, minAll, maxAll) {
 
     for (var i = 0; i < features.length; i++) {
 
-        var feature = features[i],
-            geometry = feature.geometry,
-            type = feature.type,
-            min, max;
+        var feature = features[i];
+        var geometry = feature.geometry;
+        var type = feature.type;
 
-        min = feature.min[axis];
-        max = feature.max[axis];
+        var min = axis === 0 ? feature.minX : feature.minY;
+        var max = axis === 0 ? feature.maxX : feature.maxY;
 
         if (min >= k1 && max <= k2) { // trivial accept
             clipped.push(feature);
             continue;
-        } else if (min > k2 || max < k1) continue; // trivial reject
+        } else if (min > k2 || max < k1) { // trivial reject
+            continue;
+        }
 
-        var slices = type === 1 ?
-            clipPoints(geometry, k1, k2, axis) :
-            clipGeometry(geometry, k1, k2, axis, intersect, type === 3);
+        var newGeometry = [];
 
-        if (slices.length) {
-            // if a feature got clipped, it will likely get clipped on the next zoom level as well,
-            // so there's no need to recalculate bboxes
-            clipped.push(createFeature(feature.tags, type, slices, feature.id));
+        if (type === 'Point' || type === 'MultiPoint') {
+            clipPoints(geometry, newGeometry, k1, k2, axis);
+
+        } else if (type === 'LineString') {
+            clipLine(geometry, newGeometry, k1, k2, axis, false);
+
+        } else if (type === 'MultiLineString') {
+            clipLines(geometry, newGeometry, k1, k2, axis, false);
+
+        } else if (type === 'Polygon') {
+            clipLines(geometry, newGeometry, k1, k2, axis, true);
+
+        } else if (type === 'MultiPolygon') {
+            for (var j = 0; j < geometry.length; j++) {
+                var polygon = [];
+                clipLines(geometry[j], polygon, k1, k2, axis, true);
+                if (polygon.length) {
+                    newGeometry.push(polygon);
+                }
+            }
+        }
+
+        if (newGeometry.length) {
+            if (type === 'LineString' || type === 'MultiLineString') {
+                if (newGeometry.length === 1) {
+                    type = 'LineString';
+                    newGeometry = newGeometry[0];
+                } else {
+                    type = 'MultiLineString';
+                }
+            }
+            if (type === 'Point' || type === 'MultiPoint') {
+                type = newGeometry.length === 3 ? 'Point' : 'MultiPoint';
+            }
+
+            clipped.push(createFeature(feature.id, type, newGeometry, feature.tags));
         }
     }
 
     return clipped.length ? clipped : null;
 }
 
-function clipPoints(geometry, k1, k2, axis) {
-    var slice = [];
+function clipPoints(geom, newGeom, k1, k2, axis) {
+    for (var i = 0; i < geom.length; i += 3) {
+        var a = geom[i + axis];
 
-    for (var i = 0; i < geometry.length; i++) {
-        var a = geometry[i],
-            ak = a[axis];
-
-        if (ak >= k1 && ak <= k2) slice.push(a);
+        if (a >= k1 && a <= k2) {
+            newGeom.push(geom[i]);
+            newGeom.push(geom[i + 1]);
+            newGeom.push(geom[i + 2]);
+        }
     }
-    return slice;
 }
 
-function clipGeometry(geometry, k1, k2, axis, intersect, closed) {
+function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {
 
-    var slices = [];
+    var slice = [];
+    var intersect = axis === 0 ? intersectX : intersectY;
 
-    for (var i = 0; i < geometry.length; i++) {
+    for (var i = 0; i < geom.length - 3; i += 3) {
+        var ax = geom[i];
+        var ay = geom[i + 1];
+        var az = geom[i + 2];
+        var bx = geom[i + 3];
+        var by = geom[i + 4];
+        var a = axis === 0 ? ax : ay;
+        var b = axis === 0 ? bx : by;
+        var sliced = false;
 
-        var ak = 0,
-            bk = 0,
-            b = null,
-            points = geometry[i],
-            area = points.area,
-            dist = points.dist,
-            outer = points.outer,
-            len = points.length,
-            a, j, last;
-
-        var slice = [];
-
-        for (j = 0; j < len - 1; j++) {
-            a = b || points[j];
-            b = points[j + 1];
-            ak = bk || a[axis];
-            bk = b[axis];
-
-            if (ak < k1) {
-
-                if ((bk > k2)) { // ---|-----|-->
-                    slice.push(intersect(a, b, k1), intersect(a, b, k2));
-                    if (!closed) slice = newSlice(slices, slice, area, dist, outer);
-
-                } else if (bk >= k1) slice.push(intersect(a, b, k1)); // ---|-->  |
-
-            } else if (ak > k2) {
-
-                if ((bk < k1)) { // <--|-----|---
-                    slice.push(intersect(a, b, k2), intersect(a, b, k1));
-                    if (!closed) slice = newSlice(slices, slice, area, dist, outer);
-
-                } else if (bk <= k2) slice.push(intersect(a, b, k2)); // |  <--|---
-
-            } else {
-
-                slice.push(a);
-
-                if (bk < k1) { // <--|---  |
-                    slice.push(intersect(a, b, k1));
-                    if (!closed) slice = newSlice(slices, slice, area, dist, outer);
-
-                } else if (bk > k2) { // |  ---|-->
-                    slice.push(intersect(a, b, k2));
-                    if (!closed) slice = newSlice(slices, slice, area, dist, outer);
-                }
-                // | --> |
-            }
+        if (a < k1) {
+            // ---|-->  |
+            if (b >= k1) intersect(slice, ax, ay, bx, by, k1);
+        } else if (a > k2) {
+            // |  <--|---
+            if (b <= k2) intersect(slice, ax, ay, bx, by, k2);
+        } else {
+            addPoint(slice, ax, ay, az);
+        }
+        if (b < k1 && a >= k1) {
+            // <--|---  | or <--|-----|---
+            intersect(slice, ax, ay, bx, by, k1);
+            sliced = true;
+        }
+        if (b > k2 && a <= k2) {
+            // |  ---|--> or ---|-----|-->
+            intersect(slice, ax, ay, bx, by, k2);
+            sliced = true;
         }
 
-        // add the last point
-        a = points[len - 1];
-        ak = a[axis];
-        if (ak >= k1 && ak <= k2) slice.push(a);
-
-        // close the polygon if its endpoints are not the same after clipping
-
-        last = slice[slice.length - 1];
-        if (closed && last && (slice[0][0] !== last[0] || slice[0][1] !== last[1])) slice.push(slice[0]);
-
-        // add the final slice
-        newSlice(slices, slice, area, dist, outer);
+        if (!isPolygon && sliced) {
+            slice.size = geom.size;
+            newGeom.push(slice);
+            slice = [];
+        }
     }
 
-    return slices;
+    // add the last point
+    var last = geom.length - 3;
+    ax = geom[last];
+    ay = geom[last + 1];
+    az = geom[last + 2];
+    a = axis === 0 ? ax : ay;
+    if (a >= k1 && a <= k2) addPoint(slice, ax, ay, az);
+
+    // close the polygon if its endpoints are not the same after clipping
+    last = slice.length - 3;
+    if (isPolygon && last >= 3 && (slice[last] !== slice[0] || slice[last + 1] !== slice[1])) {
+        addPoint(slice, slice[0], slice[1], slice[2]);
+    }
+
+    // add the final slice
+    if (slice.length) {
+        slice.size = geom.size;
+        newGeom.push(slice);
+    }
 }
 
-function newSlice(slices, slice, area, dist, outer) {
-    if (slice.length) {
-        // we don't recalculate the area/length of the unclipped geometry because the case where it goes
-        // below the visibility threshold as a result of clipping is rare, so we avoid doing unnecessary work
-        slice.area = area;
-        slice.dist = dist;
-        if (outer !== undefined) slice.outer = outer;
-
-        slices.push(slice);
+function clipLines(geom, newGeom, k1, k2, axis, isPolygon) {
+    for (var i = 0; i < geom.length; i++) {
+        clipLine(geom[i], newGeom, k1, k2, axis, isPolygon);
     }
-    return [];
+}
+
+function addPoint(out, x, y, z) {
+    out.push(x);
+    out.push(y);
+    out.push(z);
+}
+
+function intersectX(out, ax, ay, bx, by, x) {
+    out.push(x);
+    out.push(ay + (x - ax) * (by - ay) / (bx - ax));
+    out.push(1);
+}
+
+function intersectY(out, ax, ay, bx, by, y) {
+    out.push(ax + (y - ay) * (bx - ax) / (by - ay));
+    out.push(y);
+    out.push(1);
 }

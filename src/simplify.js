@@ -4,54 +4,35 @@ module.exports = simplify;
 
 // calculate simplification data using optimized Douglas-Peucker algorithm
 
-function simplify(points, tolerance) {
+function simplify(coords, first, last, sqTolerance) {
+    var maxSqDist = sqTolerance;
+    var index;
 
-    var sqTolerance = tolerance * tolerance,
-        len = points.length,
-        first = 0,
-        last = len - 1,
-        stack = [],
-        i, maxSqDist, sqDist, index;
+    var ax = coords[first];
+    var ay = coords[first + 1];
+    var bx = coords[last];
+    var by = coords[last + 1];
 
-    // always retain the endpoints (1 is the max value)
-    points[first][2] = 1;
-    points[last][2] = 1;
-
-    // avoid recursion by using a stack
-    while (last) {
-
-        maxSqDist = 0;
-
-        for (i = first + 1; i < last; i++) {
-            sqDist = getSqSegDist(points[i], points[first], points[last]);
-
-            if (sqDist > maxSqDist) {
-                index = i;
-                maxSqDist = sqDist;
-            }
+    for (var i = first + 3; i < last; i += 3) {
+        var d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
+        if (d > maxSqDist) {
+            index = i;
+            maxSqDist = d;
         }
+    }
 
-        if (maxSqDist > sqTolerance) {
-            points[index][2] = maxSqDist; // save the point importance in squared pixels as a z coordinate
-            stack.push(first);
-            stack.push(index);
-            first = index;
-
-        } else {
-            last = stack.pop();
-            first = stack.pop();
-        }
+    if (maxSqDist > sqTolerance) {
+        if (index - first > 3) simplify(coords, first, index, sqTolerance);
+        coords[index + 2] = maxSqDist;
+        if (last - index > 3) simplify(coords, index, last, sqTolerance);
     }
 }
 
 // square distance from a point to a segment
-function getSqSegDist(p, a, b) {
+function getSqSegDist(px, py, x, y, bx, by) {
 
-    var x = a[0], y = a[1],
-        bx = b[0], by = b[1],
-        px = p[0], py = p[1],
-        dx = bx - x,
-        dy = by - y;
+    var dx = bx - x;
+    var dy = by - y;
 
     if (dx !== 0 || dy !== 0) {
 
