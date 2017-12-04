@@ -15,6 +15,8 @@
     "url": "git://github.com/mapbox/geojson-vt.git"
   },
   "main": "src/index.js",
+  "jsdelivr": "geojson-vt-dev.js",
+  "unpkg": "geojson-vt-dev.js",
   "devDependencies": {
     "benchmark": "^2.1.4",
     "browserify": "^14.4.0",
@@ -41,6 +43,10 @@
     "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
     "build-dev": "browserify -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
     "watch": "watchify -v -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
-    "prepublish": "npm run build-dev && npm run build-min"
-  }
+    "prepare": "npm run build-dev && npm run build-min"
+  },
+  "files": [
+    "geojson-vt.js",
+    "geojson-vt-dev.js"
+  ]
 }
