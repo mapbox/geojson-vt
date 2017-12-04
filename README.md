@@ -60,9 +60,8 @@ var tileIndex = geojsonvt(data, {
 	buffer: 64,	  // tile buffer on each side
 	debug: 0      // logging level (0 to disable, 1 or 2)
 
-	indexMaxZoom: 4,        // max zoom in the initial tile index
-	indexMaxPoints: 100000, // max number of points per tile in the index
-	solidChildren: false    // whether to include solid tile children in the index
+	indexMaxZoom: 5,       // max zoom in the initial tile index
+	indexMaxPoints: 100000 // max number of points per tile in the index
 });
 ```
 
@@ -70,82 +69,9 @@ By default, tiles at zoom levels above `indexMaxZoom` are generated on the fly, 
 
 GeoJSON-VT only operates on zoom levels up to 24.
 
-### Browser builds
+### Install
 
-```bash
-npm install
-npm run build-dev # development build, used by the debug page
-npm run build-min # minified production build
-```
+Install with NPM or Yarn (`npm install geojson-vt`), or use one of the CDN browser builds:
 
-### Changelog
-
-##### 2.3.0 (Jul 29, 2016)
-
-- Improved tiling algorithm to avoid redundant clipping when tiles are requested in an empty area.
-- Fixed issues with GeoJSON that only has data above 180 or below -180 longitude.
-
-##### 2.2.0 (Jun 9, 2016)
-
-- Fixed ring winding order for polygons and multipolygons in accordance with vector tile specification 2.0.
-- Fixed handling of features with null geometry (now ignored instead of throwing an error).
-
-##### 2.1.8 (Nov 9, 2015)
-
-- Fixed a bug where `getTile` would initially return `null` when requesting a child of a solid clipped square tile.
-
-##### 2.1.7 (Oct 16, 2015)
-
-- Expose transform methods in a separate file (`transform.js`).
-
-##### 2.1.6 (Sep 22, 2015)
-
-- Fixed a bug where `getTile` could generate a lot of unnecessary tiles.
-- Fixed a bug where an empty GeoJSON generated tiles.
-
-##### 2.1.5 (Aug 14, 2015)
-
-- Added `tileCoords` property with an array of coordinates of all tiles created so far.
-
-##### 2.1.4 (Aug 14, 2015)
-
-- Improved `getTile` to always return `null` on non-existing or invalid tiles.
-
-##### 2.1.3 (Aug 13, 2015)
-
-- Added `solidChildren` option that includes children of solid filled square tiles in the index (off by default).
-- Added back solid tile heuristics (not tiling solid filled square tiles further).
-
-##### 2.1.2 (Aug 13, 2015)
-
-- Fixed a crazy slowdown (~30x) when generating a huge number of tiles on the first run.
-- Removed clipped solid square heuristics (that actually didn't work since 2.0.0).
-
-##### 2.1.1 (June 18, 2015)
-
-- Fixed duplicate points in polygons.
-
-##### 2.1.0 (June 15, 2015)
-
-- Added proper handling for features crossing or near the date line.
-
-##### 2.0.1 (June 9, 2015)
-
-- 10-20% faster tile indexing.
-- Fixed latitude extremes not being clamped.
-
-##### 2.0.0 (Mar 20, 2015)
-
-- **Breaking**: `maxZoom` renamed to `indexMaxZoom`, `maxPoints` to `indexMaxPoints`, `baseZoom` to `maxZoom`.
-- Improved performance of both indexing and on-demand tile requests.
-- Improved memory footprint.
-- Better indexing defaults.
-- Fixed a bug where unnecessary memory was retained in some cases.
-
-##### 1.1.0 (Mar 2, 2015)
-
-- Add `buffer` and `extent` options.
-
-##### 1.0.0 (Dec 8, 2014)
-
-- Initial release.
+- [Development build](https://unpkg.com/geojson-vt@3.0.0/geojson-vt-dev.js)
+- [Minified production build](https://unpkg.com/geojson-vt@3.0.0/geojson-vt.js)
