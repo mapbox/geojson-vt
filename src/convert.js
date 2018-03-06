@@ -7,31 +7,31 @@ var createFeature = require('./feature');
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
-function convert(data, tolerance) {
+function convert(data, options) {
     var features = [];
 
     if (data.type === 'FeatureCollection') {
         for (var i = 0; i < data.features.length; i++) {
-            convertFeature(features, data.features[i], tolerance);
+            convertFeature(features, data.features[i], options);
         }
 
     } else if (data.type === 'Feature') {
-        convertFeature(features, data, tolerance);
+        convertFeature(features, data, options);
 
     } else {
         // single geometry or a geometry collection
-        convertFeature(features, {geometry: data}, tolerance);
+        convertFeature(features, {geometry: data}, options);
     }
 
     return features;
 }
 
-function convertFeature(features, geojson, tolerance) {
+function convertFeature(features, geojson, options) {
     if (!geojson.geometry) return;
 
     var coords = geojson.geometry.coordinates;
     var type = geojson.geometry.type;
-    var tol = tolerance * tolerance;
+    var tolerance = Math.pow(options.tolerance / ((1 << options.maxZoom) * options.extent), 2);
     var geometry = [];
 
     if (type === 'Point') {
@@ -43,26 +43,37 @@ function convertFeature(features, geojson, tolerance) {
         }
 
     } else if (type === 'LineString') {
-        convertLine(coords, geometry, tol, false);
+        convertLine(coords, geometry, tolerance, false);
 
     } else if (type === 'MultiLineString') {
-        convertLines(coords, geometry, tol, false);
+        if (options.lineMetrics) {
+            // explode into linestrings to be able to track metrics
+            for (i = 0; i < coords.length; i++) {
+                geometry = [];
+                convertLine(coords[i], geometry, tolerance, false);
+                features.push(createFeature(geojson.id, 'LineString', geometry, geojson.properties));
+                return;
+            }
+        } else {
+            convertLines(coords, geometry, tolerance, false);
+        }
 
     } else if (type === 'Polygon') {
-        convertLines(coords, geometry, tol, true);
+        convertLines(coords, geometry, tolerance, true);
 
     } else if (type === 'MultiPolygon') {
         for (i = 0; i < coords.length; i++) {
             var polygon = [];
-            convertLines(coords[i], polygon, tol, true);
+            convertLines(coords[i], polygon, tolerance, true);
             geometry.push(polygon);
         }
     } else if (type === 'GeometryCollection') {
         for (i = 0; i < geojson.geometry.geometries.length; i++) {
             convertFeature(features, {
+                id: geojson.id,
                 geometry: geojson.geometry.geometries[i],
                 properties: geojson.properties
-            }, tolerance);
+            }, options);
         }
         return;
     } else {
@@ -78,7 +89,7 @@ function convertPoint(coords, out) {
     out.push(0);
 }
 
-function convertLine(ring, out, tol, isPolygon) {
+function convertLine(ring, out, tolerance, isPolygon) {
     var x0, y0;
     var size = 0;
 
@@ -103,16 +114,16 @@ function convertLine(ring, out, tol, isPolygon) {
 
     var last = out.length - 3;
     out[2] = 1;
-    simplify(out, 0, last, tol);
+    simplify(out, 0, last, tolerance);
     out[last + 2] = 1;
 
     out.size = Math.abs(size);
 }
 
-function convertLines(rings, out, tol, isPolygon) {
+function convertLines(rings, out, tolerance, isPolygon) {
     for (var i = 0; i < rings.length; i++) {
         var geom = [];
-        convertLine(rings[i], geom, tol, isPolygon);
+        convertLine(rings[i], geom, tolerance, isPolygon);
         out.push(geom);
     }
 }
