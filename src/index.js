@@ -35,7 +35,7 @@ function GeoJSONVT(data, options) {
         this.total = 0;
     }
 
-    features = wrap(features, options.buffer / options.extent);
+    features = wrap(features, options);
 
     // start slicing from the top tile down
     if (features.length) this.splitTile(features, 0, 0, 0);
@@ -127,19 +127,19 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         tl = bl = tr = br = null;
 
-        left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX);
-        right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX);
+        left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX, options);
+        right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX, options);
         features = null;
 
         if (left) {
-            tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY);
-            bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY);
+            tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
+            bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
             left = null;
         }
 
         if (right) {
-            tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY);
-            br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY);
+            tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
+            br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
             right = null;
         }
 

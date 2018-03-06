@@ -118,6 +118,8 @@ function convertLine(ring, out, tolerance, isPolygon) {
     out[last + 2] = 1;
 
     out.size = Math.abs(size);
+    out.start = 0;
+    out.end = out.size;
 }
 
 function convertLines(rings, out, tolerance, isPolygon) {

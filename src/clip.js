@@ -11,7 +11,7 @@ var createFeature = require('./feature');
  *     |        |
  */
 
-function clip(features, scale, k1, k2, axis, minAll, maxAll) {
+function clip(features, scale, k1, k2, axis, minAll, maxAll, options) {
 
     k1 /= scale;
     k2 /= scale;
@@ -43,7 +43,7 @@ function clip(features, scale, k1, k2, axis, minAll, maxAll) {
             clipPoints(geometry, newGeometry, k1, k2, axis);
 
         } else if (type === 'LineString') {
-            clipLine(geometry, newGeometry, k1, k2, axis, false);
+            clipLine(geometry, newGeometry, k1, k2, axis, false, options.lineMetrics);
 
         } else if (type === 'MultiLineString') {
             clipLines(geometry, newGeometry, k1, k2, axis, false);
@@ -62,6 +62,13 @@ function clip(features, scale, k1, k2, axis, minAll, maxAll) {
         }
 
         if (newGeometry.length) {
+            if (options.lineMetrics && type === 'LineString') {
+                for (j = 0; j < newGeometry.length; j++) {
+                    clipped.push(createFeature(feature.id, type, newGeometry[j], feature.tags));
+                }
+                continue;
+            }
+
             if (type === 'LineString' || type === 'MultiLineString') {
                 if (newGeometry.length === 1) {
                     type = 'LineString';
@@ -93,10 +100,11 @@ function clipPoints(geom, newGeom, k1, k2, axis) {
     }
 }
 
-function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {
+function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
 
-    var slice = [];
+    var slice = newSlice(geom);
     var intersect = axis === 0 ? intersectX : intersectY;
+    var len = 0;
 
     for (var i = 0; i < geom.length - 3; i += 3) {
         var ax = geom[i];
@@ -108,30 +116,47 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {
         var b = axis === 0 ? bx : by;
         var sliced = false;
 
+        if (trackMetrics) {
+            var segLen = Math.sqrt(Math.pow(ax - bx, 2), Math.pow(ay - by, 2));
+            len += segLen;
+        }
+
         if (a < k1) {
             // ---|-->  |
-            if (b >= k1) intersect(slice, ax, ay, bx, by, k1);
+            if (b >= k1) {
+                var t = intersect(slice, ax, ay, bx, by, k1);
+                if (trackMetrics) {
+                    slice.start = len - segLen * t;
+                }
+            }
         } else if (a > k2) {
             // |  <--|---
-            if (b <= k2) intersect(slice, ax, ay, bx, by, k2);
+            if (b <= k2) {
+                t = intersect(slice, ax, ay, bx, by, k2);
+                if (trackMetrics) {
+                    slice.start = len - segLen * t;
+                }
+            }
         } else {
             addPoint(slice, ax, ay, az);
         }
         if (b < k1 && a >= k1) {
             // <--|---  | or <--|-----|---
-            intersect(slice, ax, ay, bx, by, k1);
+            t = intersect(slice, ax, ay, bx, by, k1);
             sliced = true;
         }
         if (b > k2 && a <= k2) {
             // |  ---|--> or ---|-----|-->
-            intersect(slice, ax, ay, bx, by, k2);
+            t = intersect(slice, ax, ay, bx, by, k2);
             sliced = true;
         }
 
         if (!isPolygon && sliced) {
-            slice.size = geom.size;
+            if (trackMetrics) {
+                slice.end = len - segLen * t;
+            }
             newGeom.push(slice);
-            slice = [];
+            slice = newSlice(geom);
         }
     }
 
@@ -151,14 +176,21 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon) {
 
     // add the final slice
     if (slice.length) {
-        slice.size = geom.size;
         newGeom.push(slice);
     }
 }
 
+function newSlice(line) {
+    var slice = [];
+    slice.size = line.size;
+    slice.start = line.start;
+    slice.end = line.end;
+    return slice;
+}
+
 function clipLines(geom, newGeom, k1, k2, axis, isPolygon) {
     for (var i = 0; i < geom.length; i++) {
-        clipLine(geom[i], newGeom, k1, k2, axis, isPolygon);
+        clipLine(geom[i], newGeom, k1, k2, axis, isPolygon, false);
     }
 }
 
@@ -169,13 +201,17 @@ function addPoint(out, x, y, z) {
 }
 
 function intersectX(out, ax, ay, bx, by, x) {
+    var t = (x - ax)  / (bx - ax);
     out.push(x);
-    out.push(ay + (x - ax) * (by - ay) / (bx - ax));
+    out.push(ay + (by - ay) * t);
     out.push(1);
+    return 1 - Math.abs(t);
 }
 
 function intersectY(out, ax, ay, bx, by, y) {
-    out.push(ax + (y - ay) * (bx - ax) / (by - ay));
+    var t = (y - ay) / (by - ay);
+    out.push(ax + (bx - ax) * t);
     out.push(y);
     out.push(1);
+    return 1 - Math.abs(t);
 }

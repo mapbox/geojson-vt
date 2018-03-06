@@ -21,7 +21,7 @@ function createTile(features, z, tx, ty, options) {
     };
     for (var i = 0; i < features.length; i++) {
         tile.numFeatures++;
-        addFeature(tile, features[i], tolerance);
+        addFeature(tile, features[i], tolerance, options);
 
         var minX = features[i].minX;
         var minY = features[i].minY;
@@ -36,7 +36,7 @@ function createTile(features, z, tx, ty, options) {
     return tile;
 }
 
-function addFeature(tile, feature, tolerance) {
+function addFeature(tile, feature, tolerance, options) {
 
     var geom = feature.geometry,
         type = feature.type,
@@ -69,11 +69,18 @@ function addFeature(tile, feature, tolerance) {
     }
 
     if (simplified.length) {
+        var tags = feature.tags || null;
+        if (type === 'LineString' && options.lineMetrics) {
+            tags = {};
+            for (var key in feature.tags) tags[key] = feature.tags[key];
+            tags['$distance_start'] = geom.start / geom.size;
+            tags['$distance_end'] = geom.end / geom.size;
+        }
         var tileFeature = {
             geometry: simplified,
             type: type === 'Polygon' || type === 'MultiPolygon' ? 3 :
                 type === 'LineString' || type === 'MultiLineString' ? 2 : 1,
-            tags: feature.tags || null
+            tags: tags
         };
         if (feature.id !== null) {
             tileFeature.id = feature.id;

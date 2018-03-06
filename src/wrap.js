@@ -5,13 +5,14 @@ var createFeature = require('./feature');
 
 module.exports = wrap;
 
-function wrap(features, buffer) {
-    var merged = features,
-        left  = clip(features, 1, -1 - buffer, buffer,     0, -1, 2), // left world copy
-        right = clip(features, 1,  1 - buffer, 2 + buffer, 0, -1, 2); // right world copy
+function wrap(features, options) {
+    var buffer = options.buffer / options.extent;
+    var merged = features;
+    var left  = clip(features, 1, -1 - buffer, buffer,     0, -1, 2, options); // left world copy
+    var right = clip(features, 1,  1 - buffer, 2 + buffer, 0, -1, 2, options); // right world copy
 
     if (left || right) {
-        merged = clip(features, 1, -buffer, 1 + buffer, 0, -1, 2) || []; // center world copy
+        merged = clip(features, 1, -buffer, 1 + buffer, 0, -1, 2, options) || []; // center world copy
 
         if (left) merged = shiftFeatureCoords(left, 1).concat(merged); // merge left into center
         if (right) merged = merged.concat(shiftFeatureCoords(right, -1)); // merge right into center
