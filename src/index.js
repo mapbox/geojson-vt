@@ -73,13 +73,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         var z2 = 1 << z,
             id = toID(z, x, y),
-            tile = this.tiles[id],
-            tileTolerance = z === options.maxZoom ? 0 : options.tolerance / (z2 * options.extent);
+            tile = this.tiles[id];
 
         if (!tile) {
             if (debug > 1) console.time('creation');
 
-            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, z === options.maxZoom);
+            tile = this.tiles[id] = createTile(features, z, x, y, options);
             this.tileCoords.push({z: z, x: x, y: y});
 
             if (debug) {

@@ -20,7 +20,7 @@ function genTiles(data, maxZoom, maxPoints) {
 
     for (var id in index.tiles) {
         var tile = index.tiles[id];
-        var z = Math.log(tile.z2) / Math.LN2;
+        var z = tile.z;
         output['z' + z + '-' + tile.x + '-' + tile.y] = index.getTile(z, tile.x, tile.y).features;
     }
 

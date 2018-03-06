@@ -8,7 +8,7 @@ exports.point = transformPoint;
 function transformTile(tile, extent) {
     if (tile.transformed) return tile;
 
-    var z2 = tile.z2,
+    var z2 = 1 << tile.z,
         tx = tile.x,
         ty = tile.y,
         i, j, k;
