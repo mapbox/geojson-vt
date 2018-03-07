@@ -151,7 +151,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
             slice = newSlice(geom);
         }
 
-        len += segLen;
+        if (trackMetrics) len += segLen;
     }
 
     // add the last point
