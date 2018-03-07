@@ -117,7 +117,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
         var sliced = false;
 
         if (trackMetrics) {
-            var segLen = Math.sqrt(Math.pow(ax - bx, 2), Math.pow(ay - by, 2));
+            var segLen = Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2));
             len += segLen;
         }
 
