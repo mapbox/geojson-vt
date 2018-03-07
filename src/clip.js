@@ -9,6 +9,7 @@ var createFeature = require('./feature');
  *  ___|___     |     /
  * /   |   \____|____/
  *     |        |
+ *     k1       k2
  */
 
 function clip(features, scale, k1, k2, axis, minAll, maxAll, options) {
@@ -102,7 +103,7 @@ function clipPoints(geom, newGeom, k1, k2, axis) {
 
 function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
 
-    var slice = newSlice(geom);
+    var slice;
     var intersect = axis === 0 ? intersectX : intersectY;
     var len = slice.start;
 
@@ -114,7 +115,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
         var by = geom[i + 4];
         var a = axis === 0 ? ax : ay;
         var b = axis === 0 ? bx : by;
-        var sliced = false;
+        var finishedSlice = false;
 
         if (trackMetrics) {
             var segLen = Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2));
@@ -122,16 +123,33 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
         }
 
         if (a < k1) {
-            // ---|-->  |
+            // Segment begins outside (to the left or below) the bounds.  If it
+            // crosses into the bounds, take the intersection point as the
+            // start of the slice.
+            // Otherwise, it either ends on the _other_ side of the region
+            // (handled below), or else it lies entirely outside (so we'll just
+            // move on to the next point).
+
+            // a   |    b   |
+            // *---|--->*   |
+            //     k1       k2
             if (b >= k1) {
+                slice = newSlice(geom);
                 var t = intersect(slice, ax, ay, bx, by, k1);
                 if (trackMetrics) {
                     slice.start = len - segLen * t;
                 }
             }
         } else if (a > k2) {
-            // |  <--|---
+            // Same as above, but in the other direction: segment begins
+            // outside to the right or above, and we check to see if it's
+            // entering the bounds and thus beginning the slice.
+
+            //     |    b   |    a
+            //     |    *<--|----*
+            //     k1       k2
             if (b <= k2) {
+                slice = newSlice(geom);
                 t = intersect(slice, ax, ay, bx, by, k2);
                 if (trackMetrics) {
                     slice.start = len - segLen * t;
@@ -140,27 +158,44 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
         } else {
             addPoint(slice, ax, ay, az);
         }
-        if (b < k1 && a >= k1) {
-            // <--|---  | or <--|-----|---
-            t = intersect(slice, ax, ay, bx, by, k1);
-            sliced = true;
-        }
-        if (b > k2 && a <= k2) {
-            // |  ---|--> or ---|-----|-->
-            t = intersect(slice, ax, ay, bx, by, k2);
-            sliced = true;
-        }
 
-        if (!isPolygon && sliced) {
+        if (b < k1 && a >= k1) {
+            // Segment crosses from within bounds to outside (across the left
+            // or bottom boundary).  Add the intersection as the end of this
+            // slice.
+
+            //   b  |    a   |            b  |        |    a
+            //   *<-|----*   |        or  *<-|--------|----*
+            //      k1       k2              k1       k2
+
+            t = intersect(slice, ax, ay, bx, by, k1);
             if (trackMetrics) {
                 slice.end = len - segLen * t;
             }
+            finishedSlice = true;
+        }
+        if (b > k2 && a <= k2) {
+            // Segment crosses from within bounds to outside (across the left
+            // or bottom boundary).  Add the intersection as the end this slice.
+
+            //      |    a   |   b        a  |        |    b
+            //      |    *---|-->*    or  *--|--------|--->*
+            //      k1       k2              k1       k2
+            t = intersect(slice, ax, ay, bx, by, k2);
+            if (trackMetrics) {
+                slice.end = len - segLen * t;
+            }
+            finishedSlice = true;
+        }
+
+        if (!isPolygon && finishedSlice) {
             newGeom.push(slice);
-            slice = newSlice(geom);
         }
     }
 
     // add the last point
+    if (!slice) slice = newSlice(geom);
+
     var last = geom.length - 3;
     ax = geom[last];
     ay = geom[last + 1];
