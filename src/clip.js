@@ -103,7 +103,7 @@ function clipPoints(geom, newGeom, k1, k2, axis) {
 
 function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
 
-    var slice = newSlice(geom);
+    var slice;
     var intersect = axis === 0 ? intersectX : intersectY;
     var len = slice.start;
 
@@ -115,7 +115,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
         var by = geom[i + 4];
         var a = axis === 0 ? ax : ay;
         var b = axis === 0 ? bx : by;
-        var sliced = false;
+        var finishedSlice = false;
 
         if (trackMetrics) {
             var segLen = Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2));
@@ -134,6 +134,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
             // *---|--->*   |
             //     k1       k2
             if (b >= k1) {
+                slice = newSlice(geom);
                 var t = intersect(slice, ax, ay, bx, by, k1);
                 if (trackMetrics) {
                     slice.start = len - segLen * t;
@@ -148,6 +149,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
             //     |    *<--|----*
             //     k1       k2
             if (b <= k2) {
+                slice = newSlice(geom);
                 t = intersect(slice, ax, ay, bx, by, k2);
                 if (trackMetrics) {
                     slice.start = len - segLen * t;
@@ -167,7 +169,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
             //      k1       k2              k1       k2
 
             t = intersect(slice, ax, ay, bx, by, k1);
-            sliced = true;
+            finishedSlice = true;
         }
         if (b > k2 && a <= k2) {
             // Segment crosses from within bounds to outside (across the left
@@ -177,19 +179,20 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
             //      |    *---|-->*    or  *--|--------|--->*
             //      k1       k2              k1       k2
             t = intersect(slice, ax, ay, bx, by, k2);
-            sliced = true;
+            finishedSlice = true;
         }
 
-        if (!isPolygon && sliced) {
+        if (!isPolygon && finishedSlice) {
             if (trackMetrics) {
                 slice.end = len - segLen * t;
             }
             newGeom.push(slice);
-            slice = newSlice(geom);
         }
     }
 
     // add the last point
+    if (!slice) slice = newSlice(geom);
+
     var last = geom.length - 3;
     ax = geom[last];
     ay = geom[last + 1];
