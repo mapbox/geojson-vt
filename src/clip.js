@@ -169,6 +169,9 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
             //      k1       k2              k1       k2
 
             t = intersect(slice, ax, ay, bx, by, k1);
+            if (trackMetrics) {
+                slice.end = len - segLen * t;
+            }
             finishedSlice = true;
         }
         if (b > k2 && a <= k2) {
@@ -179,13 +182,13 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
             //      |    *---|-->*    or  *--|--------|--->*
             //      k1       k2              k1       k2
             t = intersect(slice, ax, ay, bx, by, k2);
+            if (trackMetrics) {
+                slice.end = len - segLen * t;
+            }
             finishedSlice = true;
         }
 
         if (!isPolygon && finishedSlice) {
-            if (trackMetrics) {
-                slice.end = len - segLen * t;
-            }
             newGeom.push(slice);
         }
     }
