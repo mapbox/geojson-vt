@@ -104,7 +104,7 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
 
     var slice = newSlice(geom);
     var intersect = axis === 0 ? intersectX : intersectY;
-    var len = 0;
+    var len = slice.start;
 
     for (var i = 0; i < geom.length - 3; i += 3) {
         var ax = geom[i];
