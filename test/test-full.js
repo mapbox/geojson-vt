@@ -3,7 +3,7 @@
 var test = require('tape');
 var fs = require('fs');
 var path = require('path');
-var genTiles = require('./gen-tiles');
+var geojsonvt = require('../src/index');
 
 testTiles('us-states.json', 'us-states-tiles.json', {indexMaxZoom: 7, indexMaxPoints: 200});
 testTiles('dateline.json', 'dateline-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
@@ -41,4 +41,21 @@ test('null geometry', function (t) {
 
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
+}
+
+function genTiles(data, options) {
+    var index = geojsonvt(data, Object.assign({
+        indexMaxZoom: 0,
+        indexMaxPoints: 10000
+    }, options));
+
+    var output = {};
+
+    for (var id in index.tiles) {
+        var tile = index.tiles[id];
+        var z = tile.z;
+        output['z' + z + '-' + tile.x + '-' + tile.y] = index.getTile(z, tile.x, tile.y).features;
+    }
+
+    return output;
 }
