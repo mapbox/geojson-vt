@@ -31,6 +31,27 @@ test('clips polylines', function (t) {
     t.end();
 });
 
+test('clips lines with line metrics on', function (t) {
+
+    var geom = geom1.slice();
+    geom.size = 0;
+    for (var i = 0; i < geom.length - 2; i += 2) {
+        geom.size += Math.sqrt(Math.pow(geom[i + 2] - geom[i], 2) + Math.pow(geom[i + 3] - geom[i + 1], 2));
+    }
+    geom.start = 0;
+    geom.end = geom.size;
+
+    var clipped = clip([{geometry: geom, type: 'LineString', minX: 0, minY: 0, maxX: 50, maxY: 60}],
+        1, 10, 40, 0, -Infinity, Infinity, {lineMetrics: true});
+
+    t.same(
+        clipped.map(function (f) { return [f.geometry.start, f.geometry.end]; }),
+        [[10, 40], [70, 130], [160, 200], [230, 911.4042771522114]]
+    );
+
+    t.end();
+});
+
 function closed(geometry) {
     return [geometry.concat(geometry.slice(0, 3))];
 }
