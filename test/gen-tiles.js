@@ -10,11 +10,11 @@ if (require.main === module) { // if called directly
     console.log(JSON.stringify(result));
 }
 
-function genTiles(data, maxZoom, maxPoints) {
-    var index = geojsonvt(data, {
-        indexMaxZoom: maxZoom || 0,
-        indexMaxPoints: maxPoints || 10000
-    });
+function genTiles(data, options) {
+    var index = geojsonvt(data, Object.assign({
+        indexMaxZoom: 0,
+        indexMaxPoints: 10000
+    }, options));
 
     var output = {};
 

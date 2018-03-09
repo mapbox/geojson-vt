@@ -59,6 +59,11 @@ function shiftCoords(points, offset) {
     var newPoints = [];
     newPoints.size = points.size;
 
+    if (points.start !== undefined) {
+        newPoints.start = points.start;
+        newPoints.end = points.end;
+    }
+
     for (var i = 0; i < points.length; i += 3) {
         newPoints.push(points[i] + offset, points[i + 1], points[i + 2]);
     }
