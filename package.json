@@ -41,9 +41,9 @@
   },
   "license": "ISC",
   "scripts": {
-    "test": "eslint src/*.js test/*.js debug/viz.js && tape -r esm test/test-*.js",
-    "cov": "nyc --require esm --reporter=lcov --reporter=text-summary tape test/test*.js",
-    "coveralls": "npm run cov && coveralls < ./coverage/lcov.info",
+    "pretest": "eslint src/*.js test/*.js debug/viz.js",
+    "test": "nyc --require esm tape test/test-*.js",
+    "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "build": "rollup -c",
     "watch": "rollup -w",
     "prepublishOnly": "npm run test && npm run build"
