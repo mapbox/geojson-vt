@@ -1,7 +1,7 @@
 language: node_js
 node_js:
   - "node"
-  - "4"
+  - "6"
 script:
   - npm test
   - npm run coveralls
