@@ -14,35 +14,39 @@
     "type": "git",
     "url": "git://github.com/mapbox/geojson-vt.git"
   },
-  "main": "src/index.js",
+  "module": "src/index.js",
+  "main": "geojson-vt-dev.js",
   "jsdelivr": "geojson-vt.js",
   "unpkg": "geojson-vt.js",
   "devDependencies": {
     "benchmark": "^2.1.4",
-    "browserify": "^16.1.1",
     "coveralls": "^3.0.0",
     "eslint": "^4.18.2",
     "eslint-config-mourner": "^2.0.3",
+    "esm": "^3.0.11",
     "nyc": "^11.4.1",
+    "rollup": "^0.57.1",
+    "rollup-plugin-uglify": "^3.0.0",
     "tape": "^4.9.0",
-    "uglify-js": "^3.3.13",
     "watchify": "^3.11.0"
   },
   "eslintConfig": {
     "extends": "mourner",
+    "parserOptions": {
+      "sourceType": "module"
+    },
     "globals": {
       "topojson": true
     }
   },
   "license": "ISC",
   "scripts": {
-    "test": "eslint src/*.js test/*.js debug/viz.js && tape test/test-*.js",
-    "cov": "nyc --reporter=lcov --reporter=text-summary tape test/test*.js",
+    "test": "eslint src/*.js test/*.js debug/viz.js && tape -r esm test/test-*.js",
+    "cov": "nyc --require esm --reporter=lcov --reporter=text-summary tape test/test*.js",
     "coveralls": "npm run cov && coveralls < ./coverage/lcov.info",
-    "build-min": "browserify src/index.js -s geojsonvt | uglifyjs -c -m -o geojson-vt.js",
-    "build-dev": "browserify -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
-    "watch": "watchify -v -d src/index.js -s geojsonvt -o geojson-vt-dev.js",
-    "prepublishOnly": "npm run build-dev && npm run build-min"
+    "build": "rollup -c",
+    "watch": "rollup -w",
+    "prepublishOnly": "npm run test && npm run build"
   },
   "files": [
     "geojson-vt.js",

@@ -1,8 +1,5 @@
-'use strict';
 
-module.exports = createFeature;
-
-function createFeature(id, type, geom, tags) {
+export default function createFeature(id, type, geom, tags) {
     var feature = {
         id: id || null,
         type: type,

@@ -1,15 +1,11 @@
-'use strict';
 
-module.exports = geojsonvt;
+import convert from './convert';     // GeoJSON conversion and preprocessing
+import clip from './clip';           // stripe clipping algorithm
+import wrap from './wrap';           // date line processing
+import transform from './transform'; // coordinate transformation
+import createTile from './tile';     // final simplified tile generation
 
-var convert = require('./convert'),     // GeoJSON conversion and preprocessing
-    transform = require('./transform'), // coordinate transformation
-    clip = require('./clip'),           // stripe clipping algorithm
-    wrap = require('./wrap'),           // date line processing
-    createTile = require('./tile');     // final simplified tile generation
-
-
-function geojsonvt(data, options) {
+export default function geojsonvt(data, options) {
     return new GeoJSONVT(data, options);
 }
 
@@ -163,7 +159,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     x = ((x % z2) + z2) % z2; // wrap tile x coordinate
 
     var id = toID(z, x, y);
-    if (this.tiles[id]) return transform.tile(this.tiles[id], extent);
+    if (this.tiles[id]) return transform(this.tiles[id], extent);
 
     if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -188,7 +184,7 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
     this.splitTile(parent.source, z0, x0, y0, z, x, y);
     if (debug > 1) console.timeEnd('drilling down');
 
-    return this.tiles[id] ? transform.tile(this.tiles[id], extent) : null;
+    return this.tiles[id] ? transform(this.tiles[id], extent) : null;
 };
 
 function toID(z, x, y) {

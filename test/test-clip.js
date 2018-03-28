@@ -1,7 +1,6 @@
-'use strict';
 
-var test = require('tape');
-var clip = require('../src/clip');
+import test from 'tape';
+import clip from '../src/clip';
 
 /*eslint comma-spacing:0*/
 

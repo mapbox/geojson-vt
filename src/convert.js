@@ -1,13 +1,10 @@
-'use strict';
 
-module.exports = convert;
-
-var simplify = require('./simplify');
-var createFeature = require('./feature');
+import simplify from './simplify';
+import createFeature from './feature';
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
-function convert(data, options) {
+export default function convert(data, options) {
     var features = [];
 
     if (data.type === 'FeatureCollection') {

@@ -1,7 +1,6 @@
-'use strict';
 
-var test = require('tape');
-var geojsonvt = require('../src/index');
+import test from 'tape';
+import geojsonvt from '../src/index';
 
 var leftPoint = {
     type: 'Feature',
