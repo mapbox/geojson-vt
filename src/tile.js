@@ -73,8 +73,8 @@ function addFeature(tile, feature, tolerance, options) {
         if (type === 'LineString' && options.lineMetrics) {
             tags = {};
             for (var key in feature.tags) tags[key] = feature.tags[key];
-            tags['clip_start'] = geom.start / geom.size;
-            tags['clip_end'] = geom.end / geom.size;
+            tags['mapbox_clip_start'] = geom.start / geom.size;
+            tags['mapbox_clip_end'] = geom.end / geom.size;
         }
         var tileFeature = {
             geometry: simplified,
