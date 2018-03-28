@@ -22,8 +22,7 @@ function GeoJSONVT(data, options) {
 
     if (options.maxZoom < 0 || options.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
 
-    var z2 = 1 << options.maxZoom, // 2^z
-        features = convert(data, options.tolerance / (z2 * options.extent));
+    var features = convert(data, options);
 
     this.tiles = {};
     this.tileCoords = [];
@@ -36,7 +35,7 @@ function GeoJSONVT(data, options) {
         this.total = 0;
     }
 
-    features = wrap(features, options.buffer / options.extent);
+    features = wrap(features, options);
 
     // start slicing from the top tile down
     if (features.length) this.splitTile(features, 0, 0, 0);
@@ -55,6 +54,7 @@ GeoJSONVT.prototype.options = {
     tolerance: 3,           // simplification tolerance (higher means simpler)
     extent: 4096,           // tile extent
     buffer: 64,             // tile buffer on each side
+    lineMetrics: false,     // whether to calculate line metrics
     debug: 0                // logging level (0, 1 or 2)
 };
 
@@ -73,13 +73,12 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         var z2 = 1 << z,
             id = toID(z, x, y),
-            tile = this.tiles[id],
-            tileTolerance = z === options.maxZoom ? 0 : options.tolerance / (z2 * options.extent);
+            tile = this.tiles[id];
 
         if (!tile) {
             if (debug > 1) console.time('creation');
 
-            tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, z === options.maxZoom);
+            tile = this.tiles[id] = createTile(features, z, x, y, options);
             this.tileCoords.push({z: z, x: x, y: y});
 
             if (debug) {
@@ -128,19 +127,19 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         tl = bl = tr = br = null;
 
-        left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX);
-        right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX);
+        left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX, options);
+        right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX, options);
         features = null;
 
         if (left) {
-            tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY);
-            bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY);
+            tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
+            bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
             left = null;
         }
 
         if (right) {
-            tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY);
-            br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY);
+            tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
+            br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
             right = null;
         }
 

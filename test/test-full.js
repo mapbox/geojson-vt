@@ -3,13 +3,14 @@
 var test = require('tape');
 var fs = require('fs');
 var path = require('path');
-var genTiles = require('./gen-tiles');
+var geojsonvt = require('../src/index');
 
-testTiles('us-states.json', 'us-states-tiles.json', 7, 200);
-testTiles('dateline.json', 'dateline-tiles.json');
-testTiles('feature.json', 'feature-tiles.json');
-testTiles('collection.json', 'collection-tiles.json');
-testTiles('single-geom.json', 'single-geom-tiles.json');
+testTiles('us-states.json', 'us-states-tiles.json', {indexMaxZoom: 7, indexMaxPoints: 200});
+testTiles('dateline.json', 'dateline-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
+testTiles('dateline.json', 'dateline-metrics-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000, lineMetrics: true});
+testTiles('feature.json', 'feature-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
+testTiles('collection.json', 'collection-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
+testTiles('single-geom.json', 'single-geom-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
 
 test('throws on invalid GeoJSON', function (t) {
     t.throws(function () {
@@ -18,9 +19,10 @@ test('throws on invalid GeoJSON', function (t) {
     t.end();
 });
 
-function testTiles(inputFile, expectedFile, maxZoom, maxPoints) {
-    test('full tiling test: ' + inputFile, function (t) {
-        var tiles = genTiles(getJSON(inputFile), maxZoom, maxPoints);
+function testTiles(inputFile, expectedFile, options) {
+    test('full tiling test: ' + expectedFile.replace('-tiles.json', ''), function (t) {
+        var tiles = genTiles(getJSON(inputFile), options);
+        // fs.writeFileSync(path.join(__dirname, '/fixtures/' + expectedFile), JSON.stringify(tiles));
         t.same(getJSON(expectedFile), tiles);
         t.end();
     });
@@ -39,4 +41,21 @@ test('null geometry', function (t) {
 
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
+}
+
+function genTiles(data, options) {
+    var index = geojsonvt(data, Object.assign({
+        indexMaxZoom: 0,
+        indexMaxPoints: 10000
+    }, options));
+
+    var output = {};
+
+    for (var id in index.tiles) {
+        var tile = index.tiles[id];
+        var z = tile.z;
+        output['z' + z + '-' + tile.x + '-' + tile.y] = index.getTile(z, tile.x, tile.y).features;
+    }
+
+    return output;
 }
