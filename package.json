@@ -50,6 +50,7 @@
   },
   "files": [
     "geojson-vt.js",
-    "geojson-vt-dev.js"
+    "geojson-vt-dev.js",
+    "src"
   ]
 }
