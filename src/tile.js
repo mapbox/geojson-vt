@@ -1,8 +1,5 @@
-'use strict';
 
-module.exports = createTile;
-
-function createTile(features, z, tx, ty, options) {
+export default function createTile(features, z, tx, ty, options) {
     var tolerance = z === options.maxZoom ? 0 : options.tolerance / ((1 << z) * options.extent);
     var tile = {
         features: [],

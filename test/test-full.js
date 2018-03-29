@@ -1,9 +1,8 @@
-'use strict';
 
-var test = require('tape');
-var fs = require('fs');
-var path = require('path');
-var geojsonvt = require('../src/index');
+import test from 'tape';
+import fs from 'fs';
+import path from 'path';
+import geojsonvt from '../src/index';
 
 testTiles('us-states.json', 'us-states-tiles.json', {indexMaxZoom: 7, indexMaxPoints: 200});
 testTiles('dateline.json', 'dateline-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});

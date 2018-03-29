@@ -1,10 +1,7 @@
-'use strict';
-
-module.exports = simplify;
 
 // calculate simplification data using optimized Douglas-Peucker algorithm
 
-function simplify(coords, first, last, sqTolerance) {
+export default function simplify(coords, first, last, sqTolerance) {
     var maxSqDist = sqTolerance;
     var index;
 

@@ -1,9 +1,8 @@
-'use strict';
 
-var test = require('tape');
-var fs = require('fs');
-var path = require('path');
-var geojsonvt = require('../src/index');
+import test from 'tape';
+import fs from 'fs';
+import path from 'path';
+import geojsonvt from '../src/index';
 
 var square = [{
     geometry: [[[-64, 4160], [-64, -64], [4160, -64], [4160, 4160], [-64, 4160]]],

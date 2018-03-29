@@ -1,4 +1,3 @@
-'use strict';
 
 var options = {
         debug: 1

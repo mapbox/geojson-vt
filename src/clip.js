@@ -1,8 +1,5 @@
-'use strict';
 
-module.exports = clip;
-
-var createFeature = require('./feature');
+import createFeature from './feature';
 
 /* clip features between two axis-parallel lines:
  *     |        |
@@ -11,7 +8,7 @@ var createFeature = require('./feature');
  *     |        |
  */
 
-function clip(features, scale, k1, k2, axis, minAll, maxAll, options) {
+export default function clip(features, scale, k1, k2, axis, minAll, maxAll, options) {
 
     k1 /= scale;
     k2 /= scale;

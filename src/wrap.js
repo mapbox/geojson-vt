@@ -1,11 +1,8 @@
-'use strict';
 
-var clip = require('./clip');
-var createFeature = require('./feature');
+import clip from './clip';
+import createFeature from './feature';
 
-module.exports = wrap;
-
-function wrap(features, options) {
+export default function wrap(features, options) {
     var buffer = options.buffer / options.extent;
     var merged = features;
     var left  = clip(features, 1, -1 - buffer, buffer,     0, -1, 2, options); // left world copy

@@ -1,7 +1,6 @@
-'use strict';
 
-var simplify = require('../src/simplify'),
-    t = require('tape');
+import simplify from '../src/simplify';
+import test from 'tape';
 
 /*eslint comma-spacing:0, no-shadow: 0*/
 
@@ -45,7 +44,7 @@ var simplified = [
     [0.85397,0.47115],[0.86636,0.48077]
 ];
 
-t('simplifies points correctly with the given tolerance', function (t) {
+test('simplifies points correctly with the given tolerance', function (t) {
     var coords = [];
     for (var i = 0; i < points.length; i++) {
         coords.push(points[i][0], points[i][1], 0);
