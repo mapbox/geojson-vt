@@ -23,7 +23,6 @@ var rightPoint = {
 test('handle point only in the rightside world', function (t) {
     try {
         var vt = geojsonvt(rightPoint);
-        console.log(vt.tiles[0].features);
         t.equal(vt.tiles[0].features[0].geometry[0], 1);
         t.equal(vt.tiles[0].features[0].geometry[1], .5);
     } catch (err) {

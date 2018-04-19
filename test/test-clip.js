@@ -34,8 +34,10 @@ test('clips lines with line metrics on', function (t) {
 
     var geom = geom1.slice();
     geom.size = 0;
-    for (var i = 0; i < geom.length - 2; i += 2) {
-        geom.size += Math.sqrt(Math.pow(geom[i + 2] - geom[i], 2) + Math.pow(geom[i + 3] - geom[i + 1], 2));
+    for (var i = 0; i < geom.length - 3; i += 3) {
+        var dx = geom[i + 3] - geom[i];
+        var dy = geom[i + 4] - geom[i + 1];
+        geom.size += Math.sqrt(dx * dx + dy * dy);
     }
     geom.start = 0;
     geom.end = geom.size;
@@ -45,7 +47,7 @@ test('clips lines with line metrics on', function (t) {
 
     t.same(
         clipped.map(function (f) { return [f.geometry.start, f.geometry.end]; }),
-        [[10, 40], [70, 130], [160, 200], [230, 911.4042771522114]]
+        [[10, 40], [70, 130], [160, 200], [230, 245]]
     );
 
     t.end();
