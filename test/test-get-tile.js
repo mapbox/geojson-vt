@@ -33,6 +33,32 @@ test('getTile: us-states.json', function (t) {
     t.end();
 });
 
+test('getTile: unbuffered tile left/right edges', function (t) {
+    var index = geojsonvt({
+        type: 'LineString',
+        coordinates: [[0, 90], [0, -90]]
+    }, {
+        buffer: 0
+    });
+
+    t.same(index.getTile(2, 1, 1).features, [{geometry: [[[4096, 0], [4096, 4096]]], type: 2, tags: null}]);
+    t.same(index.getTile(2, 2, 1).features, [{geometry: [[[0, 0], [0, 4096]]], type: 2, tags: null}]);
+    t.end();
+});
+
+test('getTile: unbuffered tile top/bottom edges', function (t) {
+    var index = geojsonvt({
+        type: 'LineString',
+        coordinates: [[-90, 66.51326044311188], [90, 66.51326044311188]]
+    }, {
+        buffer: 0
+    });
+
+    t.same(index.getTile(2, 1, 0).features, [{geometry: [[[0, 4096], [4096, 4096]]], type: 2, tags: null}]);
+    t.same(index.getTile(2, 1, 1).features, [{geometry: [[[0, 0], [4096, 0]]], type: 2, tags: null}]);
+    t.end();
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
 }
