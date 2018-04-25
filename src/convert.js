@@ -83,6 +83,7 @@ function convertFeature(features, geojson, options) {
 function convertPoint(coords, out) {
     out.push(projectX(coords[0]));
     out.push(projectY(coords[1]));
+    out.push(coords[2] || 0);
     out.push(0);
 }
 
@@ -93,9 +94,11 @@ function convertLine(ring, out, tolerance, isPolygon) {
     for (var j = 0; j < ring.length; j++) {
         var x = projectX(ring[j][0]);
         var y = projectY(ring[j][1]);
+        var z = ring[j][2] || 0;
 
         out.push(x);
         out.push(y);
+        out.push(z);
         out.push(0);
 
         if (j > 0) {
@@ -109,11 +112,10 @@ function convertLine(ring, out, tolerance, isPolygon) {
         y0 = y;
     }
 
-    var last = out.length - 3;
-    out[2] = 1;
+    var last = out.length - 4;
+    out[3] = 1;
     simplify(out, 0, last, tolerance);
-    out[last + 2] = 1;
-
+    out[last + 3] = 1;
     out.size = Math.abs(size);
     out.start = 0;
     out.end = out.size;

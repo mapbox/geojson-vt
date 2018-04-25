@@ -10,7 +10,7 @@ export default function simplify(coords, first, last, sqTolerance) {
     var bx = coords[last];
     var by = coords[last + 1];
 
-    for (var i = first + 3; i < last; i += 3) {
+    for (var i = first + 4; i < last; i += 4) {
         var d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
         if (d > maxSqDist) {
             index = i;
@@ -19,9 +19,9 @@ export default function simplify(coords, first, last, sqTolerance) {
     }
 
     if (maxSqDist > sqTolerance) {
-        if (index - first > 3) simplify(coords, first, index, sqTolerance);
-        coords[index + 2] = maxSqDist;
-        if (last - index > 3) simplify(coords, index, last, sqTolerance);
+        if (index - first > 4) simplify(coords, first, index, sqTolerance);
+        coords[index + 3] = maxSqDist;
+        if (last - index > 4) simplify(coords, index, last, sqTolerance);
     }
 }
 

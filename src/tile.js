@@ -40,9 +40,10 @@ function addFeature(tile, feature, tolerance, options) {
         simplified = [];
 
     if (type === 'Point' || type === 'MultiPoint') {
-        for (var i = 0; i < geom.length; i += 3) {
+        for (var i = 0; i < geom.length; i += 4) {
             simplified.push(geom[i]);
             simplified.push(geom[i + 1]);
+            simplified.push(geom[i + 2]);
             tile.numPoints++;
             tile.numSimplified++;
         }
@@ -90,17 +91,18 @@ function addLine(result, geom, tile, tolerance, isPolygon, isOuter) {
     var sqTolerance = tolerance * tolerance;
 
     if (tolerance > 0 && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
-        tile.numPoints += geom.length / 3;
+        tile.numPoints += geom.length / 4;
         return;
     }
 
     var ring = [];
 
-    for (var i = 0; i < geom.length; i += 3) {
-        if (tolerance === 0 || geom[i + 2] > sqTolerance) {
+    for (var i = 0; i < geom.length; i += 4) {
+        if (tolerance === 0 || geom[i + 3] > sqTolerance) {
             tile.numSimplified++;
             ring.push(geom[i]);
             ring.push(geom[i + 1]);
+            ring.push(geom[i + 2]);
         }
         tile.numPoints++;
     }

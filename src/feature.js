@@ -7,8 +7,10 @@ export default function createFeature(id, type, geom, tags) {
         tags: tags,
         minX: Infinity,
         minY: Infinity,
+        minZ: Infinity,
         maxX: -Infinity,
-        maxY: -Infinity
+        maxY: -Infinity,
+        maxZ: -Infinity
     };
     calcBBox(feature);
     return feature;
@@ -36,10 +38,12 @@ function calcBBox(feature) {
 }
 
 function calcLineBBox(feature, geom) {
-    for (var i = 0; i < geom.length; i += 3) {
+    for (var i = 0; i < geom.length; i += 4) {
         feature.minX = Math.min(feature.minX, geom[i]);
         feature.minY = Math.min(feature.minY, geom[i + 1]);
+        feature.minZ = Math.min(feature.minZ, geom[i + 2]);
         feature.maxX = Math.max(feature.maxX, geom[i]);
         feature.maxY = Math.max(feature.maxY, geom[i + 1]);
+        feature.maxZ = Math.max(feature.maxZ, geom[i + 2]);
     }
 }

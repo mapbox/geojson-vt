@@ -104,41 +104,43 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
     var len = geom.start;
     var segLen, t;
 
-    for (var i = 0; i < geom.length - 3; i += 3) {
+    for (var i = 0; i < geom.length - 4; i += 4) {
         var ax = geom[i];
         var ay = geom[i + 1];
         var az = geom[i + 2];
-        var bx = geom[i + 3];
-        var by = geom[i + 4];
+        var asimpl = geom[i + 3];
+        var bx = geom[i + 4];
+        var by = geom[i + 5];
+        var bz = geom[i + 6];
         var a = axis === 0 ? ax : ay;
         var b = axis === 0 ? bx : by;
         var exited = false;
 
-        if (trackMetrics) segLen = Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2));
+        if (trackMetrics) segLen = Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2) + Math.pow(az - bz, 2));
 
         if (a < k1) {
             // ---|-->  | (line enters the clip region from the left)
             if (b >= k1) {
-                t = intersect(slice, ax, ay, bx, by, k1);
+                t = intersect(slice, ax, ay, az, bx, by, bz, k1);
                 if (trackMetrics) slice.start = len + segLen * t;
             }
         } else if (a > k2) {
             // |  <--|--- (line enters the clip region from the right)
             if (b <= k2) {
-                t = intersect(slice, ax, ay, bx, by, k2);
+                t = intersect(slice, ax, ay, az, bx, by, bz, k2);
                 if (trackMetrics) slice.start = len + segLen * t;
             }
         } else {
-            addPoint(slice, ax, ay, az);
+            addPoint(slice, ax, ay, az, asimpl);
         }
         if (b < k1 && a >= k1) {
             // <--|---  | or <--|-----|--- (line exits the clip region on the left)
-            t = intersect(slice, ax, ay, bx, by, k1);
+            t = intersect(slice, ax, ay, az, bx, by, bz, k1);
             exited = true;
         }
         if (b > k2 && a <= k2) {
             // |  ---|--> or ---|-----|--> (line exits the clip region on the right)
-            t = intersect(slice, ax, ay, bx, by, k2);
+            t = intersect(slice, ax, ay, az, bx, by, bz, k1);
             exited = true;
         }
 
@@ -156,13 +158,14 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
     ax = geom[last];
     ay = geom[last + 1];
     az = geom[last + 2];
+    asimpl = geom[last + 3];
     a = axis === 0 ? ax : ay;
-    if (a >= k1 && a <= k2) addPoint(slice, ax, ay, az);
+    if (a >= k1 && a <= k2) addPoint(slice, ax, ay, az, asimpl);
 
     // close the polygon if its endpoints are not the same after clipping
-    last = slice.length - 3;
-    if (isPolygon && last >= 3 && (slice[last] !== slice[0] || slice[last + 1] !== slice[1])) {
-        addPoint(slice, slice[0], slice[1], slice[2]);
+    last = slice.length - 4;
+    if (isPolygon && last >= 4 && (slice[last] !== slice[0] || slice[last + 1] !== slice[1] || slice[last + 2] !== slice[2])) {
+        addPoint(slice, slice[0], slice[1], slice[2], slice[3]);
     }
 
     // add the final slice
@@ -185,24 +188,27 @@ function clipLines(geom, newGeom, k1, k2, axis, isPolygon) {
     }
 }
 
-function addPoint(out, x, y, z) {
+function addPoint(out, x, y, z, simpl) {
     out.push(x);
     out.push(y);
     out.push(z);
+    out.push(simpl);
 }
 
-function intersectX(out, ax, ay, bx, by, x) {
+function intersectX(out, ax, ay, az, bx, by, bz, x) {
     var t = (x - ax) / (bx - ax);
     out.push(x);
     out.push(ay + (by - ay) * t);
+    out.push(az + (bz - az) * t);
     out.push(1);
     return t;
 }
 
-function intersectY(out, ax, ay, bx, by, y) {
+function intersectY(out, ax, ay, az, bx, by, bz, y) {
     var t = (y - ay) / (by - ay);
     out.push(ax + (bx - ax) * t);
     out.push(y);
+    out.push(az + (bz - az) * t);
     out.push(1);
     return t;
 }
