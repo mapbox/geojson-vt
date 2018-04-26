@@ -4,15 +4,17 @@ import createFeature from './feature';
 
 export default function wrap(features, options) {
     var buffer = options.buffer / options.extent;
+    var dimensions = options.dimensions;
+
     var merged = features;
-    var left  = clip(features, 1, -1 - buffer, buffer,     0, -1, 2, options); // left world copy
-    var right = clip(features, 1,  1 - buffer, 2 + buffer, 0, -1, 2, options); // right world copy
+    var left  = clip(dimensions, features, 1, -1 - buffer, buffer,     0, -1, 2, options); // left world copy
+    var right = clip(dimensions, features, 1,  1 - buffer, 2 + buffer, 0, -1, 2, options); // right world copy
 
     if (left || right) {
-        merged = clip(features, 1, -buffer, 1 + buffer, 0, -1, 2, options) || []; // center world copy
+        merged = clip(dimensions, features, 1, -buffer, 1 + buffer, 0, -1, 2, options) || []; // center world copy
 
-        if (left) merged = shiftFeatureCoords(left, 1).concat(merged); // merge left into center
-        if (right) merged = merged.concat(shiftFeatureCoords(right, -1)); // merge right into center
+        if (left) merged = shiftFeatureCoords(dimensions, left, 1).concat(merged); // merge left into center
+        if (right) merged = merged.concat(shiftFeatureCoords(dimensions, right, -1)); // merge right into center
     }
 
     return merged;
@@ -52,7 +54,8 @@ function shiftFeatureCoords(features, offset) {
     return newFeatures;
 }
 
-function shiftCoords(points, offset) {
+function shiftCoords(dimensions, points, offset) {
+    var stride = dimensions + 1;
     var newPoints = [];
     newPoints.size = points.size;
 
@@ -61,8 +64,12 @@ function shiftCoords(points, offset) {
         newPoints.end = points.end;
     }
 
-    for (var i = 0; i < points.length; i += 3) {
-        newPoints.push(points[i] + offset, points[i + 1], points[i + 2]);
+    for (var i = 0; i < points.length; i += stride) {
+        if (dimensions === 2) {
+            newPoints.push(points[i] + offset, points[i + 1], points[i + 2]);
+        } else {
+            newPoints.push(points[i] + offset, points[i + 1], points[i + 2], points[i + 3]);
+        }
     }
     return newPoints;
 }

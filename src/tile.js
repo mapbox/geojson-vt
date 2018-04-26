@@ -1,5 +1,5 @@
 
-export default function createTile(features, z, tx, ty, options) {
+export default function createTile(dimensions, features, z, tx, ty, options) {
     var tolerance = z === options.maxZoom ? 0 : options.tolerance / ((1 << z) * options.extent);
     var tile = {
         features: [],
@@ -7,6 +7,7 @@ export default function createTile(features, z, tx, ty, options) {
         numSimplified: 0,
         numFeatures: 0,
         source: null,
+        dimensions: dimensions,
         x: tx,
         y: ty,
         z: z,
@@ -24,11 +25,13 @@ export default function createTile(features, z, tx, ty, options) {
         var minY = features[i].minY;
         var maxX = features[i].maxX;
         var maxY = features[i].maxY;
+        // if (dimensions === 3) maxZ = features[i].maxZ;
 
         if (minX < tile.minX) tile.minX = minX;
         if (minY < tile.minY) tile.minY = minY;
         if (maxX > tile.maxX) tile.maxX = maxX;
         if (maxY > tile.maxY) tile.maxY = maxY;
+        // if (dimensions === 3) if (maxZ > tile.maxZ) tile.maxZ = maxZ;
     }
     return tile;
 }
@@ -37,23 +40,24 @@ function addFeature(tile, feature, tolerance, options) {
 
     var geom = feature.geometry,
         type = feature.type,
-        simplified = [];
+        simplified = [],
+        stride = tile.dimensions + 1;
 
     if (type === 'Point' || type === 'MultiPoint') {
-        for (var i = 0; i < geom.length; i += 4) {
+        for (var i = 0; i < geom.length; i += stride) {
             simplified.push(geom[i]);
             simplified.push(geom[i + 1]);
-            simplified.push(geom[i + 2]);
+            if (tile.dimensions === 3) simplified.push(geom[i + 2]);
             tile.numPoints++;
             tile.numSimplified++;
         }
 
     } else if (type === 'LineString') {
-        addLine(simplified, geom, tile, tolerance, false, false);
+        addLine(tile.dimensions, simplified, geom, tile, tolerance, false, false);
 
     } else if (type === 'MultiLineString' || type === 'Polygon') {
         for (i = 0; i < geom.length; i++) {
-            addLine(simplified, geom[i], tile, tolerance, type === 'Polygon', i === 0);
+            addLine(tile.dimensions, simplified, geom[i], tile, tolerance, type === 'Polygon', i === 0);
         }
 
     } else if (type === 'MultiPolygon') {
@@ -61,7 +65,7 @@ function addFeature(tile, feature, tolerance, options) {
         for (var k = 0; k < geom.length; k++) {
             var polygon = geom[k];
             for (i = 0; i < polygon.length; i++) {
-                addLine(simplified, polygon[i], tile, tolerance, true, i === 0);
+                addLine(tile.dimensions, simplified, polygon[i], tile, tolerance, true, i === 0);
             }
         }
     }
@@ -87,26 +91,27 @@ function addFeature(tile, feature, tolerance, options) {
     }
 }
 
-function addLine(result, geom, tile, tolerance, isPolygon, isOuter) {
+function addLine(dimensions, result, geom, tile, tolerance, isPolygon, isOuter) {
     var sqTolerance = tolerance * tolerance;
-
+    var stride = dimensions + 1;
     if (tolerance > 0 && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
-        tile.numPoints += geom.length / 4;
+        tile.numPoints += geom.length / stride;
         return;
     }
 
     var ring = [];
 
-    for (var i = 0; i < geom.length; i += 4) {
-        if (tolerance === 0 || geom[i + 3] > sqTolerance) {
+    for (var i = 0; i < geom.length; i += stride) {
+        if (tolerance === 0 || geom[i + stride - 1] > sqTolerance) {
             tile.numSimplified++;
             ring.push(geom[i]);
             ring.push(geom[i + 1]);
-            ring.push(geom[i + 2]);
+            if (dimensions === 3) ring.push(geom[i + 2]);
         }
         tile.numPoints++;
     }
 
+    // polygons do not support 3 dimensions
     if (isPolygon) rewind(ring, isOuter);
 
     result.push(ring);

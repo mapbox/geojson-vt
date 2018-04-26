@@ -1,5 +1,5 @@
 
-export default function createFeature(id, type, geom, tags) {
+export default function createFeature(dimensions, id, type, geom, tags) {
     var feature = {
         id: id || null,
         type: type,
@@ -7,43 +7,44 @@ export default function createFeature(id, type, geom, tags) {
         tags: tags,
         minX: Infinity,
         minY: Infinity,
-        minZ: Infinity,
+        minZ: dimensions === 3 ?  Infinity : undefined,
         maxX: -Infinity,
         maxY: -Infinity,
-        maxZ: -Infinity
+        maxZ: dimensions === 3 ?  -Infinity : undefined
     };
-    calcBBox(feature);
+    calcBBox(dimensions, feature);
     return feature;
 }
 
-function calcBBox(feature) {
+function calcBBox(dimensions, feature) {
     var geom = feature.geometry;
     var type = feature.type;
 
     if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
-        calcLineBBox(feature, geom);
+        calcLineBBox(dimensions, feature, geom);
 
     } else if (type === 'Polygon' || type === 'MultiLineString') {
         for (var i = 0; i < geom.length; i++) {
-            calcLineBBox(feature, geom[i]);
+            calcLineBBox(dimensions, feature, geom[i]);
         }
 
     } else if (type === 'MultiPolygon') {
         for (i = 0; i < geom.length; i++) {
             for (var j = 0; j < geom[i].length; j++) {
-                calcLineBBox(feature, geom[i][j]);
+                calcLineBBox(dimensions, feature, geom[i][j]);
             }
         }
     }
 }
 
-function calcLineBBox(feature, geom) {
-    for (var i = 0; i < geom.length; i += 4) {
+function calcLineBBox(dimensions, feature, geom) {
+    var stride = dimensions + 1;
+    for (var i = 0; i < geom.length; i += stride) {
         feature.minX = Math.min(feature.minX, geom[i]);
         feature.minY = Math.min(feature.minY, geom[i + 1]);
-        feature.minZ = Math.min(feature.minZ, geom[i + 2]);
+        if (dimensions === 3) feature.minZ = Math.min(feature.minZ, geom[i + 2]);
         feature.maxX = Math.max(feature.maxX, geom[i]);
         feature.maxY = Math.max(feature.maxY, geom[i + 1]);
-        feature.maxZ = Math.max(feature.maxZ, geom[i + 2]);
+        if (dimensions === 3) feature.maxZ = Math.max(feature.maxZ, geom[i + 2]);
     }
 }

@@ -29,6 +29,7 @@ function convertFeature(features, geojson, options) {
     var coords = geojson.geometry.coordinates;
     var type = geojson.geometry.type;
     var tolerance = Math.pow(options.tolerance / ((1 << options.maxZoom) * options.extent), 2);
+    var dimensions = options.dimensions;
     var geometry = [];
 
     if (type === 'Point') {
@@ -36,32 +37,32 @@ function convertFeature(features, geojson, options) {
 
     } else if (type === 'MultiPoint') {
         for (var i = 0; i < coords.length; i++) {
-            convertPoint(coords[i], geometry);
+            convertPoint(dimensions, coords[i], geometry);
         }
 
     } else if (type === 'LineString') {
-        convertLine(coords, geometry, tolerance, false);
+        convertLine(dimensions, coords, geometry, tolerance, false);
 
     } else if (type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into linestrings to be able to track metrics
             for (i = 0; i < coords.length; i++) {
                 geometry = [];
-                convertLine(coords[i], geometry, tolerance, false);
-                features.push(createFeature(geojson.id, 'LineString', geometry, geojson.properties));
+                convertLine(dimensions, coords[i], geometry, tolerance, false);
+                features.push(createFeature(dimensions, geojson.id, 'LineString', geometry, geojson.properties));
                 return;
             }
         } else {
-            convertLines(coords, geometry, tolerance, false);
+            convertLines(dimensions, coords, geometry, tolerance, false);
         }
 
     } else if (type === 'Polygon') {
-        convertLines(coords, geometry, tolerance, true);
+        convertLines(dimensions, coords, geometry, tolerance, true);
 
     } else if (type === 'MultiPolygon') {
         for (i = 0; i < coords.length; i++) {
             var polygon = [];
-            convertLines(coords[i], polygon, tolerance, true);
+            convertLines(dimensions, coords[i], polygon, tolerance, true);
             geometry.push(polygon);
         }
     } else if (type === 'GeometryCollection') {
@@ -77,28 +78,28 @@ function convertFeature(features, geojson, options) {
         throw new Error('Input data is not a valid GeoJSON object.');
     }
 
-    features.push(createFeature(geojson.id, type, geometry, geojson.properties));
+    features.push(createFeature(dimensions, geojson.id, type, geometry, geojson.properties));
 }
 
-function convertPoint(coords, out) {
+function convertPoint(dimensions, coords, out) {
     out.push(projectX(coords[0]));
     out.push(projectY(coords[1]));
-    out.push(coords[2] || 0);
+    if (dimensions === 3) out.push(coords[2] || 0);
     out.push(0);
 }
 
-function convertLine(ring, out, tolerance, isPolygon) {
+function convertLine(dimensions, ring, out, tolerance, isPolygon) {
     var x0, y0;
     var size = 0;
-
+    var stride = dimensions + 1;
     for (var j = 0; j < ring.length; j++) {
         var x = projectX(ring[j][0]);
         var y = projectY(ring[j][1]);
-        var z = ring[j][2] || 0;
+        if (dimensions === 3) var z = ring[j][2];
 
         out.push(x);
         out.push(y);
-        out.push(z);
+        if (dimensions === 3) out.push(z);
         out.push(0);
 
         if (j > 0) {
@@ -112,19 +113,19 @@ function convertLine(ring, out, tolerance, isPolygon) {
         y0 = y;
     }
 
-    var last = out.length - 4;
-    out[3] = 1;
-    simplify(out, 0, last, tolerance);
-    out[last + 3] = 1;
+    var last = out.length - stride;
+    out[stride - 1] = 1;
+    simplify(dimensions, out, 0, last, tolerance);
+    out[last + stride - 1] = 1;
     out.size = Math.abs(size);
     out.start = 0;
     out.end = out.size;
 }
 
-function convertLines(rings, out, tolerance, isPolygon) {
+function convertLines(dimensions, rings, out, tolerance, isPolygon) {
     for (var i = 0; i < rings.length; i++) {
         var geom = [];
-        convertLine(rings[i], geom, tolerance, isPolygon);
+        convertLine(dimensions, rings[i], geom, tolerance, isPolygon);
         out.push(geom);
     }
 }

@@ -9,6 +9,7 @@ export default function transformTile(tile, extent) {
         ty = tile.y,
         i, j, k;
 
+    var dimensions = tile.dimensions;
     for (i = 0; i < tile.features.length; i++) {
         var feature = tile.features[i],
             geom = feature.geometry,
@@ -16,14 +17,14 @@ export default function transformTile(tile, extent) {
 
         feature.geometry = [];
         if (type === 1) {
-            for (j = 0; j < geom.length; j += 3) {
-                feature.geometry.push(transformPoint(geom[j], geom[j + 1], geom[j + 2], extent, z2, tx, ty));
+            for (j = 0; j < geom.length; j += dimensions) {
+                feature.geometry.push(transformPoint(geom[j], geom[j + 1], dimensions === 3 ? geom[j + 2] : null, extent, z2, tx, ty));
             }
         } else {
             for (j = 0; j < geom.length; j++) {
                 var ring = [];
-                for (k = 0; k < geom[j].length; k += 3) {
-                    ring.push(transformPoint(geom[j][k], geom[j][k + 1], geom[j][k + 2], extent, z2, tx, ty));
+                for (k = 0; k < geom[j].length; k += dimensions) {
+                    ring.push(transformPoint(geom[j][k], geom[j][k + 1], dimensions === 3 ? geom[j][k + 2] : null, extent, z2, tx, ty));
                 }
                 feature.geometry.push(ring);
             }
@@ -36,8 +37,12 @@ export default function transformTile(tile, extent) {
 }
 
 function transformPoint(x, y, z, extent, z2, tx, ty) {
-    return [
-        Math.round(extent * (x * z2 - tx)),
-        Math.round(extent * (y * z2 - ty)),
-        Math.round(z)];
+    if (z !== null) {
+        return [Math.round(extent * (x * z2 - tx)),
+            Math.round(extent * (y * z2 - ty)),
+            Math.round(z)];
+    } else {
+        return [Math.round(extent * (x * z2 - tx)),
+            Math.round(extent * (y * z2 - ty))];
+    }
 }
