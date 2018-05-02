@@ -13,8 +13,8 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
     k1 /= scale;
     k2 /= scale;
 
-    if (minAll >= k1 && maxAll <= k2) return features; // trivial accept
-    else if (minAll > k2 || maxAll < k1) return null; // trivial reject
+    if (minAll >= k1 && maxAll < k2) return features; // trivial accept
+    else if (maxAll < k1 || minAll >= k2) return null; // trivial reject
 
     var clipped = [];
 
@@ -27,10 +27,10 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
         var min = axis === 0 ? feature.minX : feature.minY;
         var max = axis === 0 ? feature.maxX : feature.maxY;
 
-        if (min >= k1 && max <= k2) { // trivial accept
+        if (min >= k1 && max < k2) { // trivial accept
             clipped.push(feature);
             continue;
-        } else if (min > k2 || max < k1) { // trivial reject
+        } else if (max < k1 || min >= k2) { // trivial reject
             continue;
         }
 
@@ -122,9 +122,9 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
                 t = intersect(slice, ax, ay, bx, by, k1);
                 if (trackMetrics) slice.start = len + segLen * t;
             }
-        } else if (a > k2) {
+        } else if (a >= k2) {
             // |  <--|--- (line enters the clip region from the right)
-            if (b <= k2) {
+            if (b < k2) {
                 t = intersect(slice, ax, ay, bx, by, k2);
                 if (trackMetrics) slice.start = len + segLen * t;
             }
