@@ -23,7 +23,7 @@
     "coveralls": "^3.0.0",
     "eslint": "^4.18.2",
     "eslint-config-mourner": "^2.0.3",
-    "esm": "^3.0.11",
+    "esm": "^3.0.19",
     "nyc": "^11.4.1",
     "rollup": "^0.57.1",
     "rollup-plugin-uglify": "^3.0.0",
