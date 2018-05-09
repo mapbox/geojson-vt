@@ -49,8 +49,8 @@ function convertFeature(features, geojson, options) {
                 geometry = [];
                 convertLine(coords[i], geometry, tolerance, false);
                 features.push(createFeature(geojson.id, 'LineString', geometry, geojson.properties));
-                return;
             }
+            return;
         } else {
             convertLines(coords, geometry, tolerance, false);
         }
