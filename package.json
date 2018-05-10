@@ -20,12 +20,12 @@
   "unpkg": "geojson-vt.js",
   "devDependencies": {
     "benchmark": "^2.1.4",
-    "coveralls": "^3.0.0",
-    "eslint": "^4.18.2",
+    "coveralls": "^3.0.1",
+    "eslint": "^4.19.1",
     "eslint-config-mourner": "^2.0.3",
-    "esm": "^3.0.19",
-    "nyc": "^11.4.1",
-    "rollup": "^0.57.1",
+    "esm": "^3.0.33",
+    "nyc": "^11.7.3",
+    "rollup": "^0.58.2",
     "rollup-plugin-uglify": "^3.0.0",
     "tape": "^4.9.0",
     "watchify": "^3.11.0"
