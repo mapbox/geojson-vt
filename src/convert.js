@@ -33,7 +33,7 @@ function convertFeature(features, geojson, options) {
     var geometry = [];
 
     if (type === 'Point') {
-        convertPoint(coords, geometry);
+        convertPoint(dimensions, coords, geometry);
 
     } else if (type === 'MultiPoint') {
         for (var i = 0; i < coords.length; i++) {
