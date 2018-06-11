@@ -23,11 +23,11 @@
     "coveralls": "^3.0.1",
     "eslint": "^4.19.1",
     "eslint-config-mourner": "^2.0.3",
-    "esm": "^3.0.33",
-    "nyc": "^11.7.3",
-    "rollup": "^0.58.2",
-    "rollup-plugin-uglify": "^3.0.0",
-    "tape": "^4.9.0",
+    "esm": "^3.0.49",
+    "nyc": "^12.0.2",
+    "rollup": "^0.60.2",
+    "rollup-plugin-uglify": "^4.0.0",
+    "tape": "^4.9.1",
     "watchify": "^3.11.0"
   },
   "eslintConfig": {
@@ -45,7 +45,7 @@
     "test": "nyc --require esm tape test/test-*.js",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "build": "rollup -c",
-    "watch": "rollup -w",
+    "watch": "rollup -cw",
     "prepublishOnly": "npm run test && npm run build"
   },
   "files": [

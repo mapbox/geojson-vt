@@ -1,4 +1,4 @@
-import uglify from 'rollup-plugin-uglify';
+import {uglify} from 'rollup-plugin-uglify';
 
 const config = (file, plugins) => ({
     input: 'src/index.js',
