@@ -8,8 +8,8 @@ export default function simplify(coords, sqTolerance) {
     var queue = [0, coords.length - 3];
 
     while (queue.length) {
-        var last = queue.pop();
-        var first = queue.pop();
+        var last = queue.pop() | 0;
+        var first = queue.pop() | 0;
         var maxSqDist = sqTolerance;
 
         var index = first;
@@ -22,7 +22,7 @@ export default function simplify(coords, sqTolerance) {
         for (var i = first + 3; i < last; i += 3) {
             var d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
             if (d > maxSqDist) {
-                index = i;
+                index = i | 0;
                 maxSqDist = d;
             }
         }
