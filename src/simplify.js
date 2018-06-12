@@ -1,27 +1,37 @@
 
 // calculate simplification data using optimized Douglas-Peucker algorithm
 
-export default function simplify(coords, first, last, sqTolerance) {
-    var maxSqDist = sqTolerance;
-    var index;
+export default function simplify(coords, sqTolerance) {
+    coords[2] = 1;
+    coords[coords.length - 1] = 1;
 
-    var ax = coords[first];
-    var ay = coords[first + 1];
-    var bx = coords[last];
-    var by = coords[last + 1];
+    var queue = [0, coords.length - 3];
 
-    for (var i = first + 3; i < last; i += 3) {
-        var d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
-        if (d > maxSqDist) {
-            index = i;
-            maxSqDist = d;
+    while (queue.length) {
+        var last = queue.pop();
+        var first = queue.pop();
+        var maxSqDist = sqTolerance;
+
+        var index = first;
+
+        var ax = coords[first];
+        var ay = coords[first + 1];
+        var bx = coords[last];
+        var by = coords[last + 1];
+
+        for (var i = first + 3; i < last; i += 3) {
+            var d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
+            if (d > maxSqDist) {
+                index = i;
+                maxSqDist = d;
+            }
         }
-    }
 
-    if (maxSqDist > sqTolerance) {
-        if (index - first > 3) simplify(coords, first, index, sqTolerance);
-        coords[index + 2] = maxSqDist;
-        if (last - index > 3) simplify(coords, index, last, sqTolerance);
+        if (maxSqDist > sqTolerance) {
+            if (index - first > 3) queue.push(first, index);
+            coords[index + 2] = maxSqDist;
+            if (last - index > 3) queue.push(index, last);
+        }
     }
 }
 
