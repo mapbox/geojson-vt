@@ -109,7 +109,10 @@ function convertLine(ring, out, tolerance, isPolygon) {
         y0 = y;
     }
 
-    simplify(out, tolerance);
+    var last = out.length - 3;
+    out[2] = 1;
+    simplify(out, 0, last, tolerance);
+    out[last + 2] = 1;
 
     out.size = Math.abs(size);
     out.start = 0;
