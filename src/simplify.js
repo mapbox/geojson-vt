@@ -14,13 +14,19 @@ export default function simplify(coords, first, last, sqTolerance) {
 
     for (var i = first + 3; i < last; i += 3) {
         var d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
+
         if (d > maxSqDist) {
             index = i;
             maxSqDist = d;
-        }
-        if (d === maxSqDist && i - mid < minPosToMid) {
-            index = i;
-            minPosToMid = i - mid;
+
+        } else if (d === maxSqDist) {
+            // a workaround to avoid max call stack size error on degenerate inputs:
+            // https://github.com/mapbox/geojson-vt/issues/104
+            var posToMid = Math.abs(i - mid);
+            if (posToMid < minPosToMid) {
+                index = i;
+                minPosToMid = i - mid;
+            }
         }
     }
 
