@@ -20,7 +20,8 @@ export default function simplify(coords, first, last, sqTolerance) {
             maxSqDist = d;
 
         } else if (d === maxSqDist) {
-            // a workaround to avoid max call stack size error on degenerate inputs:
+            // a workaround to ensure we choose a pivot close to the middle of the list,
+            // reducing recursion depth, for certain degenerate inputs
             // https://github.com/mapbox/geojson-vt/issues/104
             var posToMid = Math.abs(i - mid);
             if (posToMid < minPosToMid) {
