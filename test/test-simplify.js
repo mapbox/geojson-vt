@@ -49,9 +49,9 @@ test('simplifies points correctly with the given tolerance', function (t) {
     for (var i = 0; i < points.length; i++) {
         coords.push(points[i][0], points[i][1], 0);
     }
+
     coords[2] = 1;
     coords[coords.length - 1] = 1;
-
     simplify(coords, 0, coords.length - 3, 0.001 * 0.001);
 
     var result = [];
@@ -61,5 +61,18 @@ test('simplifies points correctly with the given tolerance', function (t) {
         }
     }
     t.same(result, simplified);
+    t.end();
+});
+
+test('does not throw max call stack error on bad long input', function (t) {
+    const coords = [];
+    for (let i = 0; i < 1400; i++) {
+        coords.push([0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]);
+    }
+
+    t.doesNotThrow(function () {
+        simplify(coords, 2e-15);
+    });
+
     t.end();
 });

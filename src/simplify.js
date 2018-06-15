@@ -3,6 +3,8 @@
 
 export default function simplify(coords, first, last, sqTolerance) {
     var maxSqDist = sqTolerance;
+    var mid = (last - first) >> 1;
+    var minPosToMid = last - first;
     var index;
 
     var ax = coords[first];
@@ -12,9 +14,20 @@ export default function simplify(coords, first, last, sqTolerance) {
 
     for (var i = first + 3; i < last; i += 3) {
         var d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
+
         if (d > maxSqDist) {
             index = i;
             maxSqDist = d;
+
+        } else if (d === maxSqDist) {
+            // a workaround to ensure we choose a pivot close to the middle of the list,
+            // reducing recursion depth, for certain degenerate inputs
+            // https://github.com/mapbox/geojson-vt/issues/104
+            var posToMid = Math.abs(i - mid);
+            if (posToMid < minPosToMid) {
+                index = i;
+                minPosToMid = i - mid;
+            }
         }
     }
 
