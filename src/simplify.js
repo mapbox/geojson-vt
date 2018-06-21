@@ -26,7 +26,7 @@ export default function simplify(coords, first, last, sqTolerance) {
             var posToMid = Math.abs(i - mid);
             if (posToMid < minPosToMid) {
                 index = i;
-                minPosToMid = i - mid;
+                minPosToMid = posToMid;
             }
         }
     }
