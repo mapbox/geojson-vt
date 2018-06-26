@@ -1,7 +1,7 @@
 
 export default function createFeature(id, type, geom, tags) {
     var feature = {
-        id: id || null,
+        id: typeof id === 'undefined' ? null : id,
         type: type,
         geometry: geom,
         tags: tags,
