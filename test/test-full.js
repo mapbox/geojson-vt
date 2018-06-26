@@ -22,7 +22,7 @@ function testTiles(inputFile, expectedFile, options) {
     test('full tiling test: ' + expectedFile.replace('-tiles.json', ''), function (t) {
         var tiles = genTiles(getJSON(inputFile), options);
         // fs.writeFileSync(path.join(__dirname, '/fixtures/' + expectedFile), JSON.stringify(tiles));
-        t.same(getJSON(expectedFile), tiles);
+        t.same(tiles, getJSON(expectedFile));
         t.end();
     });
 }
