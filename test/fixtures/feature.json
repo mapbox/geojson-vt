@@ -9,5 +9,6 @@
  "properties": {
    "prop0": "value0",
    "prop1": {"this": "that"}
-   }
+ },
+ "id": 0
  }
