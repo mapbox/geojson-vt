@@ -6,10 +6,9 @@ import createFeature from './feature';
 
 export default function convert(data, options) {
     var features = [];
-
     if (data.type === 'FeatureCollection') {
         for (var i = 0; i < data.features.length; i++) {
-            convertFeature(features, data.features[i], options);
+            convertFeature(features, data.features[i], options, i);
         }
 
     } else if (data.type === 'Feature') {
@@ -23,7 +22,7 @@ export default function convert(data, options) {
     return features;
 }
 
-function convertFeature(features, geojson, options) {
+function convertFeature(features, geojson, options, index) {
     if (!geojson.geometry) return;
 
     var coords = geojson.geometry.coordinates;
@@ -33,6 +32,8 @@ function convertFeature(features, geojson, options) {
     var id = geojson.id;
     if (options.promoteId) {
         id = geojson.properties[options.promoteId];
+    } else if (options.generateId) {
+        id = index || 0;
     }
     if (type === 'Point') {
         convertPoint(coords, geometry);

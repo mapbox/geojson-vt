@@ -17,6 +17,7 @@ function GeoJSONVT(data, options) {
     if (debug) console.time('preprocess data');
 
     if (options.maxZoom < 0 || options.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
+    if (options.promoteId && options.generateId) throw new Error('promoteId and generateId cannot be used together.');
 
     var features = convert(data, options);
 
@@ -52,6 +53,7 @@ GeoJSONVT.prototype.options = {
     buffer: 64,             // tile buffer on each side
     lineMetrics: false,     // whether to calculate line metrics
     promoteId: null,        // name of a feature property to be promoted to feature.id
+    generateId: false,      // whether to generate feature ids. Cannot be used with promoteId
     debug: 0                // logging level (0, 1 or 2)
 };
 

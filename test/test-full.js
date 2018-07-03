@@ -51,6 +51,19 @@ test('promote ids', function (t) {
     t.end();
 });
 
+test('generate ids', function (t) {
+    const data = getJSON('ids.json');
+    const tileIndex = geojsonvt(data, {
+        generateId: true,
+        indexMaxZoom: 0
+    });
+    const features = tileIndex.getTile(0, 0, 0).features;
+    for (let i = 0; i < features.length; i++) {
+        t.same(i, features[i].id);
+    }
+    t.end();
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
 }
