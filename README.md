@@ -59,14 +59,17 @@ var tileIndex = geojsonvt(data, {
 	extent: 4096, // tile extent (both width and height)
 	buffer: 64,	  // tile buffer on each side
 	debug: 0,      // logging level (0 to disable, 1 or 2)
-	lineMetrics: false,  // whether to enable line metrics tracking for LineString/MultiLineString features
-	promoteId: null,       // name of a feature property to promote to feature.id
-	indexMaxZoom: 5,       // max zoom in the initial tile index
+	lineMetrics: false, // whether to enable line metrics tracking for LineString/MultiLineString features
+	promoteId: null,    // name of a feature property to promote to feature.id. Cannot be used with `generateId`
+    generateId: false,  // whether to generate feature ids. Cannot be used with `promoteId`
+    indexMaxZoom: 5,       // max zoom in the initial tile index
 	indexMaxPoints: 100000 // max number of points per tile in the index
 });
 ```
 
 By default, tiles at zoom levels above `indexMaxZoom` are generated on the fly, but you can pre-generate all possible tiles for `data` by setting `indexMaxZoom` and `maxZoom` to the same value, setting `indexMaxPoints` to `0`, and then accessing the resulting tile coordinates from the `tileCoords` property of `tileIndex`.
+
+The `promoteId` and `generateId` options ignore existing `id` values on the feature objects.
 
 GeoJSON-VT only operates on zoom levels up to 24.
 
