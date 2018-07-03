@@ -38,6 +38,19 @@ test('null geometry', function (t) {
     t.end();
 });
 
+test('promote ids', function (t) {
+    const data = getJSON('ids.json');
+    const tileIndex = geojsonvt(data, {
+        promoteId: 'prop0',
+        indexMaxZoom: 0
+    });
+    const features = tileIndex.getTile(0, 0, 0).features;
+    features.forEach((f) => {
+        t.same(f.tags.prop0, f.id);
+    });
+    t.end();
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
 }

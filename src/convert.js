@@ -30,7 +30,10 @@ function convertFeature(features, geojson, options) {
     var type = geojson.geometry.type;
     var tolerance = Math.pow(options.tolerance / ((1 << options.maxZoom) * options.extent), 2);
     var geometry = [];
-
+    var id = geojson.id;
+    if (options.promoteId) {
+        id = geojson.properties[options.promoteId];
+    }
     if (type === 'Point') {
         convertPoint(coords, geometry);
 
@@ -48,7 +51,7 @@ function convertFeature(features, geojson, options) {
             for (i = 0; i < coords.length; i++) {
                 geometry = [];
                 convertLine(coords[i], geometry, tolerance, false);
-                features.push(createFeature(geojson.id, 'LineString', geometry, geojson.properties));
+                features.push(createFeature(id, 'LineString', geometry, geojson.properties));
             }
             return;
         } else {
@@ -67,7 +70,7 @@ function convertFeature(features, geojson, options) {
     } else if (type === 'GeometryCollection') {
         for (i = 0; i < geojson.geometry.geometries.length; i++) {
             convertFeature(features, {
-                id: geojson.id,
+                id: id,
                 geometry: geojson.geometry.geometries[i],
                 properties: geojson.properties
             }, options);
@@ -77,7 +80,7 @@ function convertFeature(features, geojson, options) {
         throw new Error('Input data is not a valid GeoJSON object.');
     }
 
-    features.push(createFeature(geojson.id, type, geometry, geojson.properties));
+    features.push(createFeature(id, type, geometry, geojson.properties));
 }
 
 function convertPoint(coords, out) {

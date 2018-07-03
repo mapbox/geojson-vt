@@ -51,6 +51,7 @@ GeoJSONVT.prototype.options = {
     extent: 4096,           // tile extent
     buffer: 64,             // tile buffer on each side
     lineMetrics: false,     // whether to calculate line metrics
+    promoteId: null,        // name of a feature property to be promoted to feature.id
     debug: 0                // logging level (0, 1 or 2)
 };
 
