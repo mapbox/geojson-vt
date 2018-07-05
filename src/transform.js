@@ -38,10 +38,10 @@ export default function transformTile(tile, extent) {
 
 function transformPoint(x, y, z, extent, z2, tx, ty) {
     if (z !== null) {
-        var z_percision = 40097932.2 / (z2 * extent);
+        var zPrecision = 40097932.2 / (z2 * extent);
         return [Math.round(extent * (x * z2 - tx)),
             Math.round(extent * (y * z2 - ty)),
-            Math.round(z / z_percision)];
+            Math.round(z / zPrecision)];
     } else {
         return [Math.round(extent * (x * z2 - tx)),
             Math.round(extent * (y * z2 - ty))];
