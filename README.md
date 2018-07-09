@@ -85,5 +85,5 @@ const geojsonvt = require('geojson-vt');
 Or use a browser build directly:
 
 ```html
-<script src="https://unpkg.com/geojson-vt@3.1.3/geojson-vt.js"></script>
+<script src="https://unpkg.com/geojson-vt@3.1.4/geojson-vt.js"></script>
 ```
