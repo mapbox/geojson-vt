@@ -74,7 +74,7 @@ function convertFeature(features, geojson, options, index) {
                 id: id,
                 geometry: geojson.geometry.geometries[i],
                 properties: geojson.properties
-            }, options);
+            }, options, index);
         }
         return;
     } else {

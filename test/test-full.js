@@ -10,6 +10,8 @@ testTiles('dateline.json', 'dateline-metrics-tiles.json', {indexMaxZoom: 0, inde
 testTiles('feature.json', 'feature-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
 testTiles('collection.json', 'collection-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
 testTiles('single-geom.json', 'single-geom-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
+testTiles('ids.json', 'ids-promote-id-tiles.json', {indexMaxZoom: 0, promoteId: 'prop0'});
+testTiles('ids.json', 'ids-generate-id-tiles.json', {indexMaxZoom: 0, generateId: true});
 
 test('throws on invalid GeoJSON', function (t) {
     t.throws(function () {
@@ -35,32 +37,6 @@ test('empty geojson', function (t) {
 test('null geometry', function (t) {
     // should ignore features with null geometry
     t.same({}, genTiles(getJSON('feature-null-geometry.json')));
-    t.end();
-});
-
-test('promote ids', function (t) {
-    const data = getJSON('ids.json');
-    const tileIndex = geojsonvt(data, {
-        promoteId: 'prop0',
-        indexMaxZoom: 0
-    });
-    const features = tileIndex.getTile(0, 0, 0).features;
-    features.forEach((f) => {
-        t.same(f.tags.prop0, f.id);
-    });
-    t.end();
-});
-
-test('generate ids', function (t) {
-    const data = getJSON('ids.json');
-    const tileIndex = geojsonvt(data, {
-        generateId: true,
-        indexMaxZoom: 0
-    });
-    const features = tileIndex.getTile(0, 0, 0).features;
-    for (let i = 0; i < features.length; i++) {
-        t.same(i, features[i].id);
-    }
     t.end();
 });
 
