@@ -57,8 +57,8 @@ var tileIndex = geojsonvt(data, {
 	maxZoom: 14,  // max zoom to preserve detail on; can't be higher than 24
 	tolerance: 3, // simplification tolerance (higher means simpler)
 	extent: 4096, // tile extent (both width and height)
-	buffer: 64,	  // tile buffer on each side
-	debug: 0,      // logging level (0 to disable, 1 or 2)
+	buffer: 64,   // tile buffer on each side
+	debug: 0,     // logging level (0 to disable, 1 or 2)
 	lineMetrics: false, // whether to enable line metrics tracking for LineString/MultiLineString features
 	promoteId: null,    // name of a feature property to promote to feature.id. Cannot be used with `generateId`
 	generateId: false,  // whether to generate feature ids. Cannot be used with `promoteId`
@@ -88,5 +88,5 @@ const geojsonvt = require('geojson-vt');
 Or use a browser build directly:
 
 ```html
-<script src="https://unpkg.com/geojson-vt@3.1.4/geojson-vt.js"></script>
+<script src="https://unpkg.com/geojson-vt@3.2.0/geojson-vt.js"></script>
 ```
