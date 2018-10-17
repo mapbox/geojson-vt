@@ -74,6 +74,20 @@ The `promoteId` and `generateId` options ignore existing `id` values on the feat
 
 GeoJSON-VT only operates on zoom levels up to 24.
 
+Render this simple map (xy, not geographical):
+
+[geojson.txt](https://github.com/cortiz37/geojson-vt/files/2487799/geojson.txt)
+
+By default, with `simple: false` the result wil be:
+
+![geographical](https://user-images.githubusercontent.com/10333549/47092984-c8bbb800-d1ed-11e8-850b-56fd6f143066.png)
+
+With `simple: true`:
+
+![simple](https://user-images.githubusercontent.com/10333549/47092996-cd806c00-d1ed-11e8-9fa0-d87941dc2fc8.png)
+
+To render vt-tiles, for this doc, Leaflet was used.
+
 ### Install
 
 Install using NPM (`npm install geojson-vt`) or Yarn (`yarn add geojson-vt`), then:
