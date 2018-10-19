@@ -59,6 +59,29 @@ test('getTile: unbuffered tile top/bottom edges', function (t) {
     t.end();
 });
 
+test('getTile: polygon clipping on the boundary', function (t) {
+    var index = geojsonvt({
+        type: 'Polygon',
+        coordinates: [[
+            [42.1875, 57.32652122521708],
+            [47.8125, 57.32652122521708],
+            [47.8125, 54.16243396806781],
+            [42.1875, 54.16243396806781],
+            [42.1875, 57.32652122521708]
+        ]]
+    }, {
+        buffer: 1024
+    });
+
+    t.same(index.getTile(5, 19, 9).features, [{
+        geometry: [[[3072, 3072], [5120, 3072], [5120, 5120], [3072, 5120], [3072, 3072]]],
+        type: 3,
+        tags: null
+    }]);
+
+    t.end();
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
 }

@@ -118,11 +118,11 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
 
         if (a < k1) {
             // ---|-->  | (line enters the clip region from the left)
-            if (b >= k1) {
+            if (b > k1) {
                 t = intersect(slice, ax, ay, bx, by, k1);
                 if (trackMetrics) slice.start = len + segLen * t;
             }
-        } else if (a >= k2) {
+        } else if (a > k2) {
             // |  <--|--- (line enters the clip region from the right)
             if (b < k2) {
                 t = intersect(slice, ax, ay, bx, by, k2);
