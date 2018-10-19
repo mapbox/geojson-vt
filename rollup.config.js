@@ -1,4 +1,5 @@
-import {uglify} from 'rollup-plugin-uglify';
+import {terser} from 'rollup-plugin-terser';
+import buble from 'rollup-plugin-buble';
 
 const config = (file, plugins) => ({
     input: 'src/index.js',
@@ -11,7 +12,9 @@ const config = (file, plugins) => ({
     plugins
 });
 
+const bubleConfig = {transforms: {dangerousForOf: true}};
+
 export default [
-    config('geojson-vt-dev.js', []),
-    config('geojson-vt.js', [uglify()])
+    config('geojson-vt-dev.js', [buble(bubleConfig)]),
+    config('geojson-vt.js', [terser(), buble(bubleConfig)])
 ];
