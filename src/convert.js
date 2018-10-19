@@ -5,9 +5,9 @@ import createFeature from './feature';
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
 export default function convert(data, options) {
-    var features = [];
+    const features = [];
     if (data.type === 'FeatureCollection') {
-        for (var i = 0; i < data.features.length; i++) {
+        for (let i = 0; i < data.features.length; i++) {
             convertFeature(features, data.features[i], options, i);
         }
 
@@ -25,11 +25,11 @@ export default function convert(data, options) {
 function convertFeature(features, geojson, options, index) {
     if (!geojson.geometry) return;
 
-    var coords = geojson.geometry.coordinates;
-    var type = geojson.geometry.type;
-    var tolerance = Math.pow(options.tolerance / ((1 << options.maxZoom) * options.extent), 2);
-    var geometry = [];
-    var id = geojson.id;
+    const coords = geojson.geometry.coordinates;
+    const type = geojson.geometry.type;
+    const tolerance = Math.pow(options.tolerance / ((1 << options.maxZoom) * options.extent), 2);
+    let geometry = [];
+    let id = geojson.id;
     if (options.promoteId) {
         id = geojson.properties[options.promoteId];
     } else if (options.generateId) {
@@ -39,7 +39,7 @@ function convertFeature(features, geojson, options, index) {
         convertPoint(coords, geometry);
 
     } else if (type === 'MultiPoint') {
-        for (var i = 0; i < coords.length; i++) {
+        for (let i = 0; i < coords.length; i++) {
             convertPoint(coords[i], geometry);
         }
 
@@ -49,7 +49,7 @@ function convertFeature(features, geojson, options, index) {
     } else if (type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into linestrings to be able to track metrics
-            for (i = 0; i < coords.length; i++) {
+            for (let i = 0; i < coords.length; i++) {
                 geometry = [];
                 convertLine(coords[i], geometry, tolerance, false);
                 features.push(createFeature(id, 'LineString', geometry, geojson.properties));
@@ -63,15 +63,15 @@ function convertFeature(features, geojson, options, index) {
         convertLines(coords, geometry, tolerance, true);
 
     } else if (type === 'MultiPolygon') {
-        for (i = 0; i < coords.length; i++) {
-            var polygon = [];
+        for (let i = 0; i < coords.length; i++) {
+            const polygon = [];
             convertLines(coords[i], polygon, tolerance, true);
             geometry.push(polygon);
         }
     } else if (type === 'GeometryCollection') {
-        for (i = 0; i < geojson.geometry.geometries.length; i++) {
+        for (let i = 0; i < geojson.geometry.geometries.length; i++) {
             convertFeature(features, {
-                id: id,
+                id,
                 geometry: geojson.geometry.geometries[i],
                 properties: geojson.properties
             }, options, index);
@@ -91,12 +91,12 @@ function convertPoint(coords, out) {
 }
 
 function convertLine(ring, out, tolerance, isPolygon) {
-    var x0, y0;
-    var size = 0;
+    let x0, y0;
+    let size = 0;
 
-    for (var j = 0; j < ring.length; j++) {
-        var x = projectX(ring[j][0]);
-        var y = projectY(ring[j][1]);
+    for (let j = 0; j < ring.length; j++) {
+        const x = projectX(ring[j][0]);
+        const y = projectY(ring[j][1]);
 
         out.push(x);
         out.push(y);
@@ -113,7 +113,7 @@ function convertLine(ring, out, tolerance, isPolygon) {
         y0 = y;
     }
 
-    var last = out.length - 3;
+    const last = out.length - 3;
     out[2] = 1;
     simplify(out, 0, last, tolerance);
     out[last + 2] = 1;
@@ -124,8 +124,8 @@ function convertLine(ring, out, tolerance, isPolygon) {
 }
 
 function convertLines(rings, out, tolerance, isPolygon) {
-    for (var i = 0; i < rings.length; i++) {
-        var geom = [];
+    for (let i = 0; i < rings.length; i++) {
+        const geom = [];
         convertLine(rings[i], geom, tolerance, isPolygon);
         out.push(geom);
     }
@@ -136,7 +136,7 @@ function projectX(x) {
 }
 
 function projectY(y) {
-    var sin = Math.sin(y * Math.PI / 180);
-    var y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
+    const sin = Math.sin(y * Math.PI / 180);
+    const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
     return y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
 }

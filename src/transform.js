@@ -4,26 +4,25 @@
 export default function transformTile(tile, extent) {
     if (tile.transformed) return tile;
 
-    var z2 = 1 << tile.z,
-        tx = tile.x,
-        ty = tile.y,
-        i, j, k;
+    const z2 = 1 << tile.z;
+    const tx = tile.x;
+    const ty = tile.y;
 
-    for (i = 0; i < tile.features.length; i++) {
-        var feature = tile.features[i],
-            geom = feature.geometry,
-            type = feature.type;
+    for (let i = 0; i < tile.features.length; i++) {
+        const feature = tile.features[i];
+        const geom = feature.geometry;
+        const type = feature.type;
 
         feature.geometry = [];
 
         if (type === 1) {
-            for (j = 0; j < geom.length; j += 2) {
+            for (let j = 0; j < geom.length; j += 2) {
                 feature.geometry.push(transformPoint(geom[j], geom[j + 1], extent, z2, tx, ty));
             }
         } else {
-            for (j = 0; j < geom.length; j++) {
-                var ring = [];
-                for (k = 0; k < geom[j].length; k += 2) {
+            for (let j = 0; j < geom.length; j++) {
+                const ring = [];
+                for (let k = 0; k < geom[j].length; k += 2) {
                     ring.push(transformPoint(geom[j][k], geom[j][k + 1], extent, z2, tx, ty));
                 }
                 feature.geometry.push(ring);

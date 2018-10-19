@@ -4,7 +4,7 @@ import test from 'tape';
 
 /*eslint comma-spacing:0, no-shadow: 0*/
 
-var points = [
+const points = [
     [0.22455,0.25015],[0.22691,0.24419],[0.23331,0.24145],[0.23498,0.23606],
     [0.24421,0.23276],[0.26259,0.21531],[0.26776,0.21381],[0.27357,0.20184],
     [0.27312,0.19216],[0.27762,0.18903],[0.28036,0.18141],[0.28651,0.17774],
@@ -32,7 +32,7 @@ var points = [
     [0.84716,0.45844],[0.85138,0.46279],[0.85397,0.47115],[0.86636,0.48077]
 ];
 
-var simplified = [
+const simplified = [
     [0.22455,0.25015],[0.26776,0.21381],[0.29691,0.15564],[0.33033,0.13757],
     [0.40952,0.14114],[0.4396,0.11974],[0.48651,0.10675],[0.52957,0.12786],
     [0.53927,0.14724],[0.56769,0.14891],[0.61774,0.15986],[0.62955,0.1946],
@@ -44,9 +44,9 @@ var simplified = [
     [0.85397,0.47115],[0.86636,0.48077]
 ];
 
-test('simplifies points correctly with the given tolerance', function (t) {
-    var coords = [];
-    for (var i = 0; i < points.length; i++) {
+test('simplifies points correctly with the given tolerance', (t) => {
+    const coords = [];
+    for (let i = 0; i < points.length; i++) {
         coords.push(points[i][0], points[i][1], 0);
     }
 
@@ -54,8 +54,8 @@ test('simplifies points correctly with the given tolerance', function (t) {
     coords[coords.length - 1] = 1;
     simplify(coords, 0, coords.length - 3, 0.001 * 0.001);
 
-    var result = [];
-    for (i = 0; i < coords.length; i += 3) {
+    const result = [];
+    for (let i = 0; i < coords.length; i += 3) {
         if (coords[i + 2] > 0.005 * 0.005) {
             result.push([coords[i], coords[i + 1]]);
         }
@@ -64,13 +64,13 @@ test('simplifies points correctly with the given tolerance', function (t) {
     t.end();
 });
 
-test('does not throw max call stack error on bad long input', function (t) {
+test('does not throw max call stack error on bad long input', (t) => {
     const coords = [];
     for (let i = 0; i < 1400; i++) {
         coords.push([0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]);
     }
 
-    t.doesNotThrow(function () {
+    t.doesNotThrow(() => {
         simplify(coords, 2e-15);
     });
 

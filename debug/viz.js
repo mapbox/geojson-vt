@@ -1,28 +1,28 @@
 
-var options = {
-        debug: 1
-    },
+const options = {
+    debug: 1
+};
 
-    padding = 8 / 512,
-    totalExtent = 4096 * (1 + padding * 2),
+const padding = 8 / 512;
+const totalExtent = 4096 * (1 + padding * 2);
 
-    tileIndex,
+let tileIndex;
 
-    canvas = document.getElementById('canvas'),
-    ctx = canvas.getContext('2d'),
-    height = canvas.height = canvas.width = window.innerHeight - 5,
-    ratio = height / totalExtent,
-    pad = 4096 * padding * ratio,
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const height = canvas.height = canvas.width = window.innerHeight - 5;
+const ratio = height / totalExtent;
+const pad = 4096 * padding * ratio;
 
-    backButton = document.getElementById('back'),
+const backButton = document.getElementById('back');
 
-    x = 0,
-    y = 0,
-    z = 0;
+let x = 0;
+let y = 0;
+let z = 0;
 
 if (devicePixelRatio > 1) {
-    canvas.style.width = canvas.width + 'px';
-    canvas.style.height = canvas.height + 'px';
+    canvas.style.width = `${canvas.width  }px`;
+    canvas.style.height = `${canvas.height  }px`;
     canvas.width *= 2;
     canvas.height *= 2;
     ctx.scale(2, 2);
@@ -33,8 +33,8 @@ ctx.font = '48px Helvetica, Arial';
 ctx.fillText('Drag a GeoJSON or TopoJSON here', height / 2, height / 2);
 
 function humanFileSize(size) {
-    var i = Math.floor(Math.log(size) / Math.log(1024));
-    return Math.round(100 * (size / Math.pow(1024, i))) / 100 + ' ' + ['B', 'kB', 'MB', 'GB'][i];
+    const i = Math.floor(Math.log(size) / Math.log(1024));
+    return `${Math.round(100 * (size / Math.pow(1024, i))) / 100  } ${  ['B', 'kB', 'MB', 'GB'][i]}`;
 }
 
 canvas.ondragover = function () {
@@ -51,16 +51,16 @@ canvas.ondrop = function (e) {
     ctx.clearRect(0, 0, height, height);
     ctx.fillText('Thanks! Loading...', height / 2, height / 2);
 
-    var reader = new FileReader();
+    const reader = new FileReader();
     reader.onload = function (event) {
         console.log('data size', humanFileSize(event.target.result.length));
         console.time('JSON.parse');
 
-        var data = JSON.parse(event.target.result);
+        let data = JSON.parse(event.target.result);
         console.timeEnd('JSON.parse');
 
         if (data.type === 'Topology') {
-            var firstKey = Object.keys(data.objects)[0];
+            const firstKey = Object.keys(data.objects)[0];
             data = topojson.feature(data, data.objects[firstKey]);
         }
 
@@ -76,7 +76,7 @@ canvas.ondrop = function (e) {
 
 ctx.lineWidth = 1;
 
-var halfHeight = height / 2;
+const halfHeight = height / 2;
 
 function drawGrid() {
     ctx.strokeStyle = 'lightgreen';
@@ -96,9 +96,9 @@ function drawSquare(left, top) {
 
 function drawTile() {
 
-    console.time('getting tile z' + z + '-' + x + '-' + y);
-    var tile = tileIndex.getTile(z, x, y);
-    console.timeEnd('getting tile z' + z + '-' + x + '-' + y);
+    console.time(`getting tile z${  z  }-${  x  }-${  y}`);
+    const tile = tileIndex.getTile(z, x, y);
+    console.timeEnd(`getting tile z${  z  }-${  x  }-${  y}`);
 
     if (!tile) {
         console.log('tile empty');
@@ -111,27 +111,27 @@ function drawTile() {
 
     ctx.clearRect(0, 0, height, height);
 
-    var features = tile.features;
+    const features = tile.features;
 
     ctx.strokeStyle = 'red';
     ctx.fillStyle = 'rgba(255,0,0,0.05)';
 
-    for (var i = 0; i < features.length; i++) {
-        var feature = features[i],
-            type = feature.type;
+    for (let i = 0; i < features.length; i++) {
+        const feature = features[i];
+        const type = feature.type;
 
         ctx.beginPath();
 
-        for (var j = 0; j < feature.geometry.length; j++) {
-            var geom = feature.geometry[j];
+        for (let j = 0; j < feature.geometry.length; j++) {
+            const geom = feature.geometry[j];
 
             if (type === 1) {
                 ctx.arc(geom[0] * ratio + pad, geom[1] * ratio + pad, 2, 0, 2 * Math.PI, false);
                 continue;
             }
 
-            for (var k = 0; k < geom.length; k++) {
-                var p = geom[k];
+            for (let k = 0; k < geom.length; k++) {
+                const p = geom[k];
                 if (k) ctx.lineTo(p[0] * ratio + pad, p[1] * ratio + pad);
                 else ctx.moveTo(p[0] * ratio + pad, p[1] * ratio + pad);
             }
@@ -148,10 +148,10 @@ function drawTile() {
 canvas.onclick = function (e) {
     if (!tileIndex || z === 14) return;
 
-    var mouseX = e.layerX - 10,
-        mouseY = e.layerY - 10,
-        left = mouseX / height < 0.5,
-        top = mouseY / height < 0.5;
+    const mouseX = e.layerX - 10;
+    const mouseY = e.layerY - 10;
+    const left = mouseX / height < 0.5;
+    const top = mouseY / height < 0.5;
 
     z++;
     x *= 2;
@@ -168,10 +168,10 @@ canvas.onclick = function (e) {
 canvas.onmousemove = function (e) {
     if (!tileIndex) return;
 
-    var mouseX = e.layerX - 10,
-        mouseY = e.layerY - 10,
-        left = mouseX / height < 0.5,
-        top = mouseY / height < 0.5;
+    const mouseX = e.layerX - 10;
+    const mouseY = e.layerY - 10;
+    const left = mouseX / height < 0.5;
+    const top = mouseY / height < 0.5;
     drawGrid();
     drawSquare(left, top);
 };
@@ -193,7 +193,7 @@ backButton.onclick = function () {
 
 /*eslint-disable no-unused-vars */
 function drillDown() {
-    var i, j;
+    let i, j;
     console.time('drill down');
     for (i = 0; i < 10; i++) {
         for (j = 0; j < 10; j++) {

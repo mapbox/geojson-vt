@@ -3,10 +3,10 @@ import clip from './clip';
 import createFeature from './feature';
 
 export default function wrap(features, options) {
-    var buffer = options.buffer / options.extent;
-    var merged = features;
-    var left  = clip(features, 1, -1 - buffer, buffer,     0, -1, 2, options); // left world copy
-    var right = clip(features, 1,  1 - buffer, 2 + buffer, 0, -1, 2, options); // right world copy
+    const buffer = options.buffer / options.extent;
+    let merged = features;
+    const left  = clip(features, 1, -1 - buffer, buffer,     0, -1, 2, options); // left world copy
+    const right = clip(features, 1,  1 - buffer, 2 + buffer, 0, -1, 2, options); // right world copy
 
     if (left || right) {
         merged = clip(features, 1, -buffer, 1 + buffer, 0, -1, 2, options) || []; // center world copy
@@ -19,27 +19,27 @@ export default function wrap(features, options) {
 }
 
 function shiftFeatureCoords(features, offset) {
-    var newFeatures = [];
+    const newFeatures = [];
 
-    for (var i = 0; i < features.length; i++) {
-        var feature = features[i],
-            type = feature.type;
+    for (let i = 0; i < features.length; i++) {
+        const feature = features[i];
+        const type = feature.type;
 
-        var newGeometry;
+        let newGeometry;
 
         if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
             newGeometry = shiftCoords(feature.geometry, offset);
 
         } else if (type === 'MultiLineString' || type === 'Polygon') {
             newGeometry = [];
-            for (var j = 0; j < feature.geometry.length; j++) {
+            for (let j = 0; j < feature.geometry.length; j++) {
                 newGeometry.push(shiftCoords(feature.geometry[j], offset));
             }
         } else if (type === 'MultiPolygon') {
             newGeometry = [];
-            for (j = 0; j < feature.geometry.length; j++) {
-                var newPolygon = [];
-                for (var k = 0; k < feature.geometry[j].length; k++) {
+            for (let j = 0; j < feature.geometry.length; j++) {
+                const newPolygon = [];
+                for (let k = 0; k < feature.geometry[j].length; k++) {
                     newPolygon.push(shiftCoords(feature.geometry[j][k], offset));
                 }
                 newGeometry.push(newPolygon);
@@ -53,7 +53,7 @@ function shiftFeatureCoords(features, offset) {
 }
 
 function shiftCoords(points, offset) {
-    var newPoints = [];
+    const newPoints = [];
     newPoints.size = points.size;
 
     if (points.start !== undefined) {
@@ -61,7 +61,7 @@ function shiftCoords(points, offset) {
         newPoints.end = points.end;
     }
 
-    for (var i = 0; i < points.length; i += 3) {
+    for (let i = 0; i < points.length; i += 3) {
         newPoints.push(points[i] + offset, points[i + 1], points[i + 2]);
     }
     return newPoints;

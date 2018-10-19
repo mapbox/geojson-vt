@@ -2,7 +2,7 @@
 import test from 'tape';
 import geojsonvt from '../src/index';
 
-var leftPoint = {
+const leftPoint = {
     type: 'Feature',
     properties: {},
     geometry: {
@@ -11,7 +11,7 @@ var leftPoint = {
     }
 };
 
-var rightPoint = {
+const rightPoint = {
     type: 'Feature',
     properties: {},
     geometry: {
@@ -20,9 +20,9 @@ var rightPoint = {
     }
 };
 
-test('handle point only in the rightside world', function (t) {
+test('handle point only in the rightside world', (t) => {
     try {
-        var vt = geojsonvt(rightPoint);
+        const vt = geojsonvt(rightPoint);
         t.equal(vt.tiles[0].features[0].geometry[0], 1);
         t.equal(vt.tiles[0].features[0].geometry[1], .5);
     } catch (err) {
@@ -31,9 +31,9 @@ test('handle point only in the rightside world', function (t) {
     t.end();
 });
 
-test('handle point only in the leftside world', function (t) {
+test('handle point only in the leftside world', (t) => {
     try {
-        var vt = geojsonvt(leftPoint);
+        const vt = geojsonvt(leftPoint);
         t.equal(vt.tiles[0].features[0].geometry[0], 0);
         t.equal(vt.tiles[0].features[0].geometry[1], .5);
     } catch (err) {
@@ -42,9 +42,9 @@ test('handle point only in the leftside world', function (t) {
     t.end();
 });
 
-test('handle points in the leftside world and the rightside world', function (t) {
+test('handle points in the leftside world and the rightside world', (t) => {
     try {
-        var vt = geojsonvt({
+        const vt = geojsonvt({
             type: 'FeatureCollection',
             features: [leftPoint, rightPoint]
         });

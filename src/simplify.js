@@ -2,18 +2,18 @@
 // calculate simplification data using optimized Douglas-Peucker algorithm
 
 export default function simplify(coords, first, last, sqTolerance) {
-    var maxSqDist = sqTolerance;
-    var mid = (last - first) >> 1;
-    var minPosToMid = last - first;
-    var index;
+    let maxSqDist = sqTolerance;
+    const mid = (last - first) >> 1;
+    let minPosToMid = last - first;
+    let index;
 
-    var ax = coords[first];
-    var ay = coords[first + 1];
-    var bx = coords[last];
-    var by = coords[last + 1];
+    const ax = coords[first];
+    const ay = coords[first + 1];
+    const bx = coords[last];
+    const by = coords[last + 1];
 
-    for (var i = first + 3; i < last; i += 3) {
-        var d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
+    for (let i = first + 3; i < last; i += 3) {
+        const d = getSqSegDist(coords[i], coords[i + 1], ax, ay, bx, by);
 
         if (d > maxSqDist) {
             index = i;
@@ -23,7 +23,7 @@ export default function simplify(coords, first, last, sqTolerance) {
             // a workaround to ensure we choose a pivot close to the middle of the list,
             // reducing recursion depth, for certain degenerate inputs
             // https://github.com/mapbox/geojson-vt/issues/104
-            var posToMid = Math.abs(i - mid);
+            const posToMid = Math.abs(i - mid);
             if (posToMid < minPosToMid) {
                 index = i;
                 minPosToMid = posToMid;
@@ -41,12 +41,12 @@ export default function simplify(coords, first, last, sqTolerance) {
 // square distance from a point to a segment
 function getSqSegDist(px, py, x, y, bx, by) {
 
-    var dx = bx - x;
-    var dy = by - y;
+    let dx = bx - x;
+    let dy = by - y;
 
     if (dx !== 0 || dy !== 0) {
 
-        var t = ((px - x) * dx + (py - y) * dy) / (dx * dx + dy * dy);
+        const t = ((px - x) * dx + (py - y) * dy) / (dx * dx + dy * dy);
 
         if (t > 1) {
             x = bx;

@@ -4,18 +4,18 @@ import fs from 'fs';
 import path from 'path';
 import geojsonvt from '../src/index';
 
-var square = [{
+const square = [{
     geometry: [[[-64, 4160], [-64, -64], [4160, -64], [4160, 4160], [-64, 4160]]],
     type: 3,
     tags: {name: 'Pennsylvania', density: 284.3},
     id: '42'
 }];
 
-test('getTile: us-states.json', function (t) {
-    var log = console.log;
+test('getTile: us-states.json', (t) => {
+    const log = console.log;
 
     console.log = function () {};
-    var index = geojsonvt(getJSON('us-states.json'), {debug: 2});
+    const index = geojsonvt(getJSON('us-states.json'), {debug: 2});
 
     t.same(index.getTile(7, 37, 48).features, getJSON('us-states-z7-37-48.json'), 'z7-37-48');
 
@@ -33,8 +33,8 @@ test('getTile: us-states.json', function (t) {
     t.end();
 });
 
-test('getTile: unbuffered tile left/right edges', function (t) {
-    var index = geojsonvt({
+test('getTile: unbuffered tile left/right edges', (t) => {
+    const index = geojsonvt({
         type: 'LineString',
         coordinates: [[0, 90], [0, -90]]
     }, {
@@ -46,8 +46,8 @@ test('getTile: unbuffered tile left/right edges', function (t) {
     t.end();
 });
 
-test('getTile: unbuffered tile top/bottom edges', function (t) {
-    var index = geojsonvt({
+test('getTile: unbuffered tile top/bottom edges', (t) => {
+    const index = geojsonvt({
         type: 'LineString',
         coordinates: [[-90, 66.51326044311188], [90, 66.51326044311188]]
     }, {
@@ -59,8 +59,8 @@ test('getTile: unbuffered tile top/bottom edges', function (t) {
     t.end();
 });
 
-test('getTile: polygon clipping on the boundary', function (t) {
-    var index = geojsonvt({
+test('getTile: polygon clipping on the boundary', (t) => {
+    const index = geojsonvt({
         type: 'Polygon',
         coordinates: [[
             [42.1875, 57.32652122521708],
@@ -83,5 +83,5 @@ test('getTile: polygon clipping on the boundary', function (t) {
 });
 
 function getJSON(name) {
-    return JSON.parse(fs.readFileSync(path.join(__dirname, '/fixtures/' + name)));
+    return JSON.parse(fs.readFileSync(path.join(__dirname, `/fixtures/${  name}`)));
 }

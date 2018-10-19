@@ -12,14 +12,14 @@ export default function geojsonvt(data, options) {
 function GeoJSONVT(data, options) {
     options = this.options = extend(Object.create(this.options), options);
 
-    var debug = options.debug;
+    const debug = options.debug;
 
     if (debug) console.time('preprocess data');
 
     if (options.maxZoom < 0 || options.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
     if (options.promoteId && options.generateId) throw new Error('promoteId and generateId cannot be used together.');
 
-    var features = convert(data, options);
+    let features = convert(data, options);
 
     this.tiles = {};
     this.tileCoords = [];
@@ -59,9 +59,9 @@ GeoJSONVT.prototype.options = {
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
-    var stack = [features, z, x, y],
-        options = this.options,
-        debug = options.debug;
+    const stack = [features, z, x, y];
+    const options = this.options;
+    const debug = options.debug;
 
     // avoid recursion by using a processing queue
     while (stack.length) {
@@ -70,15 +70,15 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         z = stack.pop();
         features = stack.pop();
 
-        var z2 = 1 << z,
-            id = toID(z, x, y),
-            tile = this.tiles[id];
+        const z2 = 1 << z;
+        const id = toID(z, x, y);
+        let tile = this.tiles[id];
 
         if (!tile) {
             if (debug > 1) console.time('creation');
 
             tile = this.tiles[id] = createTile(features, z, x, y, options);
-            this.tileCoords.push({z: z, x: x, y: y});
+            this.tileCoords.push({z, x, y});
 
             if (debug) {
                 if (debug > 1) {
@@ -86,7 +86,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
                         z, x, y, tile.numFeatures, tile.numPoints, tile.numSimplified);
                     console.timeEnd('creation');
                 }
-                var key = 'z' + z;
+                const key = `z${  z}`;
                 this.stats[key] = (this.stats[key] || 0) + 1;
                 this.total++;
             }
@@ -106,7 +106,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             if (z === options.maxZoom || z === cz) continue;
 
             // stop tiling if it's not an ancestor of the target tile
-            var m = 1 << (cz - z);
+            const m = 1 << (cz - z);
             if (x !== Math.floor(cx / m) || y !== Math.floor(cy / m)) continue;
         }
 
@@ -118,16 +118,18 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         if (debug > 1) console.time('clipping');
 
         // values we'll use for clipping
-        var k1 = 0.5 * options.buffer / options.extent,
-            k2 = 0.5 - k1,
-            k3 = 0.5 + k1,
-            k4 = 1 + k1,
-            tl, bl, tr, br, left, right;
+        const k1 = 0.5 * options.buffer / options.extent;
+        const k2 = 0.5 - k1;
+        const k3 = 0.5 + k1;
+        const k4 = 1 + k1;
 
-        tl = bl = tr = br = null;
+        let tl = null;
+        let bl = null;
+        let tr = null;
+        let br = null;
 
-        left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX, options);
-        right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX, options);
+        let left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX, options);
+        let right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX, options);
         features = null;
 
         if (left) {
@@ -152,24 +154,23 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 };
 
 GeoJSONVT.prototype.getTile = function (z, x, y) {
-    var options = this.options,
-        extent = options.extent,
-        debug = options.debug;
+    const options = this.options;
+    const {extent, debug} = options;
 
     if (z < 0 || z > 24) return null;
 
-    var z2 = 1 << z;
+    const z2 = 1 << z;
     x = ((x % z2) + z2) % z2; // wrap tile x coordinate
 
-    var id = toID(z, x, y);
+    const id = toID(z, x, y);
     if (this.tiles[id]) return transform(this.tiles[id], extent);
 
     if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
-    var z0 = z,
-        x0 = x,
-        y0 = y,
-        parent;
+    let z0 = z;
+    let x0 = x;
+    let y0 = y;
+    let parent;
 
     while (!parent && z0 > 0) {
         z0--;
@@ -195,6 +196,6 @@ function toID(z, x, y) {
 }
 
 function extend(dest, src) {
-    for (var i in src) dest[i] = src[i];
+    for (const i in src) dest[i] = src[i];
     return dest;
 }
