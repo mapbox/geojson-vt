@@ -16,14 +16,14 @@ export default function createTile(features, z, tx, ty, options) {
         maxX: -1,
         maxY: 0
     };
-    for (let i = 0; i < features.length; i++) {
+    for (const feature of features) {
         tile.numFeatures++;
-        addFeature(tile, features[i], tolerance, options);
+        addFeature(tile, feature, tolerance, options);
 
-        const minX = features[i].minX;
-        const minY = features[i].minY;
-        const maxX = features[i].maxX;
-        const maxY = features[i].maxY;
+        const minX = feature.minX;
+        const minY = feature.minY;
+        const maxX = feature.maxX;
+        const maxY = feature.maxY;
 
         if (minX < tile.minX) tile.minX = minX;
         if (minY < tile.minY) tile.minY = minY;

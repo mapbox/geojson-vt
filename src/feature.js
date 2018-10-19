@@ -22,14 +22,14 @@ function calcBBox(feature) {
         calcLineBBox(feature, geom);
 
     } else if (type === 'Polygon' || type === 'MultiLineString') {
-        for (let i = 0; i < geom.length; i++) {
-            calcLineBBox(feature, geom[i]);
+        for (const line of geom) {
+            calcLineBBox(feature, line);
         }
 
     } else if (type === 'MultiPolygon') {
-        for (let i = 0; i < geom.length; i++) {
-            for (let j = 0; j < geom[i].length; j++) {
-                calcLineBBox(feature, geom[i][j]);
+        for (const polygon of geom) {
+            for (const line of polygon) {
+                calcLineBBox(feature, line);
             }
         }
     }

@@ -18,9 +18,7 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
 
     const clipped = [];
 
-    for (let i = 0; i < features.length; i++) {
-
-        const feature = features[i];
+    for (const feature of features) {
         const geometry = feature.geometry;
         let type = feature.type;
 
@@ -49,19 +47,19 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
             clipLines(geometry, newGeometry, k1, k2, axis, true);
 
         } else if (type === 'MultiPolygon') {
-            for (let j = 0; j < geometry.length; j++) {
-                const polygon = [];
-                clipLines(geometry[j], polygon, k1, k2, axis, true);
-                if (polygon.length) {
-                    newGeometry.push(polygon);
+            for (const polygon of geometry) {
+                const newPolygon = [];
+                clipLines(polygon, newPolygon, k1, k2, axis, true);
+                if (newPolygon.length) {
+                    newGeometry.push(newPolygon);
                 }
             }
         }
 
         if (newGeometry.length) {
             if (options.lineMetrics && type === 'LineString') {
-                for (let j = 0; j < newGeometry.length; j++) {
-                    clipped.push(createFeature(feature.id, type, newGeometry[j], feature.tags));
+                for (const line of newGeometry) {
+                    clipped.push(createFeature(feature.id, type, line, feature.tags));
                 }
                 continue;
             }
@@ -180,8 +178,8 @@ function newSlice(line) {
 }
 
 function clipLines(geom, newGeom, k1, k2, axis, isPolygon) {
-    for (let i = 0; i < geom.length; i++) {
-        clipLine(geom[i], newGeom, k1, k2, axis, isPolygon, false);
+    for (const line of geom) {
+        clipLine(line, newGeom, k1, k2, axis, isPolygon, false);
     }
 }
 

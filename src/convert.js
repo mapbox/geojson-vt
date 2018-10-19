@@ -39,8 +39,8 @@ function convertFeature(features, geojson, options, index) {
         convertPoint(coords, geometry);
 
     } else if (type === 'MultiPoint') {
-        for (let i = 0; i < coords.length; i++) {
-            convertPoint(coords[i], geometry);
+        for (const p of coords) {
+            convertPoint(p, geometry);
         }
 
     } else if (type === 'LineString') {
@@ -49,9 +49,9 @@ function convertFeature(features, geojson, options, index) {
     } else if (type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into linestrings to be able to track metrics
-            for (let i = 0; i < coords.length; i++) {
+            for (const line of coords) {
                 geometry = [];
-                convertLine(coords[i], geometry, tolerance, false);
+                convertLine(line, geometry, tolerance, false);
                 features.push(createFeature(id, 'LineString', geometry, geojson.properties));
             }
             return;
@@ -63,16 +63,16 @@ function convertFeature(features, geojson, options, index) {
         convertLines(coords, geometry, tolerance, true);
 
     } else if (type === 'MultiPolygon') {
-        for (let i = 0; i < coords.length; i++) {
-            const polygon = [];
-            convertLines(coords[i], polygon, tolerance, true);
-            geometry.push(polygon);
+        for (const polygon of coords) {
+            const newPolygon = [];
+            convertLines(polygon, newPolygon, tolerance, true);
+            geometry.push(newPolygon);
         }
     } else if (type === 'GeometryCollection') {
-        for (let i = 0; i < geojson.geometry.geometries.length; i++) {
+        for (const singleGeometry of geojson.geometry.geometries) {
             convertFeature(features, {
                 id,
-                geometry: geojson.geometry.geometries[i],
+                geometry: singleGeometry,
                 properties: geojson.properties
             }, options, index);
         }

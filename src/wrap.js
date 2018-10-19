@@ -32,15 +32,15 @@ function shiftFeatureCoords(features, offset) {
 
         } else if (type === 'MultiLineString' || type === 'Polygon') {
             newGeometry = [];
-            for (let j = 0; j < feature.geometry.length; j++) {
-                newGeometry.push(shiftCoords(feature.geometry[j], offset));
+            for (const line of feature.geometry) {
+                newGeometry.push(shiftCoords(line, offset));
             }
         } else if (type === 'MultiPolygon') {
             newGeometry = [];
-            for (let j = 0; j < feature.geometry.length; j++) {
+            for (const polygon of feature.geometry) {
                 const newPolygon = [];
-                for (let k = 0; k < feature.geometry[j].length; k++) {
-                    newPolygon.push(shiftCoords(feature.geometry[j][k], offset));
+                for (const line of polygon) {
+                    newPolygon.push(shiftCoords(line, offset));
                 }
                 newGeometry.push(newPolygon);
             }

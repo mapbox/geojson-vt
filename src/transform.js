@@ -8,8 +8,7 @@ export default function transformTile(tile, extent) {
     const tx = tile.x;
     const ty = tile.y;
 
-    for (let i = 0; i < tile.features.length; i++) {
-        const feature = tile.features[i];
+    for (const feature of tile.features) {
         const geom = feature.geometry;
         const type = feature.type;
 
