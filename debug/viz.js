@@ -21,8 +21,8 @@ let y = 0;
 let z = 0;
 
 if (devicePixelRatio > 1) {
-    canvas.style.width = `${canvas.width  }px`;
-    canvas.style.height = `${canvas.height  }px`;
+    canvas.style.width = `${canvas.width}px`;
+    canvas.style.height = `${canvas.height}px`;
     canvas.width *= 2;
     canvas.height *= 2;
     ctx.scale(2, 2);
@@ -34,7 +34,7 @@ ctx.fillText('Drag a GeoJSON or TopoJSON here', height / 2, height / 2);
 
 function humanFileSize(size) {
     const i = Math.floor(Math.log(size) / Math.log(1024));
-    return `${Math.round(100 * (size / Math.pow(1024, i))) / 100  } ${  ['B', 'kB', 'MB', 'GB'][i]}`;
+    return `${Math.round(100 * (size / Math.pow(1024, i))) / 100} ${['B', 'kB', 'MB', 'GB'][i]}`;
 }
 
 canvas.ondragover = function () {
@@ -96,9 +96,9 @@ function drawSquare(left, top) {
 
 function drawTile() {
 
-    console.time(`getting tile z${  z  }-${  x  }-${  y}`);
+    console.time(`getting tile z${z}-${x}-${y}`);
     const tile = tileIndex.getTile(z, x, y);
-    console.timeEnd(`getting tile z${  z  }-${  x  }-${  y}`);
+    console.timeEnd(`getting tile z${z}-${x}-${y}`);
 
     if (!tile) {
         console.log('tile empty');
