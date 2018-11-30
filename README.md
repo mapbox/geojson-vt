@@ -64,7 +64,8 @@ var tileIndex = geojsonvt(data, {
 	generateId: false,  // whether to generate feature ids. Cannot be used with `promoteId`
 	indexMaxZoom: 5,       // max zoom in the initial tile index
 	indexMaxPoints: 100000, // max number of points per tile in the index
-	simple: false           // consider as simple map, (xy coordinates, not geographical map)
+	simple: false,          // consider as simple map, (xy coordinates, not geographical map)
+	projectionFactor: 1     // projection factor for all points. Fixed in 1 if simple is not true
 });
 ```
 
