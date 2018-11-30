@@ -55,7 +55,8 @@ GeoJSONVT.prototype.options = {
     promoteId: null,        // name of a feature property to be promoted to feature.id
     generateId: false,      // whether to generate feature ids. Cannot be used with promoteId
     debug: 0,               // logging level (0, 1 or 2)
-    simple: false           // consider as simple map, (xy coordinates, not geographical map)
+    simple: false,          // consider as simple map, (xy coordinates, not geographical map)
+    projectionFactor: 1     // projection factor to all points. Fixed 1 if not simple
 };
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {

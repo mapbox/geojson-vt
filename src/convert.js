@@ -36,22 +36,22 @@ function convertFeature(features, geojson, options, index) {
         id = index || 0;
     }
     if (type === 'Point') {
-        convertPoint(coords, geometry, options.simple);
+        convertPoint(coords, geometry, options.simple, options.projectionFactor);
 
     } else if (type === 'MultiPoint') {
         for (var i = 0; i < coords.length; i++) {
-            convertPoint(coords[i], geometry, options.simple);
+            convertPoint(coords[i], geometry, options.simple, options.projectionFactor);
         }
 
     } else if (type === 'LineString') {
-        convertLine(coords, geometry, tolerance, false, options.simple);
+        convertLine(coords, geometry, tolerance, false, options.simple, options.projectionFactor);
 
     } else if (type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into linestrings to be able to track metrics
             for (i = 0; i < coords.length; i++) {
                 geometry = [];
-                convertLine(coords[i], geometry, tolerance, false, options.simple);
+                convertLine(coords[i], geometry, tolerance, false, options.simple, options.projectionFactor);
                 features.push(createFeature(id, 'LineString', geometry, geojson.properties));
             }
             return;
@@ -84,19 +84,19 @@ function convertFeature(features, geojson, options, index) {
     features.push(createFeature(id, type, geometry, geojson.properties));
 }
 
-function convertPoint(coords, out, simple) {
-    out.push(projectX(coords[0], simple));
-    out.push(projectY(coords[1], simple));
+function convertPoint(coords, out, simple, projectionFactor) {
+    out.push(projectX(coords[0], simple, projectionFactor));
+    out.push(projectY(coords[1], simple, projectionFactor));
     out.push(0);
 }
 
-function convertLine(ring, out, tolerance, isPolygon, simple) {
+function convertLine(ring, out, tolerance, isPolygon, simple, projectionFactor) {
     var x0, y0;
     var size = 0;
 
     for (var j = 0; j < ring.length; j++) {
-        var x = projectX(ring[j][0], simple);
-        var y = projectY(ring[j][1], simple);
+        var x = projectX(ring[j][0], simple, projectionFactor);
+        var y = projectY(ring[j][1], simple, projectionFactor);
 
         out.push(x);
         out.push(y);
@@ -131,14 +131,16 @@ function convertLines(rings, out, tolerance, isPolygon) {
     }
 }
 
-function projectX(x, simple) {
-    return x / 360 + (simple ? 0 : 0.5);
+function projectX(x, simple, projectionFactor) {
+    var factor = 360 * (simple ? projectionFactor : 1);
+    return x / factor + (simple ? 0 : 0.5);
 }
 
-function projectY(y, simple) {
+function projectY(y, simple, projectionFactor) {
+    var factor = 360 * (simple ? projectionFactor : 1);
     if (simple)
-        return -y / 360 + 0.5; // xy map
-    var sin = Math.sin(y * Math.PI / 180);
+        return -y / factor + 0.5; // xy map
+    var sin = Math.sin(y * Math.PI / (factor / 2));
     var y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
     return y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
 }
