@@ -75,11 +75,14 @@ The `promoteId` and `generateId` options ignore existing `id` values on the feat
 GeoJSON-VT only operates on zoom levels up to 24.
 
 This custom projection function will work with OpenLayers and Plate Carrée projection (it works by creating a bigger level 0 tile that has empty strips above the north pole and below the south pole) and then offseting the zoom level by one (thus the division by 360 and not 180)
+
+```js
 function olPlateCarree(p) {
 	const x = (p[0] / 360) + 0.5;
 	const y = -(p[1] / 360) + 0.5;
 	return [x, y, 0];
 }
+```
 
 ### Install
 
