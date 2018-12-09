@@ -36,36 +36,36 @@ function convertFeature(features, geojson, options, index) {
         id = index || 0;
     }
     if (type === 'Point') {
-        convertPoint(coords, geometry);
+        convertPoint(coords, geometry, options);
 
     } else if (type === 'MultiPoint') {
         for (const p of coords) {
-            convertPoint(p, geometry);
+            convertPoint(p, geometry, options);
         }
 
     } else if (type === 'LineString') {
-        convertLine(coords, geometry, tolerance, false);
+        convertLine(coords, geometry, tolerance, false, options);
 
     } else if (type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into linestrings to be able to track metrics
             for (const line of coords) {
                 geometry = [];
-                convertLine(line, geometry, tolerance, false);
+                convertLine(line, geometry, tolerance, false, options);
                 features.push(createFeature(id, 'LineString', geometry, geojson.properties));
             }
             return;
         } else {
-            convertLines(coords, geometry, tolerance, false);
+            convertLines(coords, geometry, tolerance, false, options);
         }
 
     } else if (type === 'Polygon') {
-        convertLines(coords, geometry, tolerance, true);
+        convertLines(coords, geometry, tolerance, true, options);
 
     } else if (type === 'MultiPolygon') {
         for (const polygon of coords) {
             const newPolygon = [];
-            convertLines(polygon, newPolygon, tolerance, true);
+            convertLines(polygon, newPolygon, tolerance, true, options);
             geometry.push(newPolygon);
         }
     } else if (type === 'GeometryCollection') {
@@ -84,19 +84,21 @@ function convertFeature(features, geojson, options, index) {
     features.push(createFeature(id, type, geometry, geojson.properties));
 }
 
-function convertPoint(coords, out) {
-    out.push(projectX(coords[0]));
-    out.push(projectY(coords[1]));
+function convertPoint(coords, out, options) {
+	const pcoords = options.projectPoint(coords);
+    out.push(pcoords[0]);
+    out.push(pcoords[1]);
     out.push(0);
 }
 
-function convertLine(ring, out, tolerance, isPolygon) {
+function convertLine(ring, out, tolerance, isPolygon, options) {
     let x0, y0;
     let size = 0;
 
-    for (let j = 0; j < ring.length; j++) {
-        const x = projectX(ring[j][0]);
-        const y = projectY(ring[j][1]);
+	for (let j = 0; j < ring.length; j++) {
+		const coords = options.projectPoint(ring[j]);
+        const x = coords[0];
+        const y = coords[1];
 
         out.push(x);
         out.push(y);
@@ -123,20 +125,17 @@ function convertLine(ring, out, tolerance, isPolygon) {
     out.end = out.size;
 }
 
-function convertLines(rings, out, tolerance, isPolygon) {
+function convertLines(rings, out, tolerance, isPolygon, options) {
     for (let i = 0; i < rings.length; i++) {
         const geom = [];
-        convertLine(rings[i], geom, tolerance, isPolygon);
+        convertLine(rings[i], geom, tolerance, isPolygon, options);
         out.push(geom);
     }
 }
 
-function projectX(x) {
-    return x / 360 + 0.5;
-}
-
-function projectY(y) {
-    const sin = Math.sin(y * Math.PI / 180);
-    const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
-    return y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
+export function defaultProjectPoint(coords) {
+	const x = coords[0] / 360 + 0.5
+	const sin = Math.sin(coords[1] * Math.PI / 180);
+	const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
+	return [x, y2 < 0 ? 0 : y2 > 1 ? 1 : y2];
 }

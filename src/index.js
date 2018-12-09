@@ -1,9 +1,10 @@
 
-import convert from './convert';     // GeoJSON conversion and preprocessing
-import clip from './clip';           // stripe clipping algorithm
-import wrap from './wrap';           // date line processing
-import transform from './transform'; // coordinate transformation
-import createTile from './tile';     // final simplified tile generation
+import convert from './convert';             // GeoJSON conversion and preprocessing
+import defaultProjectPoint from './convert'; // GeoJSON conversion and preprocessing
+import clip from './clip';                   // stripe clipping algorithm
+import wrap from './wrap';                   // date line processing
+import transform from './transform';         // coordinate transformation
+import createTile from './tile';             // final simplified tile generation
 
 export default function geojsonvt(data, options) {
     return new GeoJSONVT(data, options);
@@ -54,7 +55,8 @@ GeoJSONVT.prototype.options = {
     lineMetrics: false,     // whether to calculate line metrics
     promoteId: null,        // name of a feature property to be promoted to feature.id
     generateId: false,      // whether to generate feature ids. Cannot be used with promoteId
-    debug: 0                // logging level (0, 1 or 2)
+	debug: 0,               // logging level (0, 1 or 2)
+	projectPoint: defaultProjectPoint // projection function
 };
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
