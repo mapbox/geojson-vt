@@ -21,15 +21,14 @@
   "devDependencies": {
     "benchmark": "^2.1.4",
     "coveralls": "^3.0.2",
-    "eslint": "^5.7.0",
+    "eslint": "^5.12.1",
     "eslint-config-mourner": "^3.0.0",
-    "esm": "^3.0.84",
+    "esm": "^3.1.1",
     "nyc": "^13.1.0",
-    "rollup": "^0.66.6",
-    "rollup-plugin-buble": "^0.19.4",
-    "rollup-plugin-terser": "^3.0.0",
-    "tape": "^4.9.1",
-    "watchify": "^3.11.0"
+    "rollup": "^1.1.2",
+    "rollup-plugin-buble": "^0.19.6",
+    "rollup-plugin-terser": "^4.0.2",
+    "tape": "^4.9.2"
   },
   "eslintConfig": {
     "extends": "mourner",
