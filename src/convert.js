@@ -139,5 +139,6 @@ function projectY(y) {
     const clampedY = y < -90 ? -90 : y > 90 ? 90 : y;
     const sin = Math.sin(clampedY * Math.PI / 180);
     const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
-    return y2
+    const clampedY2 = y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
+    return clampedY2
 }
