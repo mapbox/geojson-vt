@@ -3,7 +3,7 @@ import simplify from './simplify';
 import createFeature from './feature';
 
 const maxMercatorLatitude = 85.05;
-const minVectorLatitude = -maxMercatorLatitude * 8191/8192;
+const minVectorLatitude = -maxMercatorLatitude * 8191 / 8192;
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
