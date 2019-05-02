@@ -2,6 +2,9 @@
 import simplify from './simplify';
 import createFeature from './feature';
 
+const maxMercatorLatitude = 85.05;
+const minVectorLatitude = -maxMercatorLatitude * 8191/8192;
+
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
 export default function convert(data, options) {
@@ -136,9 +139,8 @@ function projectX(x) {
 }
 
 function projectY(y) {
-    const clampedY = y < -90 ? -90 : y > 90 ? 90 : y;
+    const clampedY = y < minVectorLatitude ? minVectorLatitude : y > maxMercatorLatitude ? maxMercatorLatitude : y;
     const sin = Math.sin(clampedY * Math.PI / 180);
     const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
-    const clampedY2 = y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
-    return clampedY2;
+    return y2;
 }
