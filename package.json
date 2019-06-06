@@ -38,7 +38,7 @@
   "license": "ISC",
   "scripts": {
     "pretest": "eslint src/*.js test/*.js debug/viz.js",
-    "test": "c8 --check-coverage --branches 100 tape -r esm test/test-*.js",
+    "test": "c8 tape -r esm test/test-*.js",
     "build": "rollup -c",
     "watch": "rollup -cw",
     "prepublishOnly": "npm run test && npm run build"
