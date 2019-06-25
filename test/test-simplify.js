@@ -50,14 +50,16 @@ test('simplifies points correctly with the given tolerance', (t) => {
         coords.push(points[i][0], points[i][1], 0);
     }
 
-    coords[2] = 1;
-    coords[coords.length - 1] = 1;
-    simplify(coords, 0, coords.length - 3, 0.001 * 0.001);
+    const simpl = new Array(coords.length / 3);
+    simpl.fill(0);
 
+    simpl[0] = 1;
+    simpl[simpl.length - 1] = 1;
+    simplify(simpl, coords, 0, coords.length - 3, 0.001 * 0.001);
     const result = [];
-    for (let i = 0; i < coords.length; i += 3) {
-        if (coords[i + 2] > 0.005 * 0.005) {
-            result.push([coords[i], coords[i + 1]]);
+    for (let i = 0; i < simpl.length; i++) {
+        if (simpl[i] > 0.005 * 0.005) {
+            result.push([coords[i * 3], coords[i * 3 + 1]]);
         }
     }
     t.same(result, simplified);
@@ -69,9 +71,11 @@ test('does not throw max call stack error on bad long input', (t) => {
     for (let i = 0; i < 1400; i++) {
         coords.push([0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]);
     }
+    const simpl = new Array(coords.length / 2);
+    simpl.fill(0);
 
     t.doesNotThrow(() => {
-        simplify(coords, 2e-15);
+        simplify(simpl, coords, 2e-15);
     });
 
     t.end();

@@ -46,7 +46,7 @@ function shiftFeatureCoords(features, offset) {
             }
         }
 
-        newFeatures.push(createFeature(feature.id, type, newGeometry, feature.tags));
+        newFeatures.push(createFeature(feature.id, type, newGeometry, feature.sqDist, feature.tags));
     }
 
     return newFeatures;

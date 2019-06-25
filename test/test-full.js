@@ -12,6 +12,7 @@ testTiles('collection.json', 'collection-tiles.json', {indexMaxZoom: 0, indexMax
 testTiles('single-geom.json', 'single-geom-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
 testTiles('ids.json', 'ids-promote-id-tiles.json', {indexMaxZoom: 0, promoteId: 'prop0'});
 testTiles('ids.json', 'ids-generate-id-tiles.json', {indexMaxZoom: 0, generateId: true});
+testTiles('three-dimensional.json', 'three-dimensional-tiles.json', {indexMaxZoom: 0, generateId: true});
 
 test('throws on invalid GeoJSON', (t) => {
     t.throws(() => {
