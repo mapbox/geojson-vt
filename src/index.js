@@ -154,6 +154,10 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 };
 
 GeoJSONVT.prototype.getTile = function (z, x, y) {
+    z = +z;
+    x = +x;
+    y = +y;
+
     const options = this.options;
     const {extent, debug} = options;
 
