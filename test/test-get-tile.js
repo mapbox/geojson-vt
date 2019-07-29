@@ -18,6 +18,7 @@ test('getTile: us-states.json', (t) => {
     const index = geojsonvt(getJSON('us-states.json'), {debug: 2});
 
     t.same(index.getTile(7, 37, 48).features, getJSON('us-states-z7-37-48.json'), 'z7-37-48');
+    t.same(index.getTile('7', '37', '48').features, getJSON('us-states-z7-37-48.json'), 'z, x, y as strings');
 
     t.same(index.getTile(9, 148, 192).features, square, 'z9-148-192 (clipped square)');
     // t.same(index.getTile(11, 592, 768).features, square, 'z11-592-768 (clipped square)');
