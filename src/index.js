@@ -101,7 +101,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             if (z === options.indexMaxZoom || tile.numPoints <= options.indexMaxPoints) continue;
         // if a drilldown to a specific tile
         } else if (z === options.maxZoom || z === cz) { // stop tiling if we reached base zoom or our target tile zoom
-            continue
+            continue;
         } else if (cz) {
             // stop tiling if it's not an ancestor of the target tile
             const m = 1 << (cz - z);
