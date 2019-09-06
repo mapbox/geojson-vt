@@ -98,9 +98,7 @@ function convertLine(ring, out, tolerance, isPolygon) {
         const x = projectX(ring[j][0]);
         const y = projectY(ring[j][1]);
 
-        out.push(x);
-        out.push(y);
-        out.push(0);
+        out.push(x, y, 0);
 
         if (j > 0) {
             if (isPolygon) {
