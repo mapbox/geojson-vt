@@ -19,6 +19,7 @@ function GeoJSONVT(data, options) {
     if (options.maxZoom < 0 || options.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
     if (options.promoteId && options.generateId) throw new Error('promoteId and generateId cannot be used together.');
 
+    // projects and adds simplification info
     let features = convert(data, options);
 
     this.tiles = {};
@@ -32,6 +33,7 @@ function GeoJSONVT(data, options) {
         this.total = 0;
     }
 
+    // wraps features (ie extreme west and extreme east)
     features = wrap(features, options);
 
     // start slicing from the top tile down

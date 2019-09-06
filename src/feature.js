@@ -1,7 +1,7 @@
 
 export default function createFeature(id, type, geom, tags) {
     const feature = {
-        id: typeof id === 'undefined' ? null : id,
+        id: id == null ? null : id,
         type,
         geometry: geom,
         tags,
@@ -21,16 +21,19 @@ function calcBBox(feature) {
     if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
         calcLineBBox(feature, geom);
 
-    } else if (type === 'Polygon' || type === 'MultiLineString') {
+    } else if (type === 'Polygon') {
+        // the outer ring (ie [0]) contains all inner rings
+        calcLineBBox(feature, geom[0]);
+
+    } else if (type === 'MultiLineString') {
         for (const line of geom) {
             calcLineBBox(feature, line);
         }
 
     } else if (type === 'MultiPolygon') {
         for (const polygon of geom) {
-            for (const line of polygon) {
-                calcLineBBox(feature, line);
-            }
+            // the outer ring (ie [0]) contains all inner rings
+            calcLineBBox(feature, polygon[0]);
         }
     }
 }
