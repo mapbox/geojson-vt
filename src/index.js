@@ -96,13 +96,13 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         tile.source = features;
 
         // if it's the first-pass tiling
-        if (!cz) {
+        if (cz == null) {
             // stop tiling if we reached max zoom, or if the tile is too simple
             if (z === options.indexMaxZoom || tile.numPoints <= options.indexMaxPoints) continue;
         // if a drilldown to a specific tile
         } else if (z === options.maxZoom || z === cz) { // stop tiling if we reached base zoom or our target tile zoom
             continue;
-        } else if (cz) {
+        } else if (cz != null) {
             // stop tiling if it's not an ancestor of the target tile
             const m = 1 << (cz - z);
             if (x !== Math.floor(cx / m) || y !== Math.floor(cy / m)) continue;
@@ -176,8 +176,8 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     while (!parent && z0 > 0) {
         z0--;
-        x0 = Math.floor(x0 / 2);
-        y0 = Math.floor(y0 / 2);
+        x0 = x0 >> 1;
+        y0 = y0 >> 1;
         parent = this.tiles[toID(z0, x0, y0)];
     }
 
