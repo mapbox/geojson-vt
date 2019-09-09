@@ -5,7 +5,7 @@ export default function createTile(features, z, tx, ty, options) {
         features: [],
         numPoints: 0,
         numSimplified: 0,
-        numFeatures: 0,
+        numFeatures: features.length,
         source: null,
         x: tx,
         y: ty,
@@ -17,7 +17,6 @@ export default function createTile(features, z, tx, ty, options) {
         maxY: 0
     };
     for (const feature of features) {
-        tile.numFeatures++;
         addFeature(tile, feature, tolerance, options);
 
         const minX = feature.minX;
@@ -41,8 +40,7 @@ function addFeature(tile, feature, tolerance, options) {
 
     if (type === 'Point' || type === 'MultiPoint') {
         for (let i = 0; i < geom.length; i += 3) {
-            simplified.push(geom[i]);
-            simplified.push(geom[i + 1]);
+            simplified.push(geom[i], geom[i + 1]);
             tile.numPoints++;
             tile.numSimplified++;
         }
@@ -67,16 +65,18 @@ function addFeature(tile, feature, tolerance, options) {
 
     if (simplified.length) {
         let tags = feature.tags || null;
+
         if (type === 'LineString' && options.lineMetrics) {
             tags = {};
             for (const key in feature.tags) tags[key] = feature.tags[key];
             tags['mapbox_clip_start'] = geom.start / geom.size;
             tags['mapbox_clip_end'] = geom.end / geom.size;
         }
+
         const tileFeature = {
             geometry: simplified,
             type: type === 'Polygon' || type === 'MultiPolygon' ? 3 :
-            type === 'LineString' || type === 'MultiLineString' ? 2 : 1,
+            (type === 'LineString' || type === 'MultiLineString' ? 2 : 1),
             tags
         };
         if (feature.id !== null) {
@@ -99,8 +99,7 @@ function addLine(result, geom, tile, tolerance, isPolygon, isOuter) {
     for (let i = 0; i < geom.length; i += 3) {
         if (tolerance === 0 || geom[i + 2] > sqTolerance) {
             tile.numSimplified++;
-            ring.push(geom[i]);
-            ring.push(geom[i + 1]);
+            ring.push(geom[i], geom[i + 1]);
         }
         tile.numPoints++;
     }
