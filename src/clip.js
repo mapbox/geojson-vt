@@ -1,15 +1,17 @@
 
 import createFeature from './feature';
 
-/* clip features between two axis-parallel lines:
+/* clip features between two vertical or horizontal axis-parallel lines:
  *     |        |
  *  ___|___     |     /
  * /   |   \____|____/
  *     |        |
+ *
+ * k1 and k2 are the line coordinates
+ * axis: 0 for x, 1 for y
+ * minAll and maxAll: minimum and maximum coordinate value for all features
  */
-
 export default function clip(features, scale, k1, k2, axis, minAll, maxAll, options) {
-
     k1 /= scale;
     k2 /= scale;
 
@@ -88,9 +90,7 @@ function clipPoints(geom, newGeom, k1, k2, axis) {
         const a = geom[i + axis];
 
         if (a >= k1 && a <= k2) {
-            newGeom.push(geom[i]);
-            newGeom.push(geom[i + 1]);
-            newGeom.push(geom[i + 2]);
+            addPoint(newGeom, geom[i], geom[i + 1], geom[i + 2]);
         }
     }
 }
@@ -184,23 +184,17 @@ function clipLines(geom, newGeom, k1, k2, axis, isPolygon) {
 }
 
 function addPoint(out, x, y, z) {
-    out.push(x);
-    out.push(y);
-    out.push(z);
+    out.push(x, y, z);
 }
 
 function intersectX(out, ax, ay, bx, by, x) {
     const t = (x - ax) / (bx - ax);
-    out.push(x);
-    out.push(ay + (by - ay) * t);
-    out.push(1);
+    addPoint(out, x, ay + (by - ay) * t, 1);
     return t;
 }
 
 function intersectY(out, ax, ay, bx, by, y) {
     const t = (y - ay) / (by - ay);
-    out.push(ax + (bx - ax) * t);
-    out.push(y);
-    out.push(1);
+    addPoint(out, ax + (bx - ax) * t, y, 1);
     return t;
 }

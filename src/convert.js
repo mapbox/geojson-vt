@@ -85,9 +85,7 @@ function convertFeature(features, geojson, options, index) {
 }
 
 function convertPoint(coords, out) {
-    out.push(projectX(coords[0]));
-    out.push(projectY(coords[1]));
-    out.push(0);
+    out.push(projectX(coords[0]), projectY(coords[1]), 0);
 }
 
 function convertLine(ring, out, tolerance, isPolygon) {
