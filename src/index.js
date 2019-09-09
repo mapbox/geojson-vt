@@ -9,6 +9,12 @@ export default function geojsonvt(data, options) {
     return new GeoJSONVT(data, options);
 }
 
+// Export util functions
+geojsonvt.clip = clip;
+geojsonvt.transform = transform;
+geojsonvt.createTile = createTile;
+geojsonvt.toID = toID;
+
 function GeoJSONVT(data, options) {
     options = this.options = extend(Object.create(this.options), options);
 
