@@ -1,9 +1,9 @@
 
-import convert from './convert';     // GeoJSON conversion and preprocessing
-import clip from './clip';           // stripe clipping algorithm
-import wrap from './wrap';           // date line processing
-import transform from './transform'; // coordinate transformation
-import createTile from './tile';     // final simplified tile generation
+import convert from './convert.js';     // GeoJSON conversion and preprocessing
+import clip from './clip.js';           // stripe clipping algorithm
+import wrap from './wrap.js';           // date line processing
+import transform from './transform.js'; // coordinate transformation
+import createTile from './tile.js';     // final simplified tile generation
 
 export default function geojsonvt(data, options) {
     return new GeoJSONVT(data, options);

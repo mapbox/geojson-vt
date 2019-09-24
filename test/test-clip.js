@@ -1,6 +1,6 @@
 
 import test from 'tape';
-import clip from '../src/clip';
+import clip from '../src/clip.js';
 
 /*eslint comma-spacing:0*/
 

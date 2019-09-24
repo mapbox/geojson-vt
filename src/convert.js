@@ -1,6 +1,6 @@
 
-import simplify from './simplify';
-import createFeature from './feature';
+import simplify from './simplify.js';
+import createFeature from './feature.js';
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 

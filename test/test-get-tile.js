@@ -2,7 +2,7 @@
 import test from 'tape';
 import fs from 'fs';
 import path from 'path';
-import geojsonvt from '../src/index';
+import geojsonvt from '../src/index.js';
 
 const square = [{
     geometry: [[[-64, 4160], [-64, -64], [4160, -64], [4160, 4160], [-64, 4160]]],
