@@ -1,5 +1,5 @@
 
-import createFeature from './feature';
+import createFeature from './feature.js';
 
 /* clip features between two vertical or horizontal axis-parallel lines:
  *     |        |
