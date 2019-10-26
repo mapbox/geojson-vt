@@ -8,7 +8,7 @@ on the browser side (without a server).
 
 Created to power GeoJSON in [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js),
 but can be useful in other visualization platforms
-like [Leaflet](https://github.com/Leaflet/Leaflet) and [d3](https://github.com/mbostock/d3),
+like [Openlayers](https://openlayers.org/), [Leaflet](https://github.com/Leaflet/Leaflet) and [d3](https://github.com/mbostock/d3),
 as well as Node.js server applications.
 
 Resulting tiles conform to the JSON equivalent
