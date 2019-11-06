@@ -1,6 +1,6 @@
 
 import test from 'tape';
-import geojsonvt from '../src/index';
+import geojsonvt from '../src/index.js';
 
 const leftPoint = {
     type: 'Feature',

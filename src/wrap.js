@@ -1,6 +1,6 @@
 
-import clip from './clip';
-import createFeature from './feature';
+import clip from './clip.js';
+import createFeature from './feature.js';
 
 export default function wrap(features, options) {
     const buffer = options.buffer / options.extent;

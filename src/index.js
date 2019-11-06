@@ -1,10 +1,10 @@
 
-import convert from './convert';             // GeoJSON conversion and preprocessing
-import defaultProjectPoint from './convert'; // GeoJSON conversion and preprocessing
-import clip from './clip';                   // stripe clipping algorithm
-import wrap from './wrap';                   // date line processing
-import transform from './transform';         // coordinate transformation
-import createTile from './tile';             // final simplified tile generation
+import convert from './convert.js';             // GeoJSON conversion and preprocessing
+import defaultProjectPoint from './convert.js'; // GeoJSON conversion and preprocessing
+import clip from './clip.js';                   // stripe clipping algorithm
+import wrap from './wrap.js';                   // date line processing
+import transform from './transform.js';         // coordinate transformation
+import createTile from './tile.js';             // final simplified tile generation
 
 export default function geojsonvt(data, options) {
     return new GeoJSONVT(data, options);
@@ -20,8 +20,10 @@ function GeoJSONVT(data, options) {
     if (options.maxZoom < 0 || options.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
     if (options.promoteId && options.generateId) throw new Error('promoteId and generateId cannot be used together.');
 
+    // projects and adds simplification info
     let features = convert(data, options);
 
+    // tiles and tileCoords are part of the public API
     this.tiles = {};
     this.tileCoords = [];
 
@@ -33,6 +35,7 @@ function GeoJSONVT(data, options) {
         this.total = 0;
     }
 
+    // wraps features (ie extreme west and extreme east)
     features = wrap(features, options);
 
     // start slicing from the top tile down
@@ -59,6 +62,12 @@ GeoJSONVT.prototype.options = {
 	projectPoint: defaultProjectPoint // projection function
 };
 
+// splits features from a parent tile to sub-tiles.
+// z, x, and y are the coordinates of the parent tile
+// cz, cx, and cy are the coordinates of the target tile
+//
+// If no target tile is specified, splitting stops when we reach the maximum
+// zoom or the number of points is low as specified in the options.
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
     const stack = [features, z, x, y];
@@ -98,18 +107,17 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         tile.source = features;
 
         // if it's the first-pass tiling
-        if (!cz) {
+        if (cz == null) {
             // stop tiling if we reached max zoom, or if the tile is too simple
             if (z === options.indexMaxZoom || tile.numPoints <= options.indexMaxPoints) continue;
-
         // if a drilldown to a specific tile
-        } else {
+        } else if (z === options.maxZoom || z === cz) {
             // stop tiling if we reached base zoom or our target tile zoom
-            if (z === options.maxZoom || z === cz) continue;
-
+            continue;
+        } else if (cz != null) {
             // stop tiling if it's not an ancestor of the target tile
-            const m = 1 << (cz - z);
-            if (x !== Math.floor(cx / m) || y !== Math.floor(cy / m)) continue;
+            const zoomSteps = cz - z;
+            if (x !== cx >> zoomSteps || y !== cy >> zoomSteps) continue;
         }
 
         // if we slice further down, no need to keep source geometry
@@ -156,13 +164,17 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 };
 
 GeoJSONVT.prototype.getTile = function (z, x, y) {
+    z = +z;
+    x = +x;
+    y = +y;
+
     const options = this.options;
     const {extent, debug} = options;
 
     if (z < 0 || z > 24) return null;
 
     const z2 = 1 << z;
-    x = ((x % z2) + z2) % z2; // wrap tile x coordinate
+    x = (x + z2) & (z2 - 1); // wrap tile x coordinate
 
     const id = toID(z, x, y);
     if (this.tiles[id]) return transform(this.tiles[id], extent);
@@ -176,17 +188,18 @@ GeoJSONVT.prototype.getTile = function (z, x, y) {
 
     while (!parent && z0 > 0) {
         z0--;
-        x0 = Math.floor(x0 / 2);
-        y0 = Math.floor(y0 / 2);
+        x0 = x0 >> 1;
+        y0 = y0 >> 1;
         parent = this.tiles[toID(z0, x0, y0)];
     }
 
     if (!parent || !parent.source) return null;
 
     // if we found a parent tile containing the original geometry, we can drill down from it
-    if (debug > 1) console.log('found parent tile z%d-%d-%d', z0, x0, y0);
-
-    if (debug > 1) console.time('drilling down');
+    if (debug > 1) {
+        console.log('found parent tile z%d-%d-%d', z0, x0, y0);
+        console.time('drilling down');
+    }
     this.splitTile(parent.source, z0, x0, y0, z, x, y);
     if (debug > 1) console.timeEnd('drilling down');
 

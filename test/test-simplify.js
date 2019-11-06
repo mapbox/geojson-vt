@@ -1,5 +1,5 @@
 
-import simplify from '../src/simplify';
+import simplify from '../src/simplify.js';
 import test from 'tape';
 
 /*eslint comma-spacing:0, no-shadow: 0*/

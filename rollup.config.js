@@ -12,7 +12,12 @@ const config = (file, plugins) => ({
     plugins
 });
 
-const bubleConfig = {transforms: {dangerousForOf: true}};
+const bubleConfig = {
+  transforms: {
+    dangerousForOf: true,
+  },
+  objectAssign: 'Object.assign',
+};
 
 export default [
     config('geojson-vt-dev.js', [buble(bubleConfig)]),

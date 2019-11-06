@@ -1,7 +1,6 @@
 ## geojson-vt &mdash; GeoJSON Vector Tiles
 
 [![Build Status](https://travis-ci.org/mapbox/geojson-vt.svg?branch=master)](https://travis-ci.org/mapbox/geojson-vt)
-[![Coverage Status](https://coveralls.io/repos/mapbox/geojson-vt/badge.svg)](https://coveralls.io/r/mapbox/geojson-vt)
 
 A highly efficient JavaScript library for **slicing GeoJSON data into vector tiles on the fly**,
 primarily designed to enable rendering and interacting with large geospatial datasets
@@ -9,7 +8,7 @@ on the browser side (without a server).
 
 Created to power GeoJSON in [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js),
 but can be useful in other visualization platforms
-like [Leaflet](https://github.com/Leaflet/Leaflet) and [d3](https://github.com/mbostock/d3),
+like [Leaflet](https://github.com/Leaflet/Leaflet), [OpenLayers](https://openlayers.org/) and [d3](https://github.com/mbostock/d3),
 as well as Node.js server applications.
 
 Resulting tiles conform to the JSON equivalent

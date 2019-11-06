@@ -1,6 +1,6 @@
 
-import simplify from './simplify';
-import createFeature from './feature';
+import simplify from './simplify.js';
+import createFeature from './feature.js';
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
@@ -85,10 +85,8 @@ function convertFeature(features, geojson, options, index) {
 }
 
 function convertPoint(coords, out, options) {
-	const pcoords = options.projectPoint(coords);
-    out.push(pcoords[0]);
-    out.push(pcoords[1]);
-    out.push(0);
+    const pcoords = options.projectPoint(coords);
+    out.push(pcoords[0], pcoords[1], 0);
 }
 
 function convertLine(ring, out, tolerance, isPolygon, options) {
@@ -100,9 +98,7 @@ function convertLine(ring, out, tolerance, isPolygon, options) {
         const x = coords[0];
         const y = coords[1];
 
-        out.push(x);
-        out.push(y);
-        out.push(0);
+        out.push(x, y, 0);
 
         if (j > 0) {
             if (isPolygon) {
