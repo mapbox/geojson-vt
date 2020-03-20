@@ -72,6 +72,11 @@ function addFeature(tile, feature, tolerance, options) {
             for (var key in feature.tags) tags[key] = feature.tags[key];
             tags['mapbox_clip_start'] = geom.start / geom.size;
             tags['mapbox_clip_end'] = geom.end / geom.size;
+            var z2 = 1 << tile.z;
+            var x = options.extent * (z2 - tile.x);
+            var y = options.extent * (z2 - tile.y);
+            var scaleRatio = Math.sqrt(x * x + y * y);
+            tags['mapbox_line_length'] = geom.size * scaleRatio;
         }
         var tileFeature = {
             geometry: simplified,
