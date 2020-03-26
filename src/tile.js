@@ -18,25 +18,19 @@ export default function createTile(features, z, tx, ty, options) {
     };
     for (const feature of features) {
         addFeature(tile, feature, tolerance, options);
-
-        const minX = feature.minX;
-        const minY = feature.minY;
-        const maxX = feature.maxX;
-        const maxY = feature.maxY;
-
-        if (minX < tile.minX) tile.minX = minX;
-        if (minY < tile.minY) tile.minY = minY;
-        if (maxX > tile.maxX) tile.maxX = maxX;
-        if (maxY > tile.maxY) tile.maxY = maxY;
     }
     return tile;
 }
 
 function addFeature(tile, feature, tolerance, options) {
-
     const geom = feature.geometry;
     const type = feature.type;
     const simplified = [];
+
+    tile.minX = Math.min(tile.minX, feature.minX);
+    tile.minY = Math.min(tile.minY, feature.minY);
+    tile.maxX = Math.max(tile.maxX, feature.maxX);
+    tile.maxY = Math.max(tile.maxY, feature.maxY);
 
     if (type === 'Point' || type === 'MultiPoint') {
         for (let i = 0; i < geom.length; i += 3) {
