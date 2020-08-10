@@ -17,7 +17,7 @@ To make data rendering and interaction fast, the tiles are simplified,
 retaining the minimum level of detail appropriate for each zoom level
 (simplifying shapes, filtering out tiny polygons and polylines).
 
-Read more on how the library works [on the Mapbox blog](https://www.mapbox.com/blog/introducing-geojson-vt/).
+Read more on how the library works [on the Mapbox blog](https://blog.mapbox.com/rendering-big-geodata-on-the-fly-with-geojson-vt-4e4d2a5dd1f2).
 
 There's a C++11 port: [geojson-vt-cpp](https://github.com/mapbox/geojson-vt-cpp)
 
