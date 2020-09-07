@@ -1,5 +1,5 @@
 
-import { convert, defaultProjectPoint } from './convert.js'; // GeoJSON conversion and preprocessing
+import convert, { defaultProjectPoint } from './convert.js'; // GeoJSON conversion and preprocessing
 import clip from './clip.js';                   // stripe clipping algorithm
 import wrap from './wrap.js';                   // date line processing
 import transform from './transform.js';         // coordinate transformation
