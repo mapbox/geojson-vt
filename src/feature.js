@@ -10,13 +10,6 @@ export default function createFeature(id, type, geom, tags) {
         maxX: -Infinity,
         maxY: -Infinity
     };
-    calcBBox(feature);
-    return feature;
-}
-
-function calcBBox(feature) {
-    const geom = feature.geometry;
-    const type = feature.type;
 
     if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
         calcLineBBox(feature, geom);
@@ -36,6 +29,8 @@ function calcBBox(feature) {
             calcLineBBox(feature, polygon[0]);
         }
     }
+
+    return feature;
 }
 
 function calcLineBBox(feature, geom) {
