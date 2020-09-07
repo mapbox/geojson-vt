@@ -1,6 +1,5 @@
 
-import convert from './convert.js';             // GeoJSON conversion and preprocessing
-import defaultProjectPoint from './convert.js'; // GeoJSON conversion and preprocessing
+import { convert, defaultProjectPoint } from './convert.js'; // GeoJSON conversion and preprocessing
 import clip from './clip.js';                   // stripe clipping algorithm
 import wrap from './wrap.js';                   // date line processing
 import transform from './transform.js';         // coordinate transformation
@@ -16,8 +15,8 @@ const defaultOptions = {
     lineMetrics: false,     // whether to calculate line metrics
     promoteId: null,        // name of a feature property to be promoted to feature.id
     generateId: false,      // whether to generate feature ids. Cannot be used with promoteId
-	debug: 0,               // logging level (0, 1 or 2)
-	projectPoint: defaultProjectPoint // projection function
+    debug: 0,               // logging level (0, 1 or 2)
+    projectPoint: defaultProjectPoint // projection function
 };
 
 class GeoJSONVT {

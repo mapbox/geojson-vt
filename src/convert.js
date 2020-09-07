@@ -93,8 +93,8 @@ function convertLine(ring, out, tolerance, isPolygon, options) {
     let x0, y0;
     let size = 0;
 
-	for (let j = 0; j < ring.length; j++) {
-		const coords = options.projectPoint(ring[j]);
+    for (let j = 0; j < ring.length; j++) {
+        const coords = options.projectPoint(ring[j]);
         const x = coords[0];
         const y = coords[1];
 
@@ -130,8 +130,8 @@ function convertLines(rings, out, tolerance, isPolygon, options) {
 }
 
 export function defaultProjectPoint(coords) {
-	const x = coords[0] / 360 + 0.5
-	const sin = Math.sin(coords[1] * Math.PI / 180);
-	const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
-	return [x, y2 < 0 ? 0 : y2 > 1 ? 1 : y2];
+    const x = coords[0] / 360 + 0.5
+    const sin = Math.sin(coords[1] * Math.PI / 180);
+    const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
+    return [x, y2 < 0 ? 0 : y2 > 1 ? 1 : y2];
 }
