@@ -63,7 +63,8 @@ var tileIndex = geojsonvt(data, {
 	generateId: false,  // whether to generate feature ids. Cannot be used with `promoteId`
 	indexMaxZoom: 5,       // max zoom in the initial tile index
 	indexMaxPoints: 100000 // max number of points per tile in the index
-	projectPoint: defaultProjectPoint // allow a custom projection function
+	projectX: defaultX // allow a custom projection function
+	projectY: defaultY // allow a custom projection function
 });
 ```
 
@@ -73,13 +74,16 @@ The `promoteId` and `generateId` options ignore existing `id` values on the feat
 
 GeoJSON-VT only operates on zoom levels up to 24.
 
-This custom projection function will work with OpenLayers and Plate Carrée projection (it works by creating a bigger level 0 tile that has empty strips above the north pole and below the south pole) and then offseting the zoom level by one (thus the division by 360 and not 180)
+Not all projections can be represented with the current model. They must be compatible with the tile division algorithm and the fact that the map is composed of a single square tile at zoom level 0. For example, this custom projection function will implement Plate Carrée projection (it works by creating a bigger zoom 0 tile that has empty strips above the north pole and below the south pole) and then offseting the zoom level by one (thus the division by 360 and not 180).
 
 ```js
-function olPlateCarree(p) {
-	const x = (p[0] / 360) + 0.5;
-	const y = -(p[1] / 360) + 0.5;
-	return [x, y, 0];
+function olPlateCarreeX(p) {
+	const x = (p / 360) + 0.5;
+	return x;
+}
+function olPlateCarreeY(p) {
+	const y = -(p / 360) + 0.5;
+	return y;
 }
 ```
 

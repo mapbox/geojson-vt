@@ -85,8 +85,7 @@ function convertFeature(features, geojson, options, index) {
 }
 
 function convertPoint(coords, out, options) {
-    const pcoords = options.projectPoint(coords);
-    out.push(pcoords[0], pcoords[1], 0);
+    out.push(options.projectX(coords[0]), options.projectY(coords[1]), 0);
 }
 
 function convertLine(ring, out, tolerance, isPolygon, options) {
@@ -94,9 +93,8 @@ function convertLine(ring, out, tolerance, isPolygon, options) {
     let size = 0;
 
     for (let j = 0; j < ring.length; j++) {
-        const coords = options.projectPoint(ring[j]);
-        const x = coords[0];
-        const y = coords[1];
+        const x = options.projectX(ring[j][0]);
+        const y = options.projectY(ring[j][1]);
 
         out.push(x, y, 0);
 
@@ -129,9 +127,12 @@ function convertLines(rings, out, tolerance, isPolygon, options) {
     }
 }
 
-export function defaultProjectPoint(coords) {
-    const x = coords[0] / 360 + 0.5
-    const sin = Math.sin(coords[1] * Math.PI / 180);
+export function defaultX(x) {
+    return x / 360 + 0.5;
+}
+
+export function defaultY(y) {
+    const sin = Math.sin(y * Math.PI / 180);
     const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
-    return [x, y2 < 0 ? 0 : y2 > 1 ? 1 : y2];
+    return y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
 }
