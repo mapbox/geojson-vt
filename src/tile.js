@@ -25,7 +25,7 @@ export default function createTile(features, z, tx, ty, options) {
 function addFeature(tile, feature, tolerance, options) {
     const geom = feature.geometry;
     const type = feature.type;
-    const simplified = [];
+    let simplified = [];
 
     tile.minX = Math.min(tile.minX, feature.minX);
     tile.minY = Math.min(tile.minY, feature.minY);
@@ -47,12 +47,20 @@ function addFeature(tile, feature, tolerance, options) {
             addLine(simplified, geom[i], tile, tolerance, type === 'Polygon', i === 0);
         }
 
+        // convert polygon to multipolygon
+        if (type === 'Polygon' && simplified.length) {
+            simplified = [simplified];
+        }
     } else if (type === 'MultiPolygon') {
 
         for (let k = 0; k < geom.length; k++) {
             const polygon = geom[k];
+            const simplifiedPolygon = [];
             for (let i = 0; i < polygon.length; i++) {
-                addLine(simplified, polygon[i], tile, tolerance, true, i === 0);
+                addLine(simplifiedPolygon, polygon[i], tile, tolerance, true, i === 0);
+            }
+            if (simplifiedPolygon.length) {
+                simplified.push(simplifiedPolygon);
             }
         }
     }
@@ -75,6 +83,9 @@ function addFeature(tile, feature, tolerance, options) {
         };
         if (feature.id !== null) {
             tileFeature.id = feature.id;
+        }
+        if (options.generateIndex) {
+            tileFeature.index = feature.index;
         }
         tile.features.push(tileFeature);
     }

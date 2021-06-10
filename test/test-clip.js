@@ -81,7 +81,7 @@ test('clips points', (t) => {
         {geometry: geom2, type: 'MultiPoint', tags: 2, minX: 0, minY: 0, maxX: 50, maxY: 10}
     ], 1, 10, 40, 0, -Infinity, Infinity, {});
 
-    t.same(clipped, [{id: null, type: 'MultiPoint',
+    t.same(clipped, [{id: null, index: undefined, type: 'MultiPoint',
         geometry: [20,10,0,20,20,0,30,20,0,30,30,0,25,40,0,25,50,0,25,60,0], tags: 1, minX: 20, minY: 10, maxX: 30, maxY: 60}]);
 
     t.end();
