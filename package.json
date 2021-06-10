@@ -47,6 +47,7 @@
   "files": [
     "geojson-vt.js",
     "geojson-vt-dev.js",
+    "types.d.ts",
     "src"
   ]
 }
