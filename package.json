@@ -1,8 +1,8 @@
 {
-  "name": "geojson-vt",
+  "name": "@2gis/geojson-vt",
   "version": "3.2.1",
   "description": "Slice GeoJSON data into vector tiles efficiently",
-  "homepage": "https://github.com/mapbox/geojson-vt",
+  "homepage": "https://github.com/2gis/geojson-vt",
   "keywords": [
     "spatial",
     "geojson",
@@ -12,7 +12,7 @@
   "author": "Vladimir Agafonkin",
   "repository": {
     "type": "git",
-    "url": "git://github.com/mapbox/geojson-vt.git"
+    "url": "git://github.com/2gis/geojson-vt.git"
   },
   "module": "src/index.js",
   "main": "geojson-vt-dev.js",
@@ -41,11 +41,13 @@
     "test": "c8 tape -r esm test/test-*.js",
     "build": "rollup -c",
     "watch": "rollup -cw",
-    "prepublishOnly": "npm run test && npm run build"
+    "prepublishOnly": "npm run test && npm run build",
+    "pub": "npm run build && npm publish"
   },
   "files": [
     "geojson-vt.js",
     "geojson-vt-dev.js",
+    "types.d.ts",
     "src"
   ]
 }

@@ -5,6 +5,12 @@ import wrap from './wrap.js';           // date line processing
 import transform from './transform.js'; // coordinate transformation
 import createTile from './tile.js';     // final simplified tile generation
 
+export const GeoJsonFeatureType = {
+    Points: 1,
+    Lines: 2,
+    Polygons: 3,
+};
+
 const defaultOptions = {
     maxZoom: 14,            // max zoom to preserve detail on
     indexMaxZoom: 5,        // max zoom in the tile index
@@ -15,6 +21,7 @@ const defaultOptions = {
     lineMetrics: false,     // whether to calculate line metrics
     promoteId: null,        // name of a feature property to be promoted to feature.id
     generateId: false,      // whether to generate feature ids. Cannot be used with promoteId
+    generateIndex: false,   // whether to generate feature indexes
     debug: 0                // logging level (0, 1 or 2)
 };
 

@@ -12,11 +12,11 @@ export default function convert(data, options) {
         }
 
     } else if (data.type === 'Feature') {
-        convertFeature(features, data, options);
+        convertFeature(features, data, options, 0);
 
     } else {
         // single geometry or a geometry collection
-        convertFeature(features, {geometry: data}, options);
+        convertFeature(features, {geometry: data}, options, 0);
     }
 
     return features;
@@ -52,7 +52,7 @@ function convertFeature(features, geojson, options, index) {
             for (const line of coords) {
                 geometry = [];
                 convertLine(line, geometry, tolerance, false);
-                features.push(createFeature(id, 'LineString', geometry, geojson.properties));
+                features.push(createFeature(id, 'LineString', geometry, geojson.properties, index));
             }
             return;
         } else {
@@ -81,7 +81,7 @@ function convertFeature(features, geojson, options, index) {
         throw new Error('Input data is not a valid GeoJSON object.');
     }
 
-    features.push(createFeature(id, type, geometry, geojson.properties));
+    features.push(createFeature(id, type, geometry, geojson.properties, index));
 }
 
 function convertPoint(coords, out) {

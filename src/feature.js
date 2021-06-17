@@ -1,7 +1,8 @@
 
-export default function createFeature(id, type, geom, tags) {
+export default function createFeature(id, type, geom, tags, index) {
     const feature = {
         id: id == null ? null : id,
+        index,
         type,
         geometry: geom,
         tags,

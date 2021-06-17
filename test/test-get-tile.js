@@ -5,7 +5,7 @@ import path from 'path';
 import geojsonvt from '../src/index.js';
 
 const square = [{
-    geometry: [[[-64, 4160], [-64, -64], [4160, -64], [4160, 4160], [-64, 4160]]],
+    geometry: [[[[-64, 4160], [-64, -64], [4160, -64], [4160, 4160], [-64, 4160]]]],
     type: 3,
     tags: {name: 'Pennsylvania', density: 284.3},
     id: '42'
@@ -75,7 +75,7 @@ test('getTile: polygon clipping on the boundary', (t) => {
     });
 
     t.same(index.getTile(5, 19, 9).features, [{
-        geometry: [[[3072, 3072], [5120, 3072], [5120, 5120], [3072, 5120], [3072, 3072]]],
+        geometry: [[[[3072, 3072], [5120, 3072], [5120, 5120], [3072, 5120], [3072, 3072]]]],
         type: 3,
         tags: null
     }]);

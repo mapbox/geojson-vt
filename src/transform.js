@@ -18,13 +18,11 @@ export default function transformTile(tile, extent) {
             for (let j = 0; j < geom.length; j += 2) {
                 feature.geometry.push(transformPoint(geom[j], geom[j + 1], extent, z2, tx, ty));
             }
+        } else if (type === 2) {
+            feature.geometry = transformRings(geom, extent, z2, tx, ty);
         } else {
             for (let j = 0; j < geom.length; j++) {
-                const ring = [];
-                for (let k = 0; k < geom[j].length; k += 2) {
-                    ring.push(transformPoint(geom[j][k], geom[j][k + 1], extent, z2, tx, ty));
-                }
-                feature.geometry.push(ring);
+                feature.geometry.push(transformRings(geom[j], extent, z2, tx, ty));
             }
         }
     }
@@ -32,6 +30,18 @@ export default function transformTile(tile, extent) {
     tile.transformed = true;
 
     return tile;
+}
+
+function transformRings(sourceRings, extent, z2, tx, ty) {
+    const rings = [];
+    for (let j = 0; j < sourceRings.length; j++) {
+        const ring = [];
+        for (let k = 0; k < sourceRings[j].length; k += 2) {
+            ring.push(transformPoint(sourceRings[j][k], sourceRings[j][k + 1], extent, z2, tx, ty));
+        }
+        rings.push(ring);
+    }
+    return rings;
 }
 
 function transformPoint(x, y, extent, z2, tx, ty) {
