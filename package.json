@@ -1,6 +1,6 @@
 {
   "name": "@2gis/geojson-vt",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "description": "Slice GeoJSON data into vector tiles efficiently",
   "homepage": "https://github.com/2gis/geojson-vt",
   "keywords": [
@@ -49,5 +49,6 @@
     "geojson-vt-dev.js",
     "types.d.ts",
     "src"
-  ]
+  ],
+  "types": "./types.d.ts"
 }
