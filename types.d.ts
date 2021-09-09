@@ -1,9 +1,6 @@
 import { GeoJSON } from 'geojson';
 
-export interface Tag {
-    name: string;
-    value: string | number | boolean | null;
-}
+export type TagValue = string | number | boolean | null;
 
 export const enum GeoJsonFeatureType {
     Points = 1,
@@ -12,7 +9,7 @@ export const enum GeoJsonFeatureType {
 }
 
 export interface TileFeatureBase {
-    tags: Tag[];
+    tags: { [key: string]: TagValue };
     index: number;
     id?: number | string;
 }
@@ -83,7 +80,7 @@ export interface GeoJsonVtOptions {
     /**
      * whether to generate feature indexes
      */
-     generateIndex?: boolean;
+    generateIndex?: boolean;
 
     /**
      * logging level (0 to disable, 1 or 2)
