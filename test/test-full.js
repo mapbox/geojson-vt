@@ -20,9 +20,28 @@ test('throws on invalid GeoJSON', (t) => {
     t.end();
 });
 
+const lines3d = make3dData(getJSON('dateline.json'));
+
+testTiles3d('test 3d features with dimensions = 2', lines3d, 'dateline-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
+testTiles3d('test 3d features with dimensions = 3', lines3d, 'dateline-tiles-3d.json', {indexMaxZoom: 0, indexMaxPoints: 10000, dimensions: 3});
+
+const states3d = make3dData(getJSON('us-states.json'));
+
+testTiles3d('test 3d features with dimensions = 2', states3d, 'us-states-tiles.json', {indexMaxZoom: 7, indexMaxPoints: 200});
+testTiles3d('test 3d features with dimensions = 3', states3d, 'us-states-tiles-3d.json', {indexMaxZoom: 7, indexMaxPoints: 200, dimensions: 3});
+
 function testTiles(inputFile, expectedFile, options) {
     test(`full tiling test: ${  expectedFile.replace('-tiles.json', '')}`, (t) => {
         const tiles = genTiles(getJSON(inputFile), options);
+        // fs.writeFileSync(path.join(__dirname, '/fixtures/' + expectedFile), JSON.stringify(tiles));
+        t.same(tiles, getJSON(expectedFile));
+        t.end();
+    });
+}
+
+function testTiles3d(testName, inputJSON, expectedFile, options) {
+    test(`${testName}: ${expectedFile}`, (t) => {
+        const tiles = genTiles(inputJSON, options);
         // fs.writeFileSync(path.join(__dirname, '/fixtures/' + expectedFile), JSON.stringify(tiles));
         t.same(tiles, getJSON(expectedFile));
         t.end();
@@ -60,3 +79,25 @@ function genTiles(data, options) {
 
     return output;
 }
+
+function make3dData(data) {
+    data.features.forEach((feature) => {
+        if (feature.geometry) {
+            add3component(feature.geometry.coordinates, 0);
+        }
+    });
+    return data;
+}
+
+function add3component(coordinates, i = 0) {
+    if (!Array.isArray(coordinates)) {
+        return;
+    }
+
+    if (Array.isArray(coordinates[0])) {
+        coordinates.forEach(add3component);
+    } else {
+        coordinates.push((i + 1) * 10);
+    }
+}
+
