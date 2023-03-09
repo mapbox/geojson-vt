@@ -22,7 +22,8 @@ const defaultOptions = {
     promoteId: null,        // name of a feature property to be promoted to feature.id
     generateId: false,      // whether to generate feature ids. Cannot be used with promoteId
     generateIndex: false,   // whether to generate feature indexes
-    debug: 0                // logging level (0, 1 or 2)
+    debug: 0,               // logging level (0, 1 or 2)
+    dimensions: 2           // number of coordinates per vertex in the input array (2 by default)
 };
 
 class GeoJSONVT {
@@ -179,7 +180,7 @@ class GeoJSONVT {
         x = (x + z2) & (z2 - 1); // wrap tile x coordinate
 
         const id = toID(z, x, y);
-        if (this.tiles[id]) return transform(this.tiles[id], extent);
+        if (this.tiles[id]) return transform(this.tiles[id], extent, options.dimensions);
 
         if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -205,7 +206,7 @@ class GeoJSONVT {
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
 
-        return this.tiles[id] ? transform(this.tiles[id], extent) : null;
+        return this.tiles[id] ? transform(this.tiles[id], extent, options.dimensions) : null;
     }
 }
 

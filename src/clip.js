@@ -12,6 +12,7 @@ import createFeature from './feature.js';
  * minAll and maxAll: minimum and maximum coordinate value for all features
  */
 export default function clip(features, scale, k1, k2, axis, minAll, maxAll, options) {
+    const stride = (options.dimensions === undefined ? 2 : options.dimensions) + 1;
     k1 /= scale;
     k2 /= scale;
 
@@ -37,21 +38,21 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
         let newGeometry = [];
 
         if (type === 'Point' || type === 'MultiPoint') {
-            clipPoints(geometry, newGeometry, k1, k2, axis);
+            clipPoints(geometry, newGeometry, k1, k2, axis, stride);
 
         } else if (type === 'LineString') {
-            clipLine(geometry, newGeometry, k1, k2, axis, false, options.lineMetrics);
+            clipLine(geometry, newGeometry, k1, k2, axis, false, options.lineMetrics, stride);
 
         } else if (type === 'MultiLineString') {
-            clipLines(geometry, newGeometry, k1, k2, axis, false);
+            clipLines(geometry, newGeometry, k1, k2, axis, false, stride);
 
         } else if (type === 'Polygon') {
-            clipLines(geometry, newGeometry, k1, k2, axis, true);
+            clipLines(geometry, newGeometry, k1, k2, axis, true, stride);
 
         } else if (type === 'MultiPolygon') {
             for (const polygon of geometry) {
                 const newPolygon = [];
-                clipLines(polygon, newPolygon, k1, k2, axis, true);
+                clipLines(polygon, newPolygon, k1, k2, axis, true, stride);
                 if (newPolygon.length) {
                     newGeometry.push(newPolygon);
                 }
@@ -61,7 +62,7 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
         if (newGeometry.length) {
             if (options.lineMetrics && type === 'LineString') {
                 for (const line of newGeometry) {
-                    clipped.push(createFeature(feature.id, type, line, feature.tags, feature.index));
+                    clipped.push(createFeature(feature.id, type, line, feature.tags, feature.index, stride));
                 }
                 continue;
             }
@@ -75,39 +76,42 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
                 }
             }
             if (type === 'Point' || type === 'MultiPoint') {
-                type = newGeometry.length === 3 ? 'Point' : 'MultiPoint';
+                type = newGeometry.length === stride ? 'Point' : 'MultiPoint';
             }
 
-            clipped.push(createFeature(feature.id, type, newGeometry, feature.tags, feature.index));
+            clipped.push(createFeature(feature.id, type, newGeometry, feature.tags, feature.index, stride));
         }
     }
 
     return clipped.length ? clipped : null;
 }
 
-function clipPoints(geom, newGeom, k1, k2, axis) {
-    for (let i = 0; i < geom.length; i += 3) {
+function clipPoints(geom, newGeom, k1, k2, axis, stride = 3) {
+    for (let i = 0; i < geom.length; i += stride) {
         const a = geom[i + axis];
 
         if (a >= k1 && a <= k2) {
             addPoint(newGeom, geom[i], geom[i + 1], geom[i + 2]);
+            for (let j = 3; j < stride; j++) {
+                newGeom.push(geom[i + j]);
+            }
         }
     }
 }
 
-function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
+function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics, stride = 3) {
 
     let slice = newSlice(geom);
     const intersect = axis === 0 ? intersectX : intersectY;
     let len = geom.start;
     let segLen, t;
 
-    for (let i = 0; i < geom.length - 3; i += 3) {
+    for (let i = 0; i < geom.length - stride; i += stride) {
         const ax = geom[i];
         const ay = geom[i + 1];
         const az = geom[i + 2];
-        const bx = geom[i + 3];
-        const by = geom[i + 4];
+        const bx = geom[i + stride];
+        const by = geom[i + stride + 1];
         const a = axis === 0 ? ax : ay;
         const b = axis === 0 ? bx : by;
         let exited = false;
@@ -118,25 +122,44 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
             // ---|-->  | (line enters the clip region from the left)
             if (b > k1) {
                 t = intersect(slice, ax, ay, bx, by, k1);
+                for (let j = 3; j < stride; j++) {
+                    const aj = geom[i + j];
+                    slice.push((geom[i + stride + j] - aj) * t + aj);
+                }
                 if (trackMetrics) slice.start = len + segLen * t;
             }
         } else if (a > k2) {
             // |  <--|--- (line enters the clip region from the right)
             if (b < k2) {
                 t = intersect(slice, ax, ay, bx, by, k2);
+                for (let j = 3; j < stride; j++) {
+                    const aj = geom[i + j];
+                    slice.push((geom[i + stride + j] - aj) * t + aj);
+                }
                 if (trackMetrics) slice.start = len + segLen * t;
             }
         } else {
             addPoint(slice, ax, ay, az);
+            for (let j = 3; j < stride; j++) {
+                slice.push(geom[i + j]);
+            }
         }
         if (b < k1 && a >= k1) {
             // <--|---  | or <--|-----|--- (line exits the clip region on the left)
             t = intersect(slice, ax, ay, bx, by, k1);
+            for (let j = 3; j < stride; j++) {
+                const aj = geom[i + j];
+                slice.push((geom[i + stride + j] - aj) * t + aj);
+            }
             exited = true;
         }
         if (b > k2 && a <= k2) {
             // |  ---|--> or ---|-----|--> (line exits the clip region on the right)
             t = intersect(slice, ax, ay, bx, by, k2);
+            for (let j = 3; j < stride; j++) {
+                const aj = geom[i + j];
+                slice.push((geom[i + stride + j] - aj) * t + aj);
+            }
             exited = true;
         }
 
@@ -150,17 +173,25 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
     }
 
     // add the last point
-    let last = geom.length - 3;
+    let last = geom.length - stride;
     const ax = geom[last];
     const ay = geom[last + 1];
     const az = geom[last + 2];
     const a = axis === 0 ? ax : ay;
-    if (a >= k1 && a <= k2) addPoint(slice, ax, ay, az);
+    if (a >= k1 && a <= k2) {
+        addPoint(slice, ax, ay, az);
+        for (let j = 3; j < stride; j++) {
+            slice.push(geom[last + j]);
+        }
+    }
 
     // close the polygon if its endpoints are not the same after clipping
-    last = slice.length - 3;
+    last = slice.length - stride;
     if (isPolygon && last >= 3 && (slice[last] !== slice[0] || slice[last + 1] !== slice[1])) {
         addPoint(slice, slice[0], slice[1], slice[2]);
+        for (let j = 3; j < stride; j++) {
+            slice.push(slice[j]);
+        }
     }
 
     // add the final slice
@@ -177,9 +208,9 @@ function newSlice(line) {
     return slice;
 }
 
-function clipLines(geom, newGeom, k1, k2, axis, isPolygon) {
+function clipLines(geom, newGeom, k1, k2, axis, isPolygon, stride) {
     for (const line of geom) {
-        clipLine(line, newGeom, k1, k2, axis, isPolygon, false);
+        clipLine(line, newGeom, k1, k2, axis, isPolygon, false, stride);
     }
 }
 

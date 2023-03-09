@@ -86,6 +86,11 @@ export interface GeoJsonVtOptions {
      * logging level (0 to disable, 1 or 2)
      */
     debug?: number;
+
+    /**
+     * number of coordinates per vertex in the input array (2 by default)
+     */
+    dimensions?: number;
 }
 
 export interface TileGeoJsonVt {
