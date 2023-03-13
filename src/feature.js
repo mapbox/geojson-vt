@@ -1,5 +1,5 @@
 
-export default function createFeature(id, type, geom, tags, index) {
+export default function createFeature(id, type, geom, tags, index, stride = 3) {
     const feature = {
         id: id == null ? null : id,
         index,
@@ -13,29 +13,29 @@ export default function createFeature(id, type, geom, tags, index) {
     };
 
     if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
-        calcLineBBox(feature, geom);
+        calcLineBBox(feature, geom, stride);
 
     } else if (type === 'Polygon') {
         // the outer ring (ie [0]) contains all inner rings
-        calcLineBBox(feature, geom[0]);
+        calcLineBBox(feature, geom[0], stride);
 
     } else if (type === 'MultiLineString') {
         for (const line of geom) {
-            calcLineBBox(feature, line);
+            calcLineBBox(feature, line, stride);
         }
 
     } else if (type === 'MultiPolygon') {
         for (const polygon of geom) {
             // the outer ring (ie [0]) contains all inner rings
-            calcLineBBox(feature, polygon[0]);
+            calcLineBBox(feature, polygon[0], stride);
         }
     }
 
     return feature;
 }
 
-function calcLineBBox(feature, geom) {
-    for (let i = 0; i < geom.length; i += 3) {
+function calcLineBBox(feature, geom, stride = 3) {
+    for (let i = 0; i < geom.length; i += stride) {
         feature.minX = Math.min(feature.minX, geom[i]);
         feature.minY = Math.min(feature.minY, geom[i + 1]);
         feature.maxX = Math.max(feature.maxX, geom[i]);
