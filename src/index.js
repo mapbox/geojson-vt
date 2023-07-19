@@ -68,7 +68,7 @@ class GeoJSONVT {
         const stack = [features, z, x, y];
         const options = this.options;
         const debug = options.debug;
-        let tilesCachce = (initializing || dynamicCache)? this.tiles : {};
+        const tilesCachce = (initializing || dynamicCache)? this.tiles : {};
         // avoid recursion by using a processing queue
         while (stack.length) {
             y = stack.pop();
@@ -198,7 +198,7 @@ class GeoJSONVT {
         const tilesCache = this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
 
-        return this.tiles[id] ? transform(this.tiles[id], extent) : null;
+        return tilesCache[id] ? transform(tilesCache[id], extent) : null;
     }
 }
 
