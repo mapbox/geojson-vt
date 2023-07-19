@@ -15,7 +15,8 @@ const defaultOptions = {
     lineMetrics: false,     // whether to calculate line metrics
     promoteId: null,        // name of a feature property to be promoted to feature.id
     generateId: false,      // whether to generate feature ids. Cannot be used with promoteId
-    debug: 0                // logging level (0, 1 or 2)
+    debug: 0,                // logging level (0, 1 or 2)
+    dynamicCache: true
 };
 
 class GeoJSONVT {
@@ -34,7 +35,6 @@ class GeoJSONVT {
 
         // tiles and tileCoords are part of the public API
         this.tiles = {};
-        this.tileCoords = [];
 
         if (debug) {
             console.timeEnd('preprocess data');
@@ -48,7 +48,7 @@ class GeoJSONVT {
         features = wrap(features, options);
 
         // start slicing from the top tile down
-        if (features.length) this.splitTile(features, 0, 0, 0);
+        if (features.length) this.splitTile(features, 0, 0, 0, undefined, undefined, undefined, true);
 
         if (debug) {
             if (features.length) console.log('features: %d, points: %d', this.tiles[0].numFeatures, this.tiles[0].numPoints);
@@ -63,12 +63,12 @@ class GeoJSONVT {
     //
     // If no target tile is specified, splitting stops when we reach the maximum
     // zoom or the number of points is low as specified in the options.
-    splitTile(features, z, x, y, cz, cx, cy) {
+    splitTile(features, z, x, y, cz, cx, cy, initializing) {
 
         const stack = [features, z, x, y];
         const options = this.options;
         const debug = options.debug;
-
+        const tilesCache = (initializing || dynamicCache)? this.tiles : {};
         // avoid recursion by using a processing queue
         while (stack.length) {
             y = stack.pop();
@@ -78,13 +78,12 @@ class GeoJSONVT {
 
             const z2 = 1 << z;
             const id = toID(z, x, y);
-            let tile = this.tiles[id];
+            let tile = tilesCache[id];
 
             if (!tile) {
                 if (debug > 1) console.time('creation');
 
-                tile = this.tiles[id] = createTile(features, z, x, y, options);
-                this.tileCoords.push({z, x, y});
+                tile = tilesCache[id] = createTile(features, z, x, y, options);
 
                 if (debug) {
                     if (debug > 1) {
@@ -156,6 +155,7 @@ class GeoJSONVT {
             stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
             stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
         }
+        return tilesCache;
     }
 
     getTile(z, x, y) {
@@ -195,10 +195,10 @@ class GeoJSONVT {
             console.log('found parent tile z%d-%d-%d', z0, x0, y0);
             console.time('drilling down');
         }
-        this.splitTile(parent.source, z0, x0, y0, z, x, y);
+        const tilesCache = this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
 
-        return this.tiles[id] ? transform(this.tiles[id], extent) : null;
+        return tilesCache[id] ? transform(tilesCache[id], extent) : null;
     }
 }
 
