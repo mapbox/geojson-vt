@@ -68,7 +68,7 @@ class GeoJSONVT {
         const stack = [features, z, x, y];
         const options = this.options;
         const debug = options.debug;
-        const tilesCachce = (initializing || dynamicCache)? this.tiles : {};
+        const tilesCache = (initializing || dynamicCache)? this.tiles : {};
         // avoid recursion by using a processing queue
         while (stack.length) {
             y = stack.pop();
@@ -78,12 +78,12 @@ class GeoJSONVT {
 
             const z2 = 1 << z;
             const id = toID(z, x, y);
-            let tile = tilesCachce[id];
+            let tile = tilesCache[id];
 
             if (!tile) {
                 if (debug > 1) console.time('creation');
 
-                tile = tilesCachce[id] = createTile(features, z, x, y, options);
+                tile = tilesCache[id] = createTile(features, z, x, y, options);
 
                 if (debug) {
                     if (debug > 1) {
@@ -155,7 +155,7 @@ class GeoJSONVT {
             stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
             stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
         }
-        return tilesCachce;
+        return tilesCache;
     }
 
     getTile(z, x, y) {
