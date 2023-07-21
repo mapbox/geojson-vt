@@ -68,7 +68,7 @@ class GeoJSONVT {
         const stack = [features, z, x, y];
         const options = this.options;
         const debug = options.debug;
-        const tilesCache = (initializing || dynamicCache)? this.tiles : {};
+        const tilesCache = (initializing || options.dynamicCache)? this.tiles : {};
         // avoid recursion by using a processing queue
         while (stack.length) {
             y = stack.pop();

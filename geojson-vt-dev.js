@@ -764,7 +764,7 @@ GeoJSONVT.prototype.splitTile = function splitTile (features, z, x, y, cz, cx, c
     var stack = [features, z, x, y];
     var options = this.options;
     var debug = options.debug;
-    var tilesCache = (initializing || dynamicCache)? this.tiles : {};
+    var tilesCache = (initializing || options.dynamicCache)? this.tiles : {};
     // avoid recursion by using a processing queue
     while (stack.length) {
         y = stack.pop();
