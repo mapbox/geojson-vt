@@ -24,6 +24,7 @@ export default function createTile(features, z, tx, ty, options) {
 
 function addFeature(tile, feature, tolerance, options) {
     const geom = feature.geometry;
+    const sqDist = feature.sqDist;
     const type = feature.type;
     const simplified = [];
 
@@ -34,25 +35,26 @@ function addFeature(tile, feature, tolerance, options) {
 
     if (type === 'Point' || type === 'MultiPoint') {
         for (let i = 0; i < geom.length; i += 3) {
-            simplified.push(geom[i], geom[i + 1]);
+            simplified.push(geom[i], geom[i + 1], geom[i + 2]);
             tile.numPoints++;
             tile.numSimplified++;
         }
 
     } else if (type === 'LineString') {
-        addLine(simplified, geom, tile, tolerance, false, false);
+        addLine(simplified, geom, sqDist, tile, tolerance, false, false);
 
     } else if (type === 'MultiLineString' || type === 'Polygon') {
         for (let i = 0; i < geom.length; i++) {
-            addLine(simplified, geom[i], tile, tolerance, type === 'Polygon', i === 0);
+            addLine(simplified, geom[i], sqDist[i], tile, tolerance, type === 'Polygon', i === 0);
         }
 
     } else if (type === 'MultiPolygon') {
 
         for (let k = 0; k < geom.length; k++) {
             const polygon = geom[k];
+            const sqDistPoly = sqDist[k];
             for (let i = 0; i < polygon.length; i++) {
-                addLine(simplified, polygon[i], tile, tolerance, true, i === 0);
+                addLine(simplified, polygon[i], sqDistPoly[i], tile, tolerance, true, i === 0);
             }
         }
     }
@@ -80,7 +82,7 @@ function addFeature(tile, feature, tolerance, options) {
     }
 }
 
-function addLine(result, geom, tile, tolerance, isPolygon, isOuter) {
+function addLine(result, geom, sqDist, tile, tolerance, isPolygon, isOuter) {
     const sqTolerance = tolerance * tolerance;
 
     if (tolerance > 0 && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
@@ -91,9 +93,10 @@ function addLine(result, geom, tile, tolerance, isPolygon, isOuter) {
     const ring = [];
 
     for (let i = 0; i < geom.length; i += 3) {
-        if (tolerance === 0 || geom[i + 2] > sqTolerance) {
+        //if (tolerance === 0 || geom.simpl[i / 3] > sqTolerance) {
+        if (tolerance === 0 || sqDist[i / 3] > sqTolerance) {
             tile.numSimplified++;
-            ring.push(geom[i], geom[i + 1]);
+            ring.push(geom[i], geom[i + 1], geom[i + 2]);
         }
         tile.numPoints++;
     }
@@ -105,17 +108,20 @@ function addLine(result, geom, tile, tolerance, isPolygon, isOuter) {
 
 function rewind(ring, clockwise) {
     let area = 0;
-    for (let i = 0, len = ring.length, j = len - 2; i < len; j = i, i += 2) {
+    for (let i = 0, len = ring.length, j = len - 3; i < len; j = i, i += 3) {
         area += (ring[i] - ring[j]) * (ring[i + 1] + ring[j + 1]);
     }
     if (area > 0 === clockwise) {
-        for (let i = 0, len = ring.length; i < len / 2; i += 2) {
+        for (let i = 0, len = ring.length; i < len / 3; i += 3) {
             const x = ring[i];
             const y = ring[i + 1];
-            ring[i] = ring[len - 2 - i];
-            ring[i + 1] = ring[len - 1 - i];
-            ring[len - 2 - i] = x;
-            ring[len - 1 - i] = y;
+            const z = ring[i + 2];
+            ring[i] = ring[len - 3 - i];
+            ring[i + 1] = ring[len - 2 - i];
+            ring[i + 2] = ring[len - 1 - i];
+            ring[len - 3 - i] = x;
+            ring[len - 2 - i] = y;
+            ring[len - 1 - i] = z;
         }
     }
 }

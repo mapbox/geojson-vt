@@ -1,9 +1,10 @@
 
-export default function createFeature(id, type, geom, tags) {
+export default function createFeature(id, type, geom, sqDist, tags) {
     const feature = {
         id: id == null ? null : id,
         type,
         geometry: geom,
+        sqDist,
         tags,
         minX: Infinity,
         minY: Infinity,
