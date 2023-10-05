@@ -3,7 +3,7 @@
 
 export default function simplify(coords, first, last, sqTolerance) {
     let maxSqDist = sqTolerance;
-    const mid = first + (last - first) >> 1;
+    const mid = first + ((last - first) >> 1);
     let minPosToMid = last - first;
     let index;
 
