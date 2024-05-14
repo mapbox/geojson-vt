@@ -93,7 +93,7 @@ export interface GeoJsonVtOptions {
     dimensions?: number;
 
     /**
-     * whether to generate cuts in last component of polygon and line points
+     * whether to generate cuts in last component of polygon and line points (false by default)
      */
     cuts?: boolean;
 }
