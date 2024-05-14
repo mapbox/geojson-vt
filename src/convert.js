@@ -52,7 +52,7 @@ function convertFeature(features, geojson, options, index) {
             for (const line of coords) {
                 geometry = [];
                 convertLine(line, geometry, tolerance, false, options.dimensions);
-                features.push(createFeature(id, 'LineString', geometry, geojson.properties, index, options.dimensions + 1));
+                features.push(createFeature(id, 'LineString', geometry, geojson.properties, index, options.dimensions + 2));
             }
             return;
         } else {
@@ -81,11 +81,11 @@ function convertFeature(features, geojson, options, index) {
         throw new Error('Input data is not a valid GeoJSON object.');
     }
 
-    features.push(createFeature(id, type, geometry, geojson.properties, index, options.dimensions + 1));
+    features.push(createFeature(id, type, geometry, geojson.properties, index, options.dimensions + 2));
 }
 
 function convertPoint(coords, out, dimensions = 2) {
-    out.push(projectX(coords[0]), projectY(coords[1]), 0);
+    out.push(projectX(coords[0]), projectY(coords[1]), 0, 1);
     for (let i = 2; i < dimensions; i++) {
         out.push(coords[i]);
     }
@@ -99,7 +99,7 @@ function convertLine(ring, out, tolerance, isPolygon, dimensions = 2) {
         const x = projectX(ring[j][0]);
         const y = projectY(ring[j][1]);
 
-        out.push(x, y, 0);
+        out.push(x, y, 0, 1);
         for (let i = 2; i < dimensions; i++) {
             out.push(ring[j][i]);
         }
@@ -114,7 +114,7 @@ function convertLine(ring, out, tolerance, isPolygon, dimensions = 2) {
         y0 = y;
     }
 
-    const last = out.length - (dimensions + 1);
+    const last = out.length - (dimensions + 2);
     out[2] = 1;
     simplify(out, 0, last, tolerance, dimensions);
     out[last + 2] = 1;

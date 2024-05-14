@@ -1,7 +1,7 @@
 
 // Transforms the coordinates of each feature in the given tile from
 // mercator-projected space into (extent x extent) tile space.
-export default function transformTile(tile, extent, dimensions = 2) {
+export default function transformTile(tile, extent, options) {
     if (tile.transformed) return tile;
 
     const z2 = 1 << tile.z;
@@ -14,15 +14,18 @@ export default function transformTile(tile, extent, dimensions = 2) {
 
         feature.geometry = [];
 
+        const delta = options.cuts && type !== 1 ? 1 : 0;
+        const stride = options.dimensions + delta;
+
         if (type === 1) {
-            for (let j = 0; j < geom.length; j += dimensions) {
-                feature.geometry.push(transformPoint(geom, j, dimensions, extent, z2, tx, ty));
+            for (let j = 0; j < geom.length; j += stride) {
+                feature.geometry.push(transformPoint(geom, j, stride, extent, z2, tx, ty));
             }
         } else if (type === 2) {
-            feature.geometry = transformRings(geom, extent, z2, tx, ty, dimensions);
+            feature.geometry = transformRings(geom, extent, z2, tx, ty, stride);
         } else {
             for (let j = 0; j < geom.length; j++) {
-                feature.geometry.push(transformRings(geom[j], extent, z2, tx, ty, dimensions));
+                feature.geometry.push(transformRings(geom[j], extent, z2, tx, ty, stride));
             }
         }
     }
@@ -32,7 +35,7 @@ export default function transformTile(tile, extent, dimensions = 2) {
     return tile;
 }
 
-function transformRings(sourceRings, extent, z2, tx, ty, dimensions = 2) {
+function transformRings(sourceRings, extent, z2, tx, ty, dimensions = 3) {
     const rings = [];
     for (let j = 0; j < sourceRings.length; j++) {
         const ring = [];

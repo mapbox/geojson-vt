@@ -2,7 +2,7 @@
 // calculate simplification data using optimized Douglas-Peucker algorithm
 
 export default function simplify(coords, first, last, sqTolerance, dimensions = 2) {
-    const stride = dimensions + 1;
+    const stride = dimensions + 2;
     let maxSqDist = sqTolerance;
     const mid = (last - first) >> 1;
     let minPosToMid = last - first;

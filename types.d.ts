@@ -91,6 +91,11 @@ export interface GeoJsonVtOptions {
      * number of coordinates per vertex in the input array (2 by default)
      */
     dimensions?: number;
+
+    /**
+     * whether to generate cuts in last component of polygon and line points
+     */
+    cuts?: false;
 }
 
 export interface TileGeoJsonVt {
