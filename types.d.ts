@@ -95,7 +95,7 @@ export interface GeoJsonVtOptions {
     /**
      * whether to generate cuts in last component of polygon and line points
      */
-    cuts?: false;
+    cuts?: boolean;
 }
 
 export interface TileGeoJsonVt {
