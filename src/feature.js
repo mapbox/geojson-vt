@@ -1,5 +1,5 @@
 
-export default function createFeature(id, type, geom, tags, index, stride = 3) {
+export default function createFeature(id, type, geom, tags, index, stride = 4) {
     const feature = {
         id: id == null ? null : id,
         index,
@@ -34,7 +34,7 @@ export default function createFeature(id, type, geom, tags, index, stride = 3) {
     return feature;
 }
 
-function calcLineBBox(feature, geom, stride = 3) {
+function calcLineBBox(feature, geom, stride = 4) {
     for (let i = 0; i < geom.length; i += stride) {
         feature.minX = Math.min(feature.minX, geom[i]);
         feature.minY = Math.min(feature.minY, geom[i + 1]);

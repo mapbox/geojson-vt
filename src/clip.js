@@ -12,7 +12,7 @@ import createFeature from './feature.js';
  * minAll and maxAll: minimum and maximum coordinate value for all features
  */
 export default function clip(features, scale, k1, k2, axis, minAll, maxAll, options) {
-    const stride = (options.dimensions === undefined ? 2 : options.dimensions) + 1;
+    const stride = (options.dimensions === undefined ? 2 : options.dimensions) + 2;
     k1 /= scale;
     k2 /= scale;
 
@@ -86,7 +86,7 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
     return clipped.length ? clipped : null;
 }
 
-function clipPoints(geom, newGeom, k1, k2, axis, stride = 3) {
+function clipPoints(geom, newGeom, k1, k2, axis, stride = 4) {
     for (let i = 0; i < geom.length; i += stride) {
         const a = geom[i + axis];
 
@@ -99,7 +99,7 @@ function clipPoints(geom, newGeom, k1, k2, axis, stride = 3) {
     }
 }
 
-function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics, stride = 3) {
+function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics, stride = 4) {
 
     let slice = newSlice(geom);
     const intersect = axis === 0 ? intersectX : intersectY;
@@ -122,7 +122,8 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics, stride =
             // ---|-->  | (line enters the clip region from the left)
             if (b > k1) {
                 t = intersect(slice, ax, ay, bx, by, k1);
-                for (let j = 3; j < stride; j++) {
+                slice.push(0);
+                for (let j = 4; j < stride; j++) {
                     const aj = geom[i + j];
                     slice.push((geom[i + stride + j] - aj) * t + aj);
                 }
@@ -132,7 +133,8 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics, stride =
             // |  <--|--- (line enters the clip region from the right)
             if (b < k2) {
                 t = intersect(slice, ax, ay, bx, by, k2);
-                for (let j = 3; j < stride; j++) {
+                slice.push(0);
+                for (let j = 4; j < stride; j++) {
                     const aj = geom[i + j];
                     slice.push((geom[i + stride + j] - aj) * t + aj);
                 }
@@ -147,7 +149,8 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics, stride =
         if (b < k1 && a >= k1) {
             // <--|---  | or <--|-----|--- (line exits the clip region on the left)
             t = intersect(slice, ax, ay, bx, by, k1);
-            for (let j = 3; j < stride; j++) {
+            slice.push(0);
+            for (let j = 4; j < stride; j++) {
                 const aj = geom[i + j];
                 slice.push((geom[i + stride + j] - aj) * t + aj);
             }
@@ -156,7 +159,8 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics, stride =
         if (b > k2 && a <= k2) {
             // |  ---|--> or ---|-----|--> (line exits the clip region on the right)
             t = intersect(slice, ax, ay, bx, by, k2);
-            for (let j = 3; j < stride; j++) {
+            slice.push(0);
+            for (let j = 4; j < stride; j++) {
                 const aj = geom[i + j];
                 slice.push((geom[i + stride + j] - aj) * t + aj);
             }

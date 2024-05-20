@@ -4,8 +4,27 @@ import clip from '../src/clip.js';
 
 /*eslint comma-spacing:0*/
 
-const geom1 = [0,0,0,50,0,0,50,10,0,20,10,0,20,20,0,30,20,0,30,30,0,50,30,0,50,40,0,25,40,0,25,50,0,0,50,0,0,60,0,25,60,0];
-const geom2 = [0,0,0,50,0,0,50,10,0,0,10,0];
+const geom1 = [
+    0,0,0,1,
+    50,0,0,1,
+    50,10,0,1,
+    20,10,0,1,
+    20,20,0,1,
+    30,20,0,1,
+    30,30,0,1,
+    50,30,0,1,
+    50,40,0,1,
+    25,40,0,1,
+    25,50,0,1,
+    0,50,0,1,
+    0,60,0,1,
+    25,60,0,1
+];
+const geom2 = [0,0,0,1,
+    50,0,0,1,
+    50,10,0,1,
+    0,10,0,1
+];
 
 test('clips polylines', (t) => {
 
@@ -16,13 +35,13 @@ test('clips polylines', (t) => {
 
     const expected = [
         {id: null, type: 'MultiLineString', geometry: [
-            [10,0,1,40,0,1],
-            [40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1],
-            [40,40,1,25,40,0,25,50,0,10,50,1],
-            [10,60,1,25,60,0]], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
+            [10,0,1,0,40,0,1,0],
+            [40,10,1,0,20,10,0,1,20,20,0,1,30,20,0,1,30,30,0,1,40,30,1,0],
+            [40,40,1,0,25,40,0,1,25,50,0,1,10,50,1,0],
+            [10,60,1,0,25,60,0,1]], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
         {id: null, type: 'MultiLineString', geometry: [
-            [10,0,1,40,0,1],
-            [40,10,1,10,10,1]], tags: 2, minX: 10, minY: 0, maxX: 40, maxY: 10}
+            [10,0,1,0,40,0,1,0],
+            [40,10,1,0,10,10,1,0]], tags: 2, minX: 10, minY: 0, maxX: 40, maxY: 10}
     ];
 
     t.equal(JSON.stringify(clipped), JSON.stringify(expected));
@@ -34,9 +53,9 @@ test('clips lines with line metrics on', (t) => {
 
     const geom = geom1.slice();
     geom.size = 0;
-    for (let i = 0; i < geom.length - 3; i += 3) {
-        const dx = geom[i + 3] - geom[i];
-        const dy = geom[i + 4] - geom[i + 1];
+    for (let i = 0; i < geom.length - 4; i += 4) {
+        const dx = geom[i + 4] - geom[i];
+        const dy = geom[i + 5] - geom[i + 1];
         geom.size += Math.sqrt(dx * dx + dy * dy);
     }
     geom.start = 0;
@@ -65,8 +84,8 @@ test('clips polygons', (t) => {
     ], 1, 10, 40, 0, -Infinity, Infinity, {});
 
     const expected = [
-        {id: null, type: 'Polygon', geometry: [[10,0,1,40,0,1,40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1,40,40,1,25,40,0,25,50,0,10,50,1,10,60,1,25,60,0,10,24,1,10,0,1]], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
-        {id: null, type: 'Polygon', geometry: [[10,0,1,40,0,1,40,10,1,10,10,1,10,0,1]], tags: 2,  minX: 10, minY: 0, maxX: 40, maxY: 10}
+        {id: null, type: 'Polygon', geometry: [[10,0,1,0,40,0,1,0,40,10,1,0,20,10,0,1,20,20,0,1,30,20,0,1,30,30,0,1,40,30,1,0,40,40,1,0,25,40,0,1,25,50,0,1,10,50,1,0,10,60,1,0,25,60,0,1,10,24,1,0,10,0,1,0]], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
+        {id: null, type: 'Polygon', geometry: [[10,0,1,0,40,0,1,0,40,10,1,0,10,10,1,0,10,0,1,0]], tags: 2,  minX: 10, minY: 0, maxX: 40, maxY: 10}
     ];
 
     t.equal(JSON.stringify(clipped), JSON.stringify(expected));
@@ -82,7 +101,15 @@ test('clips points', (t) => {
     ], 1, 10, 40, 0, -Infinity, Infinity, {});
 
     t.same(clipped, [{id: null, index: undefined, type: 'MultiPoint',
-        geometry: [20,10,0,20,20,0,30,20,0,30,30,0,25,40,0,25,50,0,25,60,0], tags: 1, minX: 20, minY: 10, maxX: 30, maxY: 60}]);
+        geometry: [
+            20,10,0,1,
+            20,20,0,1,
+            30,20,0,1,
+            30,30,0,1,
+            25,40,0,1,
+            25,50,0,1,
+            25,60,0,1
+        ], tags: 1, minX: 20, minY: 10, maxX: 30, maxY: 60}]);
 
     t.end();
 });

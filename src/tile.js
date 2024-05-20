@@ -25,7 +25,7 @@ export default function createTile(features, z, tx, ty, options) {
 function addFeature(tile, feature, tolerance, options) {
     const geom = feature.geometry;
     const type = feature.type;
-    const stride = options.dimensions + 1;
+    const stride = options.dimensions + 2;
     let simplified = [];
 
     tile.minX = Math.min(tile.minX, feature.minX);
@@ -36,7 +36,7 @@ function addFeature(tile, feature, tolerance, options) {
     if (type === 'Point' || type === 'MultiPoint') {
         for (let i = 0; i < geom.length; i += stride) {
             simplified.push(geom[i], geom[i + 1]);
-            for (let j = 3; j < stride; j++) {
+            for (let j = 4; j < stride; j++) {
                 simplified.push(geom[i + j]);
             }
             tile.numPoints++;
@@ -44,11 +44,11 @@ function addFeature(tile, feature, tolerance, options) {
         }
 
     } else if (type === 'LineString') {
-        addLine(simplified, geom, tile, tolerance, false, false, stride);
+        addLine(simplified, geom, tile, tolerance, false, false, options);
 
     } else if (type === 'MultiLineString' || type === 'Polygon') {
         for (let i = 0; i < geom.length; i++) {
-            addLine(simplified, geom[i], tile, tolerance, type === 'Polygon', i === 0, stride);
+            addLine(simplified, geom[i], tile, tolerance, type === 'Polygon', i === 0, options);
         }
 
         // convert polygon to multipolygon
@@ -61,7 +61,7 @@ function addFeature(tile, feature, tolerance, options) {
             const polygon = geom[k];
             const simplifiedPolygon = [];
             for (let i = 0; i < polygon.length; i++) {
-                addLine(simplifiedPolygon, polygon[i], tile, tolerance, true, i === 0, stride);
+                addLine(simplifiedPolygon, polygon[i], tile, tolerance, true, i === 0, options);
             }
             if (simplifiedPolygon.length) {
                 simplified.push(simplifiedPolygon);
@@ -95,9 +95,11 @@ function addFeature(tile, feature, tolerance, options) {
     }
 }
 
-function addLine(result, geom, tile, tolerance, isPolygon, isOuter, stride = 3) {
+function addLine(result, geom, tile, tolerance, isPolygon, isOuter, options) {
     const sqTolerance = tolerance * tolerance;
+    const cuts = options && !!options.cuts;
 
+    const stride = options.dimensions + 2;
     if (tolerance > 0 && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
         tile.numPoints += geom.length / stride;
         return;
@@ -109,19 +111,26 @@ function addLine(result, geom, tile, tolerance, isPolygon, isOuter, stride = 3) 
         if (tolerance === 0 || geom[i + 2] > sqTolerance) {
             tile.numSimplified++;
             ring.push(geom[i], geom[i + 1]);
-            for (let j = 3; j < stride; j++) {
+            for (let j = 4; j < stride; j++) {
                 ring.push(geom[i + j]);
+            }
+            if (cuts) {
+                // сохраняем признак резки самым последним компонентом
+                ring.push(geom[i + 3]);
             }
         }
         tile.numPoints++;
     }
 
-    if (isPolygon) rewind(ring, isOuter, stride - 1);
+    if (isPolygon) {
+        const delta = cuts ? 1 : 2;
+        rewind(ring, isOuter, stride - delta);
+    }
 
     result.push(ring);
 }
 
-function rewind(ring, clockwise, dimensions = 2) {
+function rewind(ring, clockwise, dimensions = 3) {
     let area = 0;
     for (let i = 0, len = ring.length, j = len - dimensions; i < len; j = i, i += dimensions) {
         area += (ring[i] - ring[j]) * (ring[i + 1] + ring[j + 1]);
