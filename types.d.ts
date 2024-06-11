@@ -70,7 +70,7 @@ export interface GeoJsonVtOptions {
     /**
      * name of a feature property to promote to feature.id. Cannot be used with `generateId`
      */
-    promoteId?: number | null;
+    promoteId?: string | null;
 
     /**
      * whether to generate feature ids. Cannot be used with `promoteId`
