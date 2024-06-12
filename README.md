@@ -74,18 +74,18 @@ GeoJSON-VT only operates on zoom levels up to 24.
 
 ### Install
 
-Install using NPM (`npm install geojson-vt`) or Yarn (`yarn add geojson-vt`), then:
+Install using NPM (`npm install geojson-vt`), then:
 
 ```js
 // import as a ES module
 import geojsonvt from 'geojson-vt';
 
-// or require in Node / Browserify
-const geojsonvt = require('geojson-vt');
+// import from a CDN in the browser:
+import geojsonvt from 'https://esm.run/geojson-vt';
 ```
 
 Or use a browser build directly:
 
 ```html
-<script src="https://unpkg.com/geojson-vt@3.2.0/geojson-vt.js"></script>
+<script src="https://unpkg.com/geojson-vt/geojson-vt.js"></script>
 ```

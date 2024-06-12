@@ -3,6 +3,9 @@
   "version": "3.2.1",
   "description": "Slice GeoJSON data into vector tiles efficiently",
   "homepage": "https://github.com/mapbox/geojson-vt",
+  "type": "module",
+  "exports": "src/index.js",
+  "sideEffects": false,
   "keywords": [
     "spatial",
     "geojson",
@@ -19,18 +22,18 @@
   "jsdelivr": "geojson-vt.js",
   "unpkg": "geojson-vt.js",
   "devDependencies": {
-    "@rollup/plugin-buble": "^1.0.2",
-    "@rollup/plugin-terser": "^0.4.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "benchmark": "^2.1.4",
-    "c8": "^7.12.0",
-    "eslint": "^8.33.0",
+    "c8": "^10.1.1",
+    "eslint": "^8.57.0",
     "eslint-config-mourner": "^3.0.0",
-    "esm": "^3.2.25",
-    "rollup": "^3.12.0",
-    "tape": "^5.6.3"
+    "rollup": "^3.29.3"
   },
   "eslintConfig": {
     "extends": "mourner",
+    "parserOptions": {
+      "ecmaVersion": 2020
+    },
     "globals": {
       "topojson": true
     }
@@ -38,7 +41,7 @@
   "license": "ISC",
   "scripts": {
     "pretest": "eslint src/*.js test/*.js debug/viz.js",
-    "test": "c8 tape -r esm test/test-*.js",
+    "test": "c8 node --test",
     "build": "rollup -c",
     "watch": "rollup -cw",
     "prepublishOnly": "npm run test && npm run build"
