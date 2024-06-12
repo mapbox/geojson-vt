@@ -1,6 +1,8 @@
 
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
 import simplify from '../src/simplify.js';
-import test from 'tape';
 
 /*eslint comma-spacing:0, no-shadow: 0*/
 
@@ -44,7 +46,7 @@ const simplified = [
     [0.85397,0.47115],[0.86636,0.48077]
 ];
 
-test('simplifies points correctly with the given tolerance', (t) => {
+test('simplifies points correctly with the given tolerance', () => {
     const coords = [];
     for (let i = 0; i < points.length; i++) {
         coords.push(points[i][0], points[i][1], 0);
@@ -60,19 +62,16 @@ test('simplifies points correctly with the given tolerance', (t) => {
             result.push([coords[i], coords[i + 1]]);
         }
     }
-    t.same(result, simplified);
-    t.end();
+    assert.deepEqual(result, simplified);
 });
 
-test('does not throw max call stack error on bad long input', (t) => {
+test('does not throw max call stack error on bad long input', () => {
     const coords = [];
     for (let i = 0; i < 1400; i++) {
         coords.push([0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]);
     }
 
-    t.doesNotThrow(() => {
+    assert.doesNotThrow(() => {
         simplify(coords, 2e-15);
     });
-
-    t.end();
 });

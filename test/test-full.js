@@ -1,7 +1,8 @@
 
-import test from 'tape';
+import test from 'node:test';
+import assert from 'node:assert/strict';
 import fs from 'fs';
-import path from 'path';
+
 import geojsonvt from '../src/index.js';
 
 testTiles('us-states.json', 'us-states-tiles.json', {indexMaxZoom: 7, indexMaxPoints: 200});
@@ -13,35 +14,31 @@ testTiles('single-geom.json', 'single-geom-tiles.json', {indexMaxZoom: 0, indexM
 testTiles('ids.json', 'ids-promote-id-tiles.json', {indexMaxZoom: 0, promoteId: 'prop0'});
 testTiles('ids.json', 'ids-generate-id-tiles.json', {indexMaxZoom: 0, generateId: true});
 
-test('throws on invalid GeoJSON', (t) => {
-    t.throws(() => {
+test('throws on invalid GeoJSON', () => {
+    assert.throws(() => {
         genTiles({type: 'Pologon'});
     });
-    t.end();
 });
 
 function testTiles(inputFile, expectedFile, options) {
-    test(`full tiling test: ${  expectedFile.replace('-tiles.json', '')}`, (t) => {
+    test(`full tiling test: ${  expectedFile.replace('-tiles.json', '')}`, () => {
         const tiles = genTiles(getJSON(inputFile), options);
         // fs.writeFileSync(path.join(__dirname, '/fixtures/' + expectedFile), JSON.stringify(tiles));
-        t.same(tiles, getJSON(expectedFile));
-        t.end();
+        assert.deepEqual(tiles, getJSON(expectedFile));
     });
 }
 
-test('empty geojson', (t) => {
-    t.same({}, genTiles(getJSON('empty.json')));
-    t.end();
+test('empty geojson', () => {
+    assert.deepEqual({}, genTiles(getJSON('empty.json')));
 });
 
-test('null geometry', (t) => {
+test('null geometry', () => {
     // should ignore features with null geometry
-    t.same({}, genTiles(getJSON('feature-null-geometry.json')));
-    t.end();
+    assert.deepEqual({}, genTiles(getJSON('feature-null-geometry.json')));
 });
 
 function getJSON(name) {
-    return JSON.parse(fs.readFileSync(path.join(__dirname, `/fixtures/${  name}`)));
+    return JSON.parse(fs.readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
 }
 
 function genTiles(data, options) {
@@ -55,7 +52,7 @@ function genTiles(data, options) {
     for (const id in index.tiles) {
         const tile = index.tiles[id];
         const z = tile.z;
-        output[`z${  z  }-${  tile.x  }-${  tile.y}`] = index.getTile(z, tile.x, tile.y).features;
+        output[`z${z}-${tile.x}-${tile.y}`] = index.getTile(z, tile.x, tile.y).features;
     }
 
     return output;
