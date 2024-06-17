@@ -4,7 +4,7 @@
   "description": "Slice GeoJSON data into vector tiles efficiently",
   "homepage": "https://github.com/mapbox/geojson-vt",
   "type": "module",
-  "exports": "src/index.js",
+  "exports": "./src/index.js",
   "sideEffects": false,
   "keywords": [
     "spatial",
