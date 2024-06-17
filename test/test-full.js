@@ -37,6 +37,11 @@ test('null geometry', () => {
     assert.deepEqual({}, genTiles(getJSON('feature-null-geometry.json')));
 });
 
+test('empty coordinates', () => {
+    // should ignore features with empty coordinates
+    assert.deepEqual({}, genTiles(getJSON('empty-coords.json')));
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
 }

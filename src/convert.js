@@ -26,6 +26,8 @@ function convertFeature(features, geojson, options, index) {
     if (!geojson.geometry) return;
 
     const coords = geojson.geometry.coordinates;
+    if (coords && coords.length === 0) return;
+
     const type = geojson.geometry.type;
     const tolerance = Math.pow(options.tolerance / ((1 << options.maxZoom) * options.extent), 2);
     let geometry = [];
