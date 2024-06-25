@@ -61,6 +61,7 @@ canvas.ondrop = function (e) {
 
         if (data.type === 'Topology') {
             const firstKey = Object.keys(data.objects)[0];
+            /* global topojson: false */
             data = topojson.feature(data, data.objects[firstKey]);
         }
 

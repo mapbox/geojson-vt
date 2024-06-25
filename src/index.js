@@ -133,20 +133,17 @@ class GeoJSONVT {
             let tr = null;
             let br = null;
 
-            let left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX, options);
-            let right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX, options);
-            features = null;
+            const left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX, options);
+            const right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX, options);
 
             if (left) {
                 tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
                 bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
-                left = null;
             }
 
             if (right) {
                 tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
                 br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
-                right = null;
             }
 
             if (debug > 1) console.timeEnd('clipping');

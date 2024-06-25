@@ -63,8 +63,10 @@ function addFeature(tile, feature, tolerance, options) {
         if (type === 'LineString' && options.lineMetrics) {
             tags = {};
             for (const key in feature.tags) tags[key] = feature.tags[key];
+            /* eslint-disable dot-notation */
             tags['mapbox_clip_start'] = geom.start / geom.size;
             tags['mapbox_clip_end'] = geom.end / geom.size;
+            /* eslint-enable dot-notation */
         }
 
         const tileFeature = {

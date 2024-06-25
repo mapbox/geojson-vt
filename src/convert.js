@@ -57,9 +57,8 @@ function convertFeature(features, geojson, options, index) {
                 features.push(createFeature(id, 'LineString', geometry, geojson.properties));
             }
             return;
-        } else {
-            convertLines(coords, geometry, tolerance, false);
         }
+        convertLines(coords, geometry, tolerance, false);
 
     } else if (type === 'Polygon') {
         convertLines(coords, geometry, tolerance, true);
