@@ -1,6 +1,4 @@
-## geojson-vt &mdash; GeoJSON Vector Tiles
-
-[![Build Status](https://travis-ci.org/mapbox/geojson-vt.svg?branch=main)](https://travis-ci.org/mapbox/geojson-vt)
+## geojson-vt &mdash; GeoJSON Vector Tiles [![Node](https://github.com/mapbox/geojson-vt/actions/workflows/node.yml/badge.svg)](https://github.com/mapbox/geojson-vt/actions/workflows/node.yml) [![](https://img.shields.io/badge/simply-awesome-brightgreen.svg)](https://github.com/mourner/projects)
 
 A highly efficient JavaScript library for **slicing GeoJSON data into vector tiles on the fly**,
 primarily designed to enable rendering and interacting with large geospatial datasets
