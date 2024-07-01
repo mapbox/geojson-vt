@@ -5,18 +5,21 @@ import wrap from './wrap.js';           // date line processing
 import transform from './transform.js'; // coordinate transformation
 import createTile from './tile.js';     // final simplified tile generation
 
-const defaultOptions = {
+const defaultTileOptions = {
     maxZoom: 14,            // max zoom to preserve detail on
-    indexMaxZoom: 5,        // max zoom in the tile index
-    indexMaxPoints: 100000, // max number of points per tile in the tile index
     tolerance: 3,           // simplification tolerance (higher means simpler)
     extent: 4096,           // tile extent
     buffer: 64,             // tile buffer on each side
-    lineMetrics: false,     // whether to calculate line metrics
+    lineMetrics: false      // whether to calculate line metrics
+};
+
+const defaultOptions = extend(Object.create(defaultTileOptions), {
+    indexMaxZoom: 5,        // max zoom in the tile index
+    indexMaxPoints: 100000, // max number of points per tile in the tile index
     promoteId: null,        // name of a feature property to be promoted to feature.id
     generateId: false,      // whether to generate feature ids. Cannot be used with promoteId
     debug: 0                // logging level (0, 1 or 2)
-};
+});
 
 class GeoJSONVT {
     constructor(data, options) {
@@ -210,4 +213,21 @@ function extend(dest, src) {
 
 export default function geojsonvt(data, options) {
     return new GeoJSONVT(data, options);
+}
+
+export function geoJSONToTile(data, z, x, y, options, shouldWrap = false, shouldClip = false) {
+    options = extend(Object.create(defaultTileOptions), options);
+
+    let features = convert(data, options);
+    if (shouldWrap) {
+        features = wrap(features, options);
+    }
+    if (shouldClip || options.lineMetrics) {
+        const pow2 = 1 << z;
+        const buffer = options.buffer / options.extent;
+        const left = clip(features, pow2, (x - buffer), (x + 1 + buffer), 0, -1, 2, options);
+        features = clip(left || [], pow2, (y - buffer), (y + 1 + buffer), 1, -1, 2, options);
+    }
+
+    return features ? transform(createTile(features, z, x, y, options), options.extent) : null;
 }
