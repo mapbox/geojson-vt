@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="update.css">
+</head>
+<body>
+    <div class="controls">
+        <button id="back">z0</button>
+        <div id="coord">tile: z0-0-0</div>
+        <button id="add">+1</button>
+        <button id="remove">-1</button>
+        <button id="start">Start</button>
+        <button id="stop">Stop</button>
+        <button id="props">Props</button>
+        <button id="generate">Generate +50k</button>
+        <button id="removeAll">Remove All</button>
+        <button id="mode">Mode: Update</button>
+        <div id="time">Time: <span id="ms">0</span></div>
+    </div>
+    
+    <div class="canvas-container">
+        <button id="navLeft" class="nav-button">◀</button>
+        <button id="navRight" class="nav-button">▶</button>
+        <button id="navUp" class="nav-button">▲</button>
+        <button id="navDown" class="nav-button">▼</button>
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    <div id="stats">
+        <h3>Tile Index Stats</h3>
+        <div id="stats_content">No data</div>
+    </div>
+
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+    <script src='../geojson-vt-dev.js'></script>
+    <script src="viz-update.js"></script>
+</body>
+</html>

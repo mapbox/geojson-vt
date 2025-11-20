@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 import clip from '../src/clip.js';
 
-/*eslint @stylistic/js/comma-spacing:0*/
+/* eslint @stylistic/comma-spacing: 0 */
 
 const geom1 = [0,0,0,50,0,0,50,10,0,20,10,0,20,20,0,30,20,0,30,30,0,50,30,0,50,40,0,25,40,0,25,50,0,0,50,0,0,60,0,25,60,0];
 const geom2 = [0,0,0,50,0,0,50,10,0,0,10,0];

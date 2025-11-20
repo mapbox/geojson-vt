@@ -59,6 +59,7 @@ var tileIndex = geojsonvt(data, {
 	lineMetrics: false, // whether to enable line metrics tracking for LineString/MultiLineString features
 	promoteId: null,    // name of a feature property to promote to feature.id. Cannot be used with `generateId`
 	generateId: false,  // whether to generate feature ids. Cannot be used with `promoteId`
+	updateable: false,  // whether the tile index can be updated (with the caveat of a stored simplified copy)
 	indexMaxZoom: 5,       // max zoom in the initial tile index
 	indexMaxPoints: 100000 // max number of points per tile in the index
 });
@@ -69,6 +70,36 @@ By default, tiles at zoom levels above `indexMaxZoom` are generated on the fly, 
 The `promoteId` and `generateId` options ignore existing `id` values on the feature objects.
 
 GeoJSON-VT only operates on zoom levels up to 24.
+
+### Update
+
+For incremental updates to the tile index, you can use `updateData` to change features without having to recreate a fresh index. `updateData` takes a diff object as a parameter with the following properties:
+
+```js
+var diff = {
+    removeAll: false,             // set to true to clear all features
+    remove: ['id1', 'id2'],       // array of feature ids to remove
+    add: [feature1, feature2],    // array of GeoJSON features to add
+    update: [                     // array of feature update objects
+        {
+            id: 'feature1',                           // required - id of feature to update
+            newGeometry: {type: 'Point', ...},        // new geometry for the feature
+            removeAllProperties: false,               // remove all properties
+            removeProperties: ['prop1', 'prop2'],     // array of property keys to remove
+            addOrUpdateProperties: [                  // array of properties to add/update
+                {key: 'name', value: 'New Name'},
+                {key: 'population', value: 5000}
+            ]
+        }
+    ]
+};
+
+tileIndex.updateData(diff);
+```
+
+All properties in the diff are optional, but at least one operation should be specified. Remove operations are applied before add/update operations.
+
+To use `updateData`, the index must be created with the `updateable: true` option.
 
 ### Install
 

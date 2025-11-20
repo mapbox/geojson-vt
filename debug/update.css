@@ -1,0 +1,121 @@
+body {
+    padding: 0;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+button {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+button:hover {
+    border-color: black;
+}
+.canvas-container {
+    position: relative;
+    display: inline-block;
+    margin-top: 80px;
+    margin-left: 35px;
+}
+#canvas {
+    border: 1px dotted #aaa;
+}
+#canvas.hover {
+    background: #cfc;
+}
+.controls {
+    position: fixed;
+    top: 5px;
+    left: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 5px;
+    border-radius: 3px;
+}
+#time, #coord {
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    user-select: none;
+}
+#stats {
+    position: fixed;
+    right: 10px;
+    top: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ccc;
+    padding: 15px;
+    font-family: monospace;
+    font-size: 12px;
+    min-width: 150px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+}
+#stats h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
+}
+#stats .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+}
+#stats .stat-label {
+    color: #666;
+}
+#stats .stat-value {
+    font-weight: bold;
+    color: #333;
+}
+.nav-button {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.7);
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    z-index: 10;
+}
+.nav-button:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: black;
+}
+.nav-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+#navLeft, #navRight {
+    width: 30px;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    top: 30px;
+    bottom: 30px;
+}
+#navLeft {
+    left: -35px;
+}
+#navRight {
+    right: -35px;
+}
+#navUp, #navDown {
+    height: 30px;
+    left: 0;
+    right: 0;
+}
+#navUp {
+    top: -35px;
+}
+#navDown {
+    bottom: -35px;
+}

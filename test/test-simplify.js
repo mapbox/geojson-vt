@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 import simplify from '../src/simplify.js';
 
-/*eslint @stylistic/js/comma-spacing:0, no-shadow: 0*/
+/* eslint @stylistic/comma-spacing: 0, no-shadow: 0 */
 
 const points = [
     [0.22455,0.25015],[0.22691,0.24419],[0.23331,0.24145],[0.23498,0.23606],

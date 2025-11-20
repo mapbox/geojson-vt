@@ -112,7 +112,7 @@ function convertLine(ring, out, tolerance, isPolygon) {
 
     const last = out.length - 3;
     out[2] = 1;
-    simplify(out, 0, last, tolerance);
+    if (tolerance > 0) simplify(out, 0, last, tolerance);
     out[last + 2] = 1;
 
     out.size = Math.abs(size);

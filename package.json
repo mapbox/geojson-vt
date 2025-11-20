@@ -24,8 +24,8 @@
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
     "benchmark": "^2.1.4",
-    "eslint": "^9.5.0",
-    "eslint-config-mourner": "^4.0.0",
+    "eslint": "^9.38.0",
+    "eslint-config-mourner": "^4.1.0",
     "rollup": "^4.18.0"
   },
   "license": "ISC",
@@ -35,6 +35,7 @@
     "cov": "node --experimental-test-coverage --test",
     "build": "rollup -c",
     "watch": "rollup -cw",
+    "bench": "node bench/benchmark.js",
     "prepublishOnly": "npm run test && npm run build"
   },
   "files": [
