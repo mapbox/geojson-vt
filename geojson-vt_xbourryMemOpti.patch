@@ -1,0 +1,713 @@
+diff --git a/src/clip.test.ts b/src/clip.test.ts
+index d4645d3..7f88667 100644
+--- a/src/clip.test.ts
++++ b/src/clip.test.ts
+@@ -1,7 +1,7 @@
+ 
+ import {test, expect} from 'vitest';
+ import {clip} from './clip';
+-import type { StartEndSizeArray } from './definitions';
++import type { SliceArray } from './definitions';
+ 
+ const geom1 = [0,0,0,50,0,0,50,10,0,20,10,0,20,20,0,30,20,0,30,30,0,50,30,0,50,40,0,25,40,0,25,50,0,0,50,0,0,60,0,25,60,0];
+ const geom2 = [0,0,0,50,0,0,50,10,0,0,10,0];
+@@ -9,19 +9,19 @@ const geom2 = [0,0,0,50,0,0,50,10,0,0,10,0];
+ test('clips polylines', () => {
+ 
+     const clipped = clip([
+-        {geometry: geom1, type: 'LineString', tags: { "1": 1}, minX: 0, minY: 0, maxX: 50, maxY: 60},
+-        {geometry: geom2, type: 'LineString', tags: { "2": 2}, minX: 0, minY: 0, maxX: 50, maxY: 10}
++        {geometry: {points: geom1}, type: 'LineString', tags: { "1": 1}, minX: 0, minY: 0, maxX: 50, maxY: 60},
++        {geometry: {points: geom2}, type: 'LineString', tags: { "2": 2}, minX: 0, minY: 0, maxX: 50, maxY: 10}
+     ], 1, 10, 40, 0, -Infinity, Infinity, {});
+ 
+     const expected = [
+         {id: null as string, type: 'MultiLineString', geometry: [
+-            [10,0,1,40,0,1],
+-            [40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1],
+-            [40,40,1,25,40,0,25,50,0,10,50,1],
+-            [10,60,1,25,60,0]], tags: {"1": 1}, minX: 10, minY: 0, maxX: 40, maxY: 60},
++            {points: [10,0,1,40,0,1]},
++            {points: [40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1]},
++            {points: [40,40,1,25,40,0,25,50,0,10,50,1]},
++            {points: [10,60,1,25,60,0]}], tags: {"1": 1}, minX: 10, minY: 0, maxX: 40, maxY: 60},
+         {id: null as string, type: 'MultiLineString', geometry: [
+-            [10,0,1,40,0,1],
+-            [40,10,1,10,10,1]], tags: {"2": 2}, minX: 10, minY: 0, maxX: 40, maxY: 10}
++            {points: [10,0,1,40,0,1]},
++            {points: [40,10,1,10,10,1]}], tags: {"2": 2}, minX: 10, minY: 0, maxX: 40, maxY: 10}
+     ];
+ 
+     expect(JSON.stringify(clipped)).toEqual(JSON.stringify(expected));
+@@ -29,27 +29,26 @@ test('clips polylines', () => {
+ 
+ test('clips lines with line metrics on', () => {
+ 
+-    const geom = geom1.slice() as StartEndSizeArray;
+-    geom.size = 0;
+-    for (let i = 0; i < geom.length - 3; i += 3) {
+-        const dx = geom[i + 3] - geom[i];
+-        const dy = geom[i + 4] - geom[i + 1];
+-        geom.size += Math.sqrt(dx * dx + dy * dy);
++    const points = geom1.slice();
++    let size = 0;
++    for (let i = 0; i < points.length - 3; i += 3) {
++        const dx = points[i + 3] - points[i];
++        const dy = points[i + 4] - points[i + 1];
++        size += Math.sqrt(dx * dx + dy * dy);
+     }
+-    geom.start = 0;
+-    geom.end = geom.size;
++    const geom: SliceArray = {points, size, start: 0, end: size};
+ 
+     const clipped = clip([{id: 1, geometry: geom, type: 'LineString', tags: {}, minX: 0, minY: 0, maxX: 50, maxY: 60}],
+         1, 10, 40, 0, -Infinity, Infinity, {lineMetrics: true});
+ 
+     expect(
+-        clipped.map(f => [(f.geometry as StartEndSizeArray).start, (f.geometry as StartEndSizeArray).end])).toEqual(
++        clipped.map(f => [(f.geometry as SliceArray).start, (f.geometry as SliceArray).end])).toEqual(
+         [[10, 40], [70, 130], [160, 200], [230, 245]]
+     );
+ });
+ 
+-function closed(geometry: number[]): number[][] {
+-    return [geometry.concat(geometry.slice(0, 3))];
++function closed(geometry: number[]): SliceArray[] {
++    return [{points: geometry.concat(geometry.slice(0, 3))}];
+ }
+ 
+ test('clips polygons', () => {
+@@ -60,8 +59,8 @@ test('clips polygons', () => {
+     ], 1, 10, 40, 0, -Infinity, Infinity, {});
+ 
+     const expected = [
+-        {id: null as string, type: 'Polygon', geometry: [[10,0,1,40,0,1,40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1,40,40,1,25,40,0,25,50,0,10,50,1,10,60,1,25,60,0,10,24,1,10,0,1]], tags: {"1": 1}, minX: 10, minY: 0, maxX: 40, maxY: 60},
+-        {id: null as string, type: 'Polygon', geometry: [[10,0,1,40,0,1,40,10,1,10,10,1,10,0,1]], tags: {"2": 2}, minX: 10, minY: 0, maxX: 40, maxY: 10}
++        {id: null as string, type: 'Polygon', geometry: [{points: [10,0,1,40,0,1,40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1,40,40,1,25,40,0,25,50,0,10,50,1,10,60,1,25,60,0,10,24,1,10,0,1]}], tags: {"1": 1}, minX: 10, minY: 0, maxX: 40, maxY: 60},
++        {id: null as string, type: 'Polygon', geometry: [{points: [10,0,1,40,0,1,40,10,1,10,10,1,10,0,1]}], tags: {"2": 2}, minX: 10, minY: 0, maxX: 40, maxY: 10}
+     ];
+ 
+     expect(JSON.stringify(clipped)).toEqual(JSON.stringify(expected));
+diff --git a/src/clip.ts b/src/clip.ts
+index a65d7fb..955472d 100644
+--- a/src/clip.ts
++++ b/src/clip.ts
+@@ -1,6 +1,6 @@
+ 
+-import {createFeature} from './feature';
+-import type { GeoJSONVTInternalFeature, GeoJSONVTInternalLineStringFeature, GeoJSONVTInternalMultiLineStringFeature, GeoJSONVTInternalMultiPointFeature, GeoJSONVTInternalMultiPolygonFeature, GeoJSONVTInternalPointFeature, GeoJSONVTInternalPolygonFeature, GeoJSONVTOptions, StartEndSizeArray } from './definitions';
++import {createFeature, optimizeLineMemory} from './feature';
++import type { GeoJSONVTInternalFeature, GeoJSONVTInternalLineStringFeature, GeoJSONVTInternalMultiLineStringFeature, GeoJSONVTInternalMultiPointFeature, GeoJSONVTInternalMultiPolygonFeature, GeoJSONVTInternalPointFeature, GeoJSONVTInternalPolygonFeature, GeoJSONVTOptions, SliceArray, SliceFixedArray } from './definitions';
+ 
+ export const enum AxisType {
+     X = 0,
+@@ -94,7 +94,7 @@ function clipPointFeature(feature: GeoJSONVTInternalPointFeature | GeoJSONVTInte
+ }
+ 
+ function clipLineStringFeature(feature: GeoJSONVTInternalLineStringFeature, clipped: GeoJSONVTInternalFeature[], start: number, end: number, axis: AxisType, options: GeoJSONVTOptions) {
+-    const geom: StartEndSizeArray[] = [];
++    const geom: SliceArray[] = [];
+ 
+     clipLine(feature.geometry, geom, start, end, axis, false, options.lineMetrics);
+     if (!geom.length) return;
+@@ -115,7 +115,7 @@ function clipLineStringFeature(feature: GeoJSONVTInternalLineStringFeature, clip
+ }
+ 
+ function clipMultiLineStringFeature(feature: GeoJSONVTInternalMultiLineStringFeature, clipped: GeoJSONVTInternalFeature[], start: number, end: number, axis: AxisType) {
+-    const geom: StartEndSizeArray[] = [];
++    const geom: SliceArray[] = [];
+ 
+     clipLines(feature.geometry, geom, start, end, axis, false);
+     if (!geom.length) return;
+@@ -129,7 +129,7 @@ function clipMultiLineStringFeature(feature: GeoJSONVTInternalMultiLineStringFea
+ }
+ 
+ function clipPolygonFeature(feature: GeoJSONVTInternalPolygonFeature, clipped: GeoJSONVTInternalFeature[], start: number, end: number, axis: AxisType) {
+-    const geom: StartEndSizeArray[] = [];
++    const geom: SliceArray[] = [];
+ 
+     clipLines(feature.geometry, geom, start, end, axis, true);
+     if (!geom.length) return;
+@@ -138,10 +138,10 @@ function clipPolygonFeature(feature: GeoJSONVTInternalPolygonFeature, clipped: G
+ }
+ 
+ function clipMultiPolygonFeature(feature: GeoJSONVTInternalMultiPolygonFeature, clipped: GeoJSONVTInternalFeature[], start: number, end: number, axis: AxisType) {
+-    const geom: StartEndSizeArray[][] = [];
++    const geom: SliceArray[][] = [];
+ 
+     for (const polygon of feature.geometry) {
+-        const newPolygon: StartEndSizeArray[] = [];
++        const newPolygon: SliceArray[] = [];
+ 
+         clipLines(polygon, newPolygon, start, end, axis, true);
+         if (!newPolygon.length) continue;
+@@ -163,19 +163,19 @@ function clipPoints(geom: number[], newGeom: number[], start: number, end: numbe
+     }
+ }
+ 
+-function clipLine(geom: StartEndSizeArray, newGeom: StartEndSizeArray[], start: number, end: number, axis: AxisType, isPolygon: boolean, trackMetrics: boolean) {
++function clipLine(geom: SliceFixedArray, newGeom: SliceArray[], start: number, end: number, axis: AxisType, isPolygon: boolean, trackMetrics: boolean) {
+ 
+     let slice = newSlice(geom);
+     const intersect = axis === AxisType.X ? intersectX : intersectY;
+     let len = geom.start;
+     let segLen, t;
+ 
+-    for (let i = 0; i < geom.length - 3; i += 3) {
+-        const ax = geom[i];
+-        const ay = geom[i + 1];
+-        const az = geom[i + 2];
+-        const bx = geom[i + 3];
+-        const by = geom[i + 4];
++    for (let i = 0; i < geom.points.length - 3; i += 3) {
++        const ax = geom.points[i];
++        const ay = geom.points[i + 1];
++        const az = geom.points[i + 2];
++        const bx = geom.points[i + 3];
++        const by = geom.points[i + 4];
+         const a = axis === AxisType.X ? ax : ay;
+         const b = axis === AxisType.X ? bx : by;
+         let exited = false;
+@@ -195,7 +195,7 @@ function clipLine(geom: StartEndSizeArray, newGeom: StartEndSizeArray[], start:
+                 if (trackMetrics) slice.start = len + segLen * t;
+             }
+         } else {
+-            addPoint(slice, ax, ay, az);
++            addPoint(slice.points, ax, ay, az);
+         }
+ 
+         if (b < start && a >= start) {
+@@ -220,34 +220,36 @@ function clipLine(geom: StartEndSizeArray, newGeom: StartEndSizeArray[], start:
+     }
+ 
+     // add the last point
+-    let last = geom.length - 3;
+-    const ax = geom[last];
+-    const ay = geom[last + 1];
+-    const az = geom[last + 2];
++    let last = geom.points.length - 3;
++    const ax = geom.points[last];
++    const ay = geom.points[last + 1];
++    const az = geom.points[last + 2];
+     const a = axis === AxisType.X ? ax : ay;
+-    if (a >= start && a <= end) addPoint(slice, ax, ay, az);
++    if (a >= start && a <= end) addPoint(slice.points, ax, ay, az);
+ 
+     // close the polygon if its endpoints are not the same after clipping
+-    last = slice.length - 3;
+-    if (isPolygon && last >= 3 && (slice[last] !== slice[0] || slice[last + 1] !== slice[1])) {
+-        addPoint(slice, slice[0], slice[1], slice[2]);
++    last = slice.points.length - 3;
++    if (isPolygon && last >= 3 && (slice.points[last] !== slice.points[0] || slice.points[last + 1] !== slice.points[1])) {
++        addPoint(slice.points, slice.points[0], slice.points[1], slice.points[2]);
+     }
+ 
+     // add the final slice
+-    if (slice.length) {
++    if (slice.points.length) {
++        optimizeLineMemory(slice);
+         newGeom.push(slice);
+     }
+ }
+ 
+-function newSlice(line: StartEndSizeArray): StartEndSizeArray {
+-    const slice: StartEndSizeArray = [];
+-    slice.size = line.size;
+-    slice.start = line.start;
+-    slice.end = line.end;
+-    return slice;
++function newSlice(line: SliceFixedArray): SliceArray {
++    return {
++        points: [],
++        size: line.size,
++        start: line.start,
++        end: line.end
++    };
+ }
+ 
+-function clipLines(geom: StartEndSizeArray[], newGeom: StartEndSizeArray[], start: number, end: number, axis: AxisType, isPolygon: boolean) {
++function clipLines(geom: SliceFixedArray[], newGeom: SliceArray[], start: number, end: number, axis: AxisType, isPolygon: boolean) {
+     for (const line of geom) {
+         clipLine(line, newGeom, start, end, axis, isPolygon, false);
+     }
+@@ -257,14 +259,14 @@ function addPoint(out: number[], x: number, y: number, z: number) {
+     out.push(x, y, z);
+ }
+ 
+-function intersectX(out: StartEndSizeArray, ax: number, ay: number, bx: number, by: number, x: number) {
++function intersectX(out: SliceArray, ax: number, ay: number, bx: number, by: number, x: number) {
+     const t = (x - ax) / (bx - ax);
+-    addPoint(out, x, ay + (by - ay) * t, 1);
++    addPoint(out.points, x, ay + (by - ay) * t, 1);
+     return t;
+ }
+ 
+-function intersectY(out: StartEndSizeArray, ax: number, ay: number, bx: number, by: number, y: number) {
++function intersectY(out: SliceArray, ax: number, ay: number, bx: number, by: number, y: number) {
+     const t = (y - ay) / (by - ay);
+-    addPoint(out, ax + (bx - ax) * t, y, 1);
++    addPoint(out.points, ax + (bx - ax) * t, y, 1);
+     return t;
+ }
+diff --git a/src/convert.ts b/src/convert.ts
+index 3ed0c07..108ee88 100644
+--- a/src/convert.ts
++++ b/src/convert.ts
+@@ -1,7 +1,7 @@
+ 
+ import {simplify} from './simplify';
+-import {createFeature} from './feature';
+-import type {GeoJSONVTInternalFeature, GeoJSONVTOptions, StartEndSizeArray} from './definitions';
++import {createFeature, optimizeLineMemory} from './feature';
++import type {GeoJSONVTInternalFeature, GeoJSONVTOptions, SliceArray} from './definitions';
+ 
+ /**
+  * converts GeoJSON to internal source features (an intermediate projected JSON vector format with simplification data)
+@@ -108,7 +108,7 @@ function convertMultiPointFeature(features: GeoJSONVTInternalFeature[], id: numb
+ }
+ 
+ function convertLineStringFeature(features: GeoJSONVTInternalFeature[], id: number | string | undefined, geom: GeoJSON.LineString, tolerance: number, properties: GeoJSON.GeoJsonProperties) {
+-    const out: StartEndSizeArray = [];
++    const out: SliceArray = {points: []};
+     convertLine(geom.coordinates, out, tolerance, false);
+     features.push(createFeature(id, 'LineString', out, properties));
+ }
+@@ -117,34 +117,34 @@ function convertMultiLineStringFeature(features: GeoJSONVTInternalFeature[], id:
+     if (options.lineMetrics) {
+         // explode into linestrings to be able to track metrics
+         for (const line of geom.coordinates) {
+-            const out: StartEndSizeArray = [];
++            const out: SliceArray = {points: []};
+             convertLine(line, out, tolerance, false);
+             features.push(createFeature(id, 'LineString', out, properties));
+         }
+     } else {
+-        const out: StartEndSizeArray[] = [];
++        const out: SliceArray[] = [];
+         convertLines(geom.coordinates, out, tolerance, false);
+         features.push(createFeature(id, 'MultiLineString', out, properties));
+     }
+ }
+ 
+ function convertPolygonFeature(features: GeoJSONVTInternalFeature[], id: number | string | undefined, geom: GeoJSON.Polygon, tolerance: number, properties: GeoJSON.GeoJsonProperties) {
+-    const out: StartEndSizeArray[] = [];
++    const out: SliceArray[] = [];
+     convertLines(geom.coordinates, out, tolerance, true);
+     features.push(createFeature(id, 'Polygon', out, properties));
+ }
+ 
+ function convertMultiPolygonFeature(features: GeoJSONVTInternalFeature[], id: number | string | undefined, geom: GeoJSON.MultiPolygon, tolerance: number, properties: GeoJSON.GeoJsonProperties) {
+-    const out: StartEndSizeArray[][] = [];
++    const out: SliceArray[][] = [];
+     for (const polygon of geom.coordinates) {
+-        const polygonOut: StartEndSizeArray[] = [];
++        const polygonOut: SliceArray[] = [];
+         convertLines(polygon, polygonOut, tolerance, true);
+         out.push(polygonOut);
+     }
+     features.push(createFeature(id, 'MultiPolygon', out, properties));
+ }
+ 
+-function convertLine(ring: GeoJSON.Position[], out: StartEndSizeArray, tolerance: number, isPolygon: boolean) {
++function convertLine(ring: GeoJSON.Position[], out: SliceArray, tolerance: number, isPolygon: boolean) {
+     let x0, y0;
+     let size = 0;
+ 
+@@ -152,7 +152,7 @@ function convertLine(ring: GeoJSON.Position[], out: StartEndSizeArray, tolerance
+         const x = projectX(ring[j][0]);
+         const y = projectY(ring[j][1]);
+ 
+-        out.push(x, y, 0);
++        out.points.push(x, y, 0);
+ 
+         if (j > 0) {
+             if (isPolygon) {
+@@ -165,19 +165,20 @@ function convertLine(ring: GeoJSON.Position[], out: StartEndSizeArray, tolerance
+         y0 = y;
+     }
+ 
+-    const last = out.length - 3;
+-    out[2] = 1;
+-    if (tolerance > 0) simplify(out, 0, last, tolerance);
+-    out[last + 2] = 1;
++    const last = out.points.length - 3;
++    out.points[2] = 1;
++    if (tolerance > 0) simplify(out.points, 0, last, tolerance);
++    out.points[last + 2] = 1;
+ 
++    optimizeLineMemory(out);
+     out.size = Math.abs(size);
+     out.start = 0;
+     out.end = out.size;
+ }
+ 
+-function convertLines(rings: GeoJSON.Position[][], out: StartEndSizeArray[], tolerance: number, isPolygon: boolean) {
++function convertLines(rings: GeoJSON.Position[][], out: SliceArray[], tolerance: number, isPolygon: boolean) {
+     for (let i = 0; i < rings.length; i++) {
+-        const geom: StartEndSizeArray = [];
++        const geom: SliceArray = {points: []};
+         convertLine(rings[i], geom, tolerance, isPolygon);
+         out.push(geom);
+     }
+diff --git a/src/deconvert.test.ts b/src/deconvert.test.ts
+index 8f51728..4369fa8 100644
+--- a/src/deconvert.test.ts
++++ b/src/deconvert.test.ts
+@@ -61,7 +61,7 @@ test('featureToGeoJSON: converts LineString geometry', () => {
+     const feature: GeoJSONVTInternalFeature = {
+         type: 'LineString',
+         id: 'line1',
+-        geometry: [0.5, 0.5, 0, 0.525, 0.5, 0, 0.525, 0.525, 0],
++        geometry: {points: [0.5, 0.5, 0, 0.525, 0.5, 0, 0.525, 0.525, 0]},
+         tags: {highway: 'primary'},
+         minX: 0.5, minY: 0.5, maxX: 0.525, maxY: 0.525
+     };
+@@ -77,8 +77,8 @@ test('featureToGeoJSON: converts MultiLineString geometry', () => {
+         type: 'MultiLineString',
+         id: 'multiline1',
+         geometry: [
+-            [0.5, 0.5, 0, 0.525, 0.5, 0],
+-            [0.55, 0.55, 0, 0.575, 0.55, 0]
++            {points: [0.5, 0.5, 0, 0.525, 0.5, 0]},
++            {points: [0.55, 0.55, 0, 0.575, 0.55, 0]}
+         ],
+         tags: {},
+         minX: 0.5, minY: 0.5, maxX: 0.575, maxY: 0.55
+@@ -95,8 +95,8 @@ test('featureToGeoJSON: converts Polygon geometry', () => {
+         type: 'Polygon',
+         id: 'polygon1',
+         geometry: [
+-            [0.5, 0.5, 0, 0.6, 0.5, 0, 0.6, 0.6, 0, 0.5, 0.6, 0, 0.5, 0.5, 0],
+-            [0.52, 0.52, 0, 0.58, 0.52, 0, 0.58, 0.58, 0, 0.52, 0.58, 0, 0.52, 0.52, 0]
++            {points: [0.5, 0.5, 0, 0.6, 0.5, 0, 0.6, 0.6, 0, 0.5, 0.6, 0, 0.5, 0.5, 0]},
++            {points: [0.52, 0.52, 0, 0.58, 0.52, 0, 0.58, 0.58, 0, 0.52, 0.58, 0, 0.52, 0.52, 0]}
+         ],
+         tags: {landuse: 'residential'},
+         minX: 0.5, minY: 0.5, maxX: 0.6, maxY: 0.6
+@@ -113,8 +113,8 @@ test('featureToGeoJSON: converts MultiPolygon geometry', () => {
+         type: 'MultiPolygon',
+         id: 'multipolygon1',
+         geometry: [
+-            [[0.5, 0.5, 0, 0.52, 0.5, 0, 0.52, 0.52, 0, 0.5, 0.52, 0, 0.5, 0.5, 0]],
+-            [[0.55, 0.55, 0, 0.57, 0.55, 0, 0.57, 0.57, 0, 0.55, 0.57, 0, 0.55, 0.55, 0]]
++            [{points: [0.5, 0.5, 0, 0.52, 0.5, 0, 0.52, 0.52, 0, 0.5, 0.52, 0, 0.5, 0.5, 0]}],
++            [{points: [0.55, 0.55, 0, 0.57, 0.55, 0, 0.57, 0.57, 0, 0.55, 0.57, 0, 0.55, 0.55, 0]}]
+         ],
+         tags: {},
+         minX: 0.5, minY: 0.5, maxX: 0.57, maxY: 0.57
+diff --git a/src/deconvert.ts b/src/deconvert.ts
+index 7f833be..5f8284e 100644
+--- a/src/deconvert.ts
++++ b/src/deconvert.ts
+@@ -41,28 +41,32 @@ function geometryToGeoJSON(feature: GeoJSONVTInternalFeature): GeoJSON.Geometry
+                 coordinates: unprojectPoint(geometry[0], geometry[1])
+             };
+         case 'MultiPoint':
+-        case 'LineString':
+             return {
+                 type: type,
+                 coordinates: unprojectPoints(geometry)
+             };
++        case 'LineString':
++            return {
++                type: type,
++                coordinates: unprojectPoints(geometry.points)
++            };
+         case 'MultiLineString':
+         case 'Polygon':
+             return {
+                 type: type,
+-                coordinates: geometry.map(ring => unprojectPoints(ring))
++                coordinates: geometry.map(ring => unprojectPoints(ring.points))
+             };
+         case 'MultiPolygon':
+             return {
+                 type: type,
+                 coordinates: geometry.map(polygon =>
+-                    polygon.map(ring => unprojectPoints(ring))
++                    polygon.map(ring => unprojectPoints(ring.points))
+                 )
+             };
+     }
+ }
+ 
+-export function unprojectPoints(coords: number[]): GeoJSON.Position[] {
++export function unprojectPoints(coords: number[] | Float64Array): GeoJSON.Position[] {
+     const result: GeoJSON.Position[] = [];
+ 
+     for (let i = 0; i < coords.length; i += 3) {
+diff --git a/src/definitions.ts b/src/definitions.ts
+index 978930e..229c501 100644
+--- a/src/definitions.ts
++++ b/src/definitions.ts
+@@ -78,7 +78,9 @@ export type GeoJSONToTileOptions = GeoJSONVTOptions & {
+     clip?: boolean;
+ };
+ 
+-export type StartEndSizeArray = number[] & { start?: number; end?: number; size?: number };
++export type SliceArray = { points: number[]; start?: number; end?: number; size?: number };
++
++export type SliceFixedArray = { points: number[] | Float64Array; start?: number; end?: number; size?: number };
+ 
+ export type PartialGeoJSONVTFeature = {
+     id?: number | string | undefined;
+@@ -101,22 +103,22 @@ export type GeoJSONVTInternalMultiPointFeature = PartialGeoJSONVTFeature & {
+ 
+ export type GeoJSONVTInternalLineStringFeature = PartialGeoJSONVTFeature & {
+     type: 'LineString';
+-    geometry: StartEndSizeArray;
++    geometry: SliceFixedArray;
+ };
+ 
+ export type GeoJSONVTInternalMultiLineStringFeature = PartialGeoJSONVTFeature & {
+     type: 'MultiLineString';
+-    geometry: StartEndSizeArray[];
++    geometry: SliceFixedArray[];
+ };
+ 
+ export type GeoJSONVTInternalPolygonFeature = PartialGeoJSONVTFeature & {
+     type: 'Polygon';
+-    geometry: StartEndSizeArray[];
++    geometry: SliceFixedArray[];
+ };
+ 
+ export type GeoJSONVTInternalMultiPolygonFeature = PartialGeoJSONVTFeature & {
+     type: 'MultiPolygon';
+-    geometry: StartEndSizeArray[][];
++    geometry: SliceFixedArray[][];
+ };
+ 
+ export type GeoJSONVTInternalFeature =
+diff --git a/src/difference.test.ts b/src/difference.test.ts
+index 1cc71be..44e4987 100644
+--- a/src/difference.test.ts
++++ b/src/difference.test.ts
+@@ -137,8 +137,8 @@ test('applySourceDiff: updates a feature geometry', () => {
+ 
+     expect(source.length).toBe(1);
+     expect(source[0].id).toBe('point');
+-    expect(source[0].geometry[0]).toBe(0.5027777777777778);
+-    expect(source[0].geometry[1]).toBe(0.5);
++    expect((source[0].geometry as number[])[0]).toBe(0.5027777777777778);
++    expect((source[0].geometry as number[])[1]).toBe(0.5);
+ });
+ 
+ test('applySourceDiff: adds properties', () => {
+diff --git a/src/feature.ts b/src/feature.ts
+index 4543c3d..831e0da 100644
+--- a/src/feature.ts
++++ b/src/feature.ts
+@@ -1,4 +1,4 @@
+-import type { GeoJSONVTInternalFeature, GeoJSONVTInternalLineStringFeature, GeoJSONVTInternalMultiLineStringFeature, GeoJSONVTInternalMultiPointFeature, GeoJSONVTInternalMultiPolygonFeature, GeoJSONVTInternalPointFeature, GeoJSONVTInternalPolygonFeature } from "./definitions";
++import type { GeoJSONVTInternalFeature, GeoJSONVTInternalLineStringFeature, GeoJSONVTInternalMultiLineStringFeature, GeoJSONVTInternalMultiPointFeature, GeoJSONVTInternalMultiPolygonFeature, GeoJSONVTInternalPointFeature, GeoJSONVTInternalPolygonFeature, SliceArray, SliceFixedArray } from "./definitions";
+ 
+ type FeatureTypeMap = {
+     Point: GeoJSONVTInternalPointFeature["geometry"];
+@@ -35,25 +35,28 @@ export function createFeature<T extends GeoJSONVTInternalFeature["type"]>(id: nu
+     switch (data.type) {
+         case 'Point':
+         case 'MultiPoint':
+-        case 'LineString':
+             calcLineBBox(feature, data.geom);
+             break;
+ 
++        case 'LineString':
++            calcLineBBox(feature, data.geom.points);
++            break;
++
+         case 'Polygon':
+             // the outer ring (ie [0]) contains all inner rings
+-            calcLineBBox(feature, data.geom[0]);
++            calcLineBBox(feature, data.geom[0].points);
+             break;
+ 
+         case 'MultiLineString':
+             for (const line of data.geom) {
+-                calcLineBBox(feature, line);
++                calcLineBBox(feature, line.points);
+             }
+             break;
+ 
+         case 'MultiPolygon':
+             for (const polygon of data.geom) {
+                 // the outer ring (ie [0]) contains all inner rings
+-                calcLineBBox(feature, polygon[0]);
++                calcLineBBox(feature, polygon[0].points);
+             }
+             break;
+     }
+@@ -61,7 +64,14 @@ export function createFeature<T extends GeoJSONVTInternalFeature["type"]>(id: nu
+     return feature;
+ }
+ 
+-function calcLineBBox(feature: GeoJSONVTInternalFeature, geom: number[]) {
++export function optimizeLineMemory(line: SliceArray) {
++    const lineImmutable = line as SliceFixedArray;
++    if (line.points.length > 64) {
++        lineImmutable.points = new Float64Array(line.points);
++    }
++}
++
++function calcLineBBox(feature: GeoJSONVTInternalFeature, geom: number[] | Float64Array) {
+     for (let i = 0; i < geom.length; i += 3) {
+         feature.minX = Math.min(feature.minX, geom[i]);
+         feature.minY = Math.min(feature.minY, geom[i + 1]);
+diff --git a/src/index.ts b/src/index.ts
+index f0d645f..0982613 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -1,6 +1,6 @@
+ 
+ import type {GeoJSONVTFeatureDiff, GeoJSONVTSourceDiff} from './difference';
+-import type {GeoJSONVTInternalFeature, GeoJSONVTInternalLineStringFeature, GeoJSONVTInternalMultiLineStringFeature, GeoJSONVTInternalMultiPointFeature, GeoJSONVTInternalMultiPolygonFeature, GeoJSONVTInternalPointFeature, GeoJSONVTInternalPolygonFeature, GeoJSONVTOptions, GeoJSONToTileOptions, PartialGeoJSONVTFeature, StartEndSizeArray, ClusterProperties, ClusterFeature, ClusterOrPointFeature, GeoJSONVTTile, GeoJSONVTFeature, GeoJSONVTFeaturePoint, GeoJSONVTFeatureNonPoint, GeoJSONVTInternalTileFeaturePoint, GeoJSONVTInternalTileFeatureNonPoint, GeoJSONVTInternalTile, GeoJSONVTInternalTileFeature, GeoJSONVTTileIndex, SuperclusterOptions} from './definitions';
++import type {GeoJSONVTInternalFeature, GeoJSONVTInternalLineStringFeature, GeoJSONVTInternalMultiLineStringFeature, GeoJSONVTInternalMultiPointFeature, GeoJSONVTInternalMultiPolygonFeature, GeoJSONVTInternalPointFeature, GeoJSONVTInternalPolygonFeature, GeoJSONVTOptions, GeoJSONToTileOptions, PartialGeoJSONVTFeature, SliceArray, SliceFixedArray, ClusterProperties, ClusterFeature, ClusterOrPointFeature, GeoJSONVTTile, GeoJSONVTFeature, GeoJSONVTFeaturePoint, GeoJSONVTFeatureNonPoint, GeoJSONVTInternalTileFeaturePoint, GeoJSONVTInternalTileFeatureNonPoint, GeoJSONVTInternalTile, GeoJSONVTInternalTileFeature, GeoJSONVTTileIndex, SuperclusterOptions} from './definitions';
+ import type {KDBushWithData} from './cluster-tile-index';
+ import {GeoJSONVT} from './geojsonvt';
+ import {ClusterTileIndex} from './cluster-tile-index';
+@@ -22,7 +22,8 @@ export type {
+     GeoJSONVTInternalTile, 
+     GeoJSONVTInternalTileFeature, 
+     PartialGeoJSONVTFeature,
+-    StartEndSizeArray,
++    SliceArray,
++    SliceFixedArray,
+     GeoJSONVTTile,
+     GeoJSONVTFeature,
+     GeoJSONVTSourceDiff,
+diff --git a/src/tile.ts b/src/tile.ts
+index 536547a..253e274 100644
+--- a/src/tile.ts
++++ b/src/tile.ts
+@@ -1,4 +1,4 @@
+-import type { GeoJSONVTInternalFeature, GeoJSONVTInternalLineStringFeature, GeoJSONVTInternalMultiLineStringFeature, GeoJSONVTInternalMultiPointFeature, GeoJSONVTInternalMultiPolygonFeature, GeoJSONVTInternalPointFeature, GeoJSONVTInternalPolygonFeature, GeoJSONVTInternalTile, GeoJSONVTInternalTileFeature, GeoJSONVTOptions, StartEndSizeArray } from "./definitions";
++import type { GeoJSONVTInternalFeature, GeoJSONVTInternalLineStringFeature, GeoJSONVTInternalMultiLineStringFeature, GeoJSONVTInternalMultiPointFeature, GeoJSONVTInternalMultiPolygonFeature, GeoJSONVTInternalPointFeature, GeoJSONVTInternalPolygonFeature, GeoJSONVTInternalTile, GeoJSONVTInternalTileFeature, GeoJSONVTOptions, SliceFixedArray } from "./definitions";
+ 
+ export const GEOJSONVT_CLIP_START = 'geojsonvt_clip_start';
+ export const GEOJSONVT_CLIP_END = 'geojsonvt_clip_end';
+@@ -140,20 +140,20 @@ function addMultiPolygonTileFeature(tile: GeoJSONVTInternalTile, feature: GeoJSO
+     tile.features.push(tileFeature);
+ }
+ 
+-function addLine(result: number[][], geom: StartEndSizeArray, tile: GeoJSONVTInternalTile, tolerance: number, isPolygon: boolean, isOuter: boolean) {
++function addLine(result: number[][], geom: SliceFixedArray, tile: GeoJSONVTInternalTile, tolerance: number, isPolygon: boolean, isOuter: boolean) {
+     const sqTolerance = tolerance * tolerance;
+ 
+     if (tolerance > 0 && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
+-        tile.numPoints += geom.length / 3;
++        tile.numPoints += geom.points.length / 3;
+         return;
+     }
+ 
+     const ring = [];
+ 
+-    for (let i = 0; i < geom.length; i += 3) {
+-        if (tolerance === 0 || geom[i + 2] > sqTolerance) {
++    for (let i = 0; i < geom.points.length; i += 3) {
++        if (tolerance === 0 || geom.points[i + 2] > sqTolerance) {
+             tile.numSimplified++;
+-            ring.push(geom[i], geom[i + 1]);
++            ring.push(geom.points[i], geom.points[i + 1]);
+         }
+         tile.numPoints++;
+     }
+diff --git a/src/wrap.ts b/src/wrap.ts
+index b9e8119..fbd2d92 100644
+--- a/src/wrap.ts
++++ b/src/wrap.ts
+@@ -1,7 +1,7 @@
+ 
+ import {AxisType, clip} from './clip';
+-import type { GeoJSONVTInternalFeature, GeoJSONVTOptions, StartEndSizeArray } from './definitions';
+-import {createFeature} from './feature';
++import type { GeoJSONVTInternalFeature, GeoJSONVTOptions, SliceArray, SliceFixedArray } from './definitions';
++import {createFeature, optimizeLineMemory} from './feature';
+ 
+ export function wrap(features: GeoJSONVTInternalFeature[], options: GeoJSONVTOptions): GeoJSONVTInternalFeature[] {
+     const buffer = options.buffer / options.extent;
+@@ -26,9 +26,15 @@ function shiftFeatureCoords(features: GeoJSONVTInternalFeature[], offset: number
+     for (const feature of features) {
+         switch (feature.type) {
+             case 'Point':
+-            case 'MultiPoint':
++            case 'MultiPoint': {
++                const newGeometry = shiftPointCoords(feature.geometry, offset);
++
++                newFeatures.push(createFeature(feature.id, feature.type, newGeometry, feature.tags));
++                continue;
++            }
++
+             case 'LineString': {
+-                const newGeometry = shiftCoords(feature.geometry, offset);
++                const newGeometry = shiftLineCoords(feature.geometry, offset);
+ 
+                 newFeatures.push(createFeature(feature.id, feature.type, newGeometry, feature.tags));
+                 continue;
+@@ -36,9 +42,9 @@ function shiftFeatureCoords(features: GeoJSONVTInternalFeature[], offset: number
+ 
+             case 'MultiLineString':
+             case 'Polygon': {
+-                const newGeometry = [];
++                const newGeometry: SliceFixedArray[] = [];
+                 for (const line of feature.geometry) {
+-                    newGeometry.push(shiftCoords(line, offset));
++                    newGeometry.push(shiftLineCoords(line, offset));
+                 }
+ 
+                 newFeatures.push(createFeature(feature.id, feature.type, newGeometry, feature.tags));
+@@ -46,11 +52,11 @@ function shiftFeatureCoords(features: GeoJSONVTInternalFeature[], offset: number
+             }
+ 
+             case 'MultiPolygon': {
+-                const newGeometry = [];
++                const newGeometry: SliceFixedArray[][] = [];
+                 for (const polygon of feature.geometry) {
+-                    const newPolygon = [];
++                    const newPolygon: SliceFixedArray[] = [];
+                     for (const line of polygon) {
+-                        newPolygon.push(shiftCoords(line, offset));
++                        newPolygon.push(shiftLineCoords(line, offset));
+                     }
+                     newGeometry.push(newPolygon);
+                 }
+@@ -64,18 +70,32 @@ function shiftFeatureCoords(features: GeoJSONVTInternalFeature[], offset: number
+     return newFeatures;
+ }
+ 
+-function shiftCoords(points: StartEndSizeArray, offset: number): number[] | StartEndSizeArray {
+-    const newPoints: StartEndSizeArray = [];
+-    newPoints.size = points.size;
++function shiftPointCoords(coords: number[], offset: number): number[] {
++    const newCoords: number[] = [];
+ 
+-    if (points.start !== undefined) {
+-        newPoints.start = points.start;
+-        newPoints.end = points.end;
++    for (let i = 0; i < coords.length; i += 3) {
++        newCoords.push(coords[i] + offset, coords[i + 1], coords[i + 2]);
+     }
+ 
+-    for (let i = 0; i < points.length; i += 3) {
+-        newPoints.push(points[i] + offset, points[i + 1], points[i + 2]);
++    return newCoords;
++}
++
++function shiftLineCoords(line: SliceArray | SliceFixedArray, offset: number): SliceFixedArray {
++    const newLine: SliceArray = {
++        points: [],
++        size: line.size
++    };
++
++    if (line.start !== undefined) {
++        newLine.start = line.start;
++        newLine.end = line.end;
+     }
+ 
+-    return newPoints;
++    for (let i = 0; i < line.points.length; i += 3) {
++        newLine.points.push(line.points[i] + offset, line.points[i + 1], line.points[i + 2]);
++    }
++
++    optimizeLineMemory(newLine);
++
++    return newLine;
+ }

@@ -12,19 +12,19 @@ const geom2 = [0,0,0,50,0,0,50,10,0,0,10,0];
 test('clips polylines', () => {
 
     const clipped = clip([
-        {geometry: geom1, type: 'LineString', tags: 1, minX: 0, minY: 0, maxX: 50, maxY: 60},
-        {geometry: geom2, type: 'LineString', tags: 2, minX: 0, minY: 0, maxX: 50, maxY: 10}
+        {geometry: {points: geom1}, type: 'LineString', tags: 1, minX: 0, minY: 0, maxX: 50, maxY: 60},
+        {geometry: {points: geom2}, type: 'LineString', tags: 2, minX: 0, minY: 0, maxX: 50, maxY: 10}
     ], 1, 10, 40, 0, -Infinity, Infinity, {});
 
     const expected = [
         {id: null, type: 'MultiLineString', geometry: [
-            [10,0,1,40,0,1],
-            [40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1],
-            [40,40,1,25,40,0,25,50,0,10,50,1],
-            [10,60,1,25,60,0]], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
+            {points: [10,0,1,40,0,1]},
+            {points: [40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1]},
+            {points: [40,40,1,25,40,0,25,50,0,10,50,1]},
+            {points: [10,60,1,25,60,0]}], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
         {id: null, type: 'MultiLineString', geometry: [
-            [10,0,1,40,0,1],
-            [40,10,1,10,10,1]], tags: 2, minX: 10, minY: 0, maxX: 40, maxY: 10}
+            {points: [10,0,1,40,0,1]},
+            {points: [40,10,1,10,10,1]}], tags: 2, minX: 10, minY: 0, maxX: 40, maxY: 10}
     ];
 
     assert.equal(JSON.stringify(clipped), JSON.stringify(expected));
@@ -32,15 +32,14 @@ test('clips polylines', () => {
 
 test('clips lines with line metrics on', () => {
 
-    const geom = geom1.slice();
-    geom.size = 0;
-    for (let i = 0; i < geom.length - 3; i += 3) {
-        const dx = geom[i + 3] - geom[i];
-        const dy = geom[i + 4] - geom[i + 1];
-        geom.size += Math.sqrt(dx * dx + dy * dy);
+    const points = geom1.slice();
+    let size = 0;
+    for (let i = 0; i < points.length - 3; i += 3) {
+        const dx = points[i + 3] - points[i];
+        const dy = points[i + 4] - points[i + 1];
+        size += Math.sqrt(dx * dx + dy * dy);
     }
-    geom.start = 0;
-    geom.end = geom.size;
+    const geom = {points, size, start: 0, end: size};
 
     const clipped = clip([{geometry: geom, type: 'LineString', minX: 0, minY: 0, maxX: 50, maxY: 60}],
         1, 10, 40, 0, -Infinity, Infinity, {lineMetrics: true});
@@ -52,7 +51,7 @@ test('clips lines with line metrics on', () => {
 });
 
 function closed(geometry) {
-    return [geometry.concat(geometry.slice(0, 3))];
+    return [{points: geometry.concat(geometry.slice(0, 3))}];
 }
 
 test('clips polygons', () => {
@@ -63,8 +62,8 @@ test('clips polygons', () => {
     ], 1, 10, 40, 0, -Infinity, Infinity, {});
 
     const expected = [
-        {id: null, type: 'Polygon', geometry: [[10,0,1,40,0,1,40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1,40,40,1,25,40,0,25,50,0,10,50,1,10,60,1,25,60,0,10,24,1,10,0,1]], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
-        {id: null, type: 'Polygon', geometry: [[10,0,1,40,0,1,40,10,1,10,10,1,10,0,1]], tags: 2,  minX: 10, minY: 0, maxX: 40, maxY: 10}
+        {id: null, type: 'Polygon', geometry: [{points: [10,0,1,40,0,1,40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1,40,40,1,25,40,0,25,50,0,10,50,1,10,60,1,25,60,0,10,24,1,10,0,1]}], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
+        {id: null, type: 'Polygon', geometry: [{points: [10,0,1,40,0,1,40,10,1,10,10,1,10,0,1]}], tags: 2,  minX: 10, minY: 0, maxX: 40, maxY: 10}
     ];
 
     assert.equal(JSON.stringify(clipped), JSON.stringify(expected));

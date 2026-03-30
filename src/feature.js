@@ -11,26 +11,35 @@ export default function createFeature(id, type, geom, tags) {
         maxY: -Infinity
     };
 
-    if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
+    if (type === 'Point' || type === 'MultiPoint') {
         calcLineBBox(feature, geom);
+
+    } else if (type === 'LineString') {
+        calcLineBBox(feature, geom.points);
 
     } else if (type === 'Polygon') {
         // the outer ring (ie [0]) contains all inner rings
-        calcLineBBox(feature, geom[0]);
+        calcLineBBox(feature, geom[0].points);
 
     } else if (type === 'MultiLineString') {
         for (const line of geom) {
-            calcLineBBox(feature, line);
+            calcLineBBox(feature, line.points);
         }
 
     } else if (type === 'MultiPolygon') {
         for (const polygon of geom) {
             // the outer ring (ie [0]) contains all inner rings
-            calcLineBBox(feature, polygon[0]);
+            calcLineBBox(feature, polygon[0].points);
         }
     }
 
     return feature;
+}
+
+export function optimizeLineMemory(line) {
+    if (line.points.length > 64) {
+        line.points = new Float64Array(line.points);
+    }
 }
 
 function calcLineBBox(feature, geom) {

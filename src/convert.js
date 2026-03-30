@@ -1,6 +1,6 @@
 
 import simplify from './simplify.js';
-import createFeature from './feature.js';
+import createFeature, {optimizeLineMemory} from './feature.js';
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
@@ -46,13 +46,14 @@ function convertFeature(features, geojson, options, index) {
         }
 
     } else if (type === 'LineString') {
+        geometry = {points: []};
         convertLine(coords, geometry, tolerance, false);
 
     } else if (type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into linestrings to be able to track metrics
             for (const line of coords) {
-                geometry = [];
+                geometry = {points: []};
                 convertLine(line, geometry, tolerance, false);
                 features.push(createFeature(id, 'LineString', geometry, geojson.properties));
             }
@@ -97,7 +98,7 @@ function convertLine(ring, out, tolerance, isPolygon) {
         const x = projectX(ring[j][0]);
         const y = projectY(ring[j][1]);
 
-        out.push(x, y, 0);
+        out.points.push(x, y, 0);
 
         if (j > 0) {
             if (isPolygon) {
@@ -110,11 +111,12 @@ function convertLine(ring, out, tolerance, isPolygon) {
         y0 = y;
     }
 
-    const last = out.length - 3;
-    out[2] = 1;
-    simplify(out, 0, last, tolerance);
-    out[last + 2] = 1;
+    const last = out.points.length - 3;
+    out.points[2] = 1;
+    if (tolerance > 0) simplify(out.points, 0, last, tolerance);
+    out.points[last + 2] = 1;
 
+    optimizeLineMemory(out);
     out.size = Math.abs(size);
     out.start = 0;
     out.end = out.size;
@@ -122,7 +124,7 @@ function convertLine(ring, out, tolerance, isPolygon) {
 
 function convertLines(rings, out, tolerance, isPolygon) {
     for (let i = 0; i < rings.length; i++) {
-        const geom = [];
+        const geom = {points: []};
         convertLine(rings[i], geom, tolerance, isPolygon);
         out.push(geom);
     }

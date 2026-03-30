@@ -86,16 +86,16 @@ function addLine(result, geom, tile, tolerance, isPolygon, isOuter) {
     const sqTolerance = tolerance * tolerance;
 
     if (tolerance > 0 && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
-        tile.numPoints += geom.length / 3;
+        tile.numPoints += geom.points.length / 3;
         return;
     }
 
     const ring = [];
 
-    for (let i = 0; i < geom.length; i += 3) {
-        if (tolerance === 0 || geom[i + 2] > sqTolerance) {
+    for (let i = 0; i < geom.points.length; i += 3) {
+        if (tolerance === 0 || geom.points[i + 2] > sqTolerance) {
             tile.numSimplified++;
-            ring.push(geom[i], geom[i + 1]);
+            ring.push(geom.points[i], geom.points[i + 1]);
         }
         tile.numPoints++;
     }

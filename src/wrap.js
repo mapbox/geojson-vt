@@ -1,6 +1,6 @@
 
 import clip from './clip.js';
-import createFeature from './feature.js';
+import createFeature, {optimizeLineMemory} from './feature.js';
 
 export default function wrap(features, options) {
     const buffer = options.buffer / options.extent;
@@ -21,26 +21,28 @@ export default function wrap(features, options) {
 function shiftFeatureCoords(features, offset) {
     const newFeatures = [];
 
-    for (let i = 0; i < features.length; i++) {
-        const feature = features[i];
+    for (const feature of features) {
         const type = feature.type;
 
         let newGeometry;
 
-        if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
-            newGeometry = shiftCoords(feature.geometry, offset);
+        if (type === 'Point' || type === 'MultiPoint') {
+            newGeometry = shiftPointCoords(feature.geometry, offset);
+
+        } else if (type === 'LineString') {
+            newGeometry = shiftLineCoords(feature.geometry, offset);
 
         } else if (type === 'MultiLineString' || type === 'Polygon') {
             newGeometry = [];
             for (const line of feature.geometry) {
-                newGeometry.push(shiftCoords(line, offset));
+                newGeometry.push(shiftLineCoords(line, offset));
             }
         } else if (type === 'MultiPolygon') {
             newGeometry = [];
             for (const polygon of feature.geometry) {
                 const newPolygon = [];
                 for (const line of polygon) {
-                    newPolygon.push(shiftCoords(line, offset));
+                    newPolygon.push(shiftLineCoords(line, offset));
                 }
                 newGeometry.push(newPolygon);
             }
@@ -52,17 +54,32 @@ function shiftFeatureCoords(features, offset) {
     return newFeatures;
 }
 
-function shiftCoords(points, offset) {
-    const newPoints = [];
-    newPoints.size = points.size;
+function shiftPointCoords(coords, offset) {
+    const newCoords = [];
 
-    if (points.start !== undefined) {
-        newPoints.start = points.start;
-        newPoints.end = points.end;
+    for (let i = 0; i < coords.length; i += 3) {
+        newCoords.push(coords[i] + offset, coords[i + 1], coords[i + 2]);
     }
 
-    for (let i = 0; i < points.length; i += 3) {
-        newPoints.push(points[i] + offset, points[i + 1], points[i + 2]);
+    return newCoords;
+}
+
+function shiftLineCoords(line, offset) {
+    const newLine = {
+        points: [],
+        size: line.size
+    };
+
+    if (line.start !== undefined) {
+        newLine.start = line.start;
+        newLine.end = line.end;
     }
-    return newPoints;
+
+    for (let i = 0; i < line.points.length; i += 3) {
+        newLine.points.push(line.points[i] + offset, line.points[i + 1], line.points[i + 2]);
+    }
+
+    optimizeLineMemory(newLine);
+
+    return newLine;
 }
