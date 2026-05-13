@@ -77,6 +77,59 @@ test('getTile: polygon clipping on the boundary', () => {
     }]);
 });
 
+test('getTile: polygon with vertex exactly on tile boundary (#118)', () => {
+    const index = geojsonvt({
+        type: 'Polygon',
+        coordinates: [[[-90, -90], [0, -90], [90, -90], [0, 0], [-90, -90]]]
+    }, {indexMaxZoom: 0, maxZoom: 24, tolerance: 1.5, extent: 4096, buffer: 0});
+
+    assert.deepEqual(index.getTile(1, 1, 1).features, [{
+        geometry: [[[0, 4096], [0, 0], [0, 0], [2048, 4096], [0, 4096]]],
+        type: 3,
+        tags: null
+    }]);
+});
+
+test('getTile: polygon with collinear vertex on tile boundary (#161)', () => {
+    const index = geojsonvt({
+        type: 'Polygon',
+        coordinates: [[
+            [20, 34.365234375],
+            [80, 4.34326171875],
+            [45, 4.34326171875],
+            [20, 4.34326171875],
+            [20, 34.365234375]
+        ]]
+    }, {buffer: 0, maxZoom: 5});
+
+    const tile = index.getTile(3, 4, 3);
+    assert.deepEqual(tile.features, [{
+        geometry: [[[1820, 762], [4096, 1986], [4096, 3700], [1820, 3700], [1820, 762]]],
+        type: 3,
+        tags: null
+    }]);
+});
+
+test('getTile: line metrics with vertex on tile border (geojson-vt-cpp#92)', () => {
+    const index = geojsonvt({
+        type: 'Feature',
+        geometry: {
+            type: 'LineString',
+            coordinates: [
+                [-77.031373697916663, 38.895516493055553],
+                [-77.01416015625, 38.887532552083336],
+                [-76.99, 38.87]
+            ]
+        }
+    }, {lineMetrics: true, buffer: 2048, extent: 8192, maxZoom: 14});
+
+    const tile = index.getTile(13, 2344, 3134);
+    assert.equal(tile.features.length, 1);
+    assert.deepEqual(tile.features[0].geometry, [[[-2048, 2747], [408, 5037]]]);
+    assert.ok(Math.abs(tile.features[0].tags.mapbox_clip_start - 0.660622) < 1e-5);
+    assert.equal(tile.features[0].tags.mapbox_clip_end, 1);
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
 }
