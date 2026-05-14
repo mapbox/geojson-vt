@@ -2,9 +2,11 @@
     "compilerOptions": {
         "strict": true,
         "noEmit": true,
+        "allowJs": true,
+        "checkJs": true,
         "target": "es2020",
         "module": "nodenext",
         "moduleResolution": "nodenext"
     },
-    "files": ["src/index.d.ts", "src/featureset.d.ts"]
+    "include": ["src/**/*.js", "src/**/*.d.ts"]
 }

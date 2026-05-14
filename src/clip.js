@@ -51,6 +51,12 @@ class Clipper {
         if (lo >= this.k1 && hi < this.k2) return this.inSet;   // whole-set trivial accept (shared reference)
         if (hi < this.k1 || lo >= this.k2) return null;          // whole-set trivial reject
 
+        // Fast path (plan §6 step 8 mitigation b): pre-scan feature bboxes. If no feature
+        // straddles the clip line, every survivor is a trivial-accept and we can build a
+        // filtered view that shares coords/rings/ringSizes/ringClips with inSet — no copy.
+        const view = this.tryFilteredView();
+        if (view !== undefined) return view;
+
         for (let i = 0; i < this.inSet.numFeatures; i++) this.clipFeature(i);
 
         const set = this.set;
@@ -60,6 +66,77 @@ class Clipper {
         if (this.ringSizes !== null) set.ringSizes = this.ringSizes;
         if (this.ringClips !== null) set.ringClips = this.ringClips;
         return set;
+    }
+
+    /**
+     * Returns a filtered-view FeatureSet (sharing coords/rings/ringSizes/ringClips with inSet)
+     * if no feature would need clipping; null if no feature survives; undefined if at least one
+     * feature straddles the clip and the caller must take the full per-feature clip path.
+     *
+     * The filtered view's ringOffsets points back into the shared `rings` array, so trailing
+     * sentinels for `rings` etc. remain inSet's original totals (not numFeatures-derived). This
+     * is safe because downstream consumers (createTile, this Clipper called again) only access
+     * ringSizes/ringClips/rings by ringOffsets-derived indices — they never use `.length` for
+     * iteration sizing on a view.
+     *
+     * @returns {FeatureSet | null | undefined}
+     */
+    tryFilteredView() {
+        const inSet = this.inSet;
+        const axis = this.axis, k1 = this.k1, k2 = this.k2;
+        const n = inSet.numFeatures;
+
+        /** @type {number[]} */
+        const kept = [];
+        for (let i = 0; i < n; i++) {
+            const bb = i * 4;
+            const fMin = inSet.bboxes[bb + axis];
+            const fMax = inSet.bboxes[bb + axis + 2];
+            if (fMax < k1 || fMin >= k2) continue;          // trivial reject
+            if (fMin >= k1 && fMax < k2) { kept.push(i); continue; } // trivial accept
+            return undefined;                                // straddles — full clip path required
+        }
+
+        if (kept.length === 0) return null;
+        if (kept.length === n) return inSet;                 // all kept, no clips → share
+
+        /** @type {FeatureSet} */
+        const out = {
+            coords: inSet.coords,                            // shared
+            rings: inSet.rings,                              // shared
+            ringOffsets: new Array(kept.length + 1),
+            bboxes: new Array(kept.length * 4),
+            sourceIndices: new Array(kept.length),
+            bounds: [Infinity, Infinity, -Infinity, -Infinity],
+            numFeatures: kept.length
+        };
+        if (inSet.ringSizes !== undefined) out.ringSizes = inSet.ringSizes;
+        if (inSet.ringClips !== undefined) out.ringClips = inSet.ringClips;
+
+        const outBB = out.bboxes;
+        const inBB  = inSet.bboxes;
+        const outRO = out.ringOffsets;
+        const outSI = out.sourceIndices;
+        const inRO  = inSet.ringOffsets;
+        const inSI  = inSet.sourceIndices;
+        const b = out.bounds;
+
+        for (let k = 0; k < kept.length; k++) {
+            const i = kept[k];
+            outRO[k] = inRO[i];
+            outSI[k] = inSI[i];
+            const minX = inBB[i * 4],     minY = inBB[i * 4 + 1];
+            const maxX = inBB[i * 4 + 2], maxY = inBB[i * 4 + 3];
+            outBB[k * 4]     = minX; outBB[k * 4 + 1] = minY;
+            outBB[k * 4 + 2] = maxX; outBB[k * 4 + 3] = maxY;
+            if (minX < b[0]) b[0] = minX;
+            if (minY < b[1]) b[1] = minY;
+            if (maxX > b[2]) b[2] = maxX;
+            if (maxY > b[3]) b[3] = maxY;
+        }
+        // Trailing sentinel: end of the last survivor's ring range (NOT inSet's total).
+        outRO[kept.length] = inRO[kept[kept.length - 1] + 1];
+        return out;
     }
 
     /** @param {number} i input feature index */
@@ -100,7 +177,10 @@ class Clipper {
         }
     }
 
-    /** Bulk-copy a feature whose bbox lies wholly inside [k1, k2]. */
+    /**
+     * Bulk-copy a feature whose bbox lies wholly inside [k1, k2].
+     * @param {number} i @param {number} srcIdx @param {number} rStart @param {number} rEnd
+     */
     copyFeature(i, srcIdx, rStart, rEnd) {
         const inSet = this.inSet, set = this.set;
         const baseRing = inSet.rings[rStart];
@@ -111,15 +191,35 @@ class Clipper {
         set.ringOffsets.push(set.rings.length);
         set.sourceIndices.push(srcIdx);
 
+        // Pre-grow + indexed assign beats per-coord push for the bulk-copy case (plan §6 step 8
+        // mitigation a). For trivially-accepted features at depth, this is the hot path.
+        const inRings = inSet.rings, outRings = set.rings;
         for (let r = rStart; r < rEnd; r++) {
-            set.rings.push(inSet.rings[r] - baseRing + outRingBase);
-            if (this.ringSizes !== null) this.ringSizes.push(/** @type {number[]} */(inSet.ringSizes)[r]);
-            if (this.ringClips !== null) {
-                const rc = /** @type {number[]} */ (inSet.ringClips);
-                this.ringClips.push(rc[r * 2], rc[r * 2 + 1]);
+            outRings.push(inRings[r] - baseRing + outRingBase);
+        }
+        if (this.ringSizes !== null) {
+            const src = /** @type {number[]} */ (inSet.ringSizes);
+            const dst = this.ringSizes;
+            const base = dst.length;
+            dst.length = base + (rEnd - rStart);
+            for (let r = rStart; r < rEnd; r++) dst[base + r - rStart] = src[r];
+        }
+        if (this.ringClips !== null) {
+            const src = /** @type {number[]} */ (inSet.ringClips);
+            const dst = this.ringClips;
+            const base = dst.length;
+            const n = (rEnd - rStart) * 2;
+            dst.length = base + n;
+            for (let r = rStart, w = base; r < rEnd; r++, w += 2) {
+                dst[w]     = src[r * 2];
+                dst[w + 1] = src[r * 2 + 1];
             }
         }
-        for (let c = baseCoord3; c < coordEnd3; c++) set.coords.push(inSet.coords[c]);
+        const inCoords = inSet.coords, outCoords = set.coords;
+        const base = outCoords.length;
+        const n = coordEnd3 - baseCoord3;
+        outCoords.length = base + n;
+        for (let c = 0; c < n; c++) outCoords[base + c] = inCoords[baseCoord3 + c];
 
         const minX = inSet.bboxes[i * 4],     minY = inSet.bboxes[i * 4 + 1];
         const maxX = inSet.bboxes[i * 4 + 2], maxY = inSet.bboxes[i * 4 + 3];
@@ -128,7 +228,10 @@ class Clipper {
         set.numFeatures++;
     }
 
-    /** Filter-only ring for point features; emits one output ring if any survive. */
+    /**
+     * Filter-only ring for point features; emits one output ring if any survive.
+     * @param {number} r3a @param {number} r3b
+     */
     clipPointsRing(r3a, r3b) {
         const inSet = this.inSet, set = this.set;
         const axis = this.axis, k1 = this.k1, k2 = this.k2;
@@ -299,6 +402,7 @@ class Clipper {
     /**
      * Pushes a clip-intersection point (z = 1, preserves through simplification) to outSet.coords
      * and updates bbox. Returns the segment parameter t ∈ [0, 1] for along-line metric calculation.
+     * @param {number} ax @param {number} ay @param {number} bx @param {number} by @param {number} k
      * @returns {number}
      */
     intersect(ax, ay, bx, by, k) {

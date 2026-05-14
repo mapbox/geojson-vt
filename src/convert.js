@@ -73,8 +73,9 @@ class Converter {
         let id = geojson.id;
         if (this.promoteId != null) id = geojson.properties && geojson.properties[this.promoteId];
         else if (this.generateId) id = index || 0;
-        // non-numeric ids coerce to NaN (= absent); see plan §4.3
-        this.convertGeometry(geojson.geometry, parseFloat(id), geojson.properties || null);
+        // non-numeric ids coerce to NaN (= absent); see plan §4.3. parseFloat does ToString
+        // internally, so the cast is purely for tsc — runtime accepts number/undefined too.
+        this.convertGeometry(geojson.geometry, parseFloat(/** @type {string} */ (id)), geojson.properties || null);
     }
 
     /** @param {Geometry} geom @param {number} id @param {Properties} props */
@@ -83,9 +84,9 @@ class Converter {
             for (const sub of geom.geometries) this.convertGeometry(sub, id, props);
             return;
         }
-        const coords = geom.coordinates;
-        if (!coords || coords.length === 0) return;
 
+        // Type validity is checked before the empty-coords early return — otherwise
+        // `{type:'Pologon'}` with no coords would silently pass.
         let type;
         switch (geom.type) {
             case 'Point': case 'MultiPoint':           type = 1; break;
@@ -93,17 +94,23 @@ class Converter {
             case 'Polygon': case 'MultiPolygon':       type = 3; break;
             default: throw new Error('Input data is not a valid GeoJSON object.');
         }
+
+        const coords = geom.coordinates;
+        if (!coords || coords.length === 0) return;
+
         const src = this.addSource(type, id, props);
 
+        // The casts below recover from GeoJSON's union-typed `coordinates` — type-tag
+        // narrowing across the outer dispatch isn't visible to tsc on the shared `coords` local.
         if (type === 1) {
             // single feature, single ring of N points
-            const points = geom.type === 'Point' ? [coords] : coords;
+            const points = /** @type {number[][]} */ (geom.type === 'Point' ? [coords] : coords);
             this.startFeature(src);
             this.writePoints(points);
             this.finishFeature();
 
         } else if (type === 2) {
-            const lines = geom.type === 'LineString' ? [coords] : coords;
+            const lines = /** @type {number[][][]} */ (geom.type === 'LineString' ? [coords] : coords);
             if (this.lineMetrics) {
                 // explode: one feature per line, all sharing the source row
                 for (const line of lines) {
@@ -119,7 +126,7 @@ class Converter {
 
         } else {
             // single feature; rings of all polygons in this geometry concatenated (winding-corrected per group)
-            const polygons = geom.type === 'Polygon' ? [coords] : coords;
+            const polygons = /** @type {number[][][][]} */ (geom.type === 'Polygon' ? [coords] : coords);
             this.startFeature(src);
             for (const polygon of polygons) this.writePolygonRings(polygon);
             this.finishFeature();

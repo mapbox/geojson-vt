@@ -59,7 +59,7 @@ export default class GeoJSONVT {
         this.source = source;
 
         const wrapped = wrap(set, source, opts);
-        if (wrapped) this.splitTile(wrapped, 0, 0, 0);
+        if (wrapped && wrapped.numFeatures > 0) this.splitTile(wrapped, 0, 0, 0);
     }
 
     /**

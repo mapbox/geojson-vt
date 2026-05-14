@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
 
-import geojsonvt from '../src/index.js';
+import GeoJSONVT from '../src/index.js';
 
 testTiles('us-states.json', 'us-states-tiles.json', {indexMaxZoom: 7, indexMaxPoints: 200});
 testTiles('dateline.json', 'dateline-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
@@ -16,7 +16,7 @@ testTiles('ids.json', 'ids-generate-id-tiles.json', {indexMaxZoom: 0, generateId
 
 test('throws on invalid GeoJSON', () => {
     assert.throws(() => {
-        genTiles({type: 'Pologon'});
+        genTiles(/** @type {any} */ ({type: 'Pologon'}));
     });
 });
 
@@ -47,17 +47,15 @@ function getJSON(name) {
 }
 
 function genTiles(data, options) {
-    const index = geojsonvt(data, Object.assign({
+    const index = new GeoJSONVT(data, Object.assign({
         indexMaxZoom: 0,
         indexMaxPoints: 10000
     }, options));
 
     const output = {};
 
-    for (const id in index.tiles) {
-        const tile = index.tiles[id];
-        const z = tile.z;
-        output[`z${z}-${tile.x}-${tile.y}`] = index.getTile(z, tile.x, tile.y).features;
+    for (const {z, x, y} of index.tileCoords) {
+        output[`z${z}-${x}-${y}`] = index.getTile(z, x, y).features;
     }
 
     return output;

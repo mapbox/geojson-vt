@@ -48,10 +48,19 @@ class TileBuilder {
 
         this.write(coords, rings, ringOffsets, sourceIndices, ringSizes, ringClips);
 
+        // numPoints: total input points across all rings owned by this FeatureSet's features.
+        // Can't use `coords.length / 3` because a filtered-view set (clip §b fast path) shares
+        // its coords array with a parent and would over-report. Walk ringOffsets/rings instead.
+        const set = this.set;
+        let inputPoints = 0;
+        for (let i = 0; i < set.numFeatures; i++) {
+            inputPoints += set.rings[set.ringOffsets[i + 1]] - set.rings[set.ringOffsets[i]];
+        }
+
         /** @type {Tile} */
         const tile = {
             coords, rings, ringOffsets, sourceIndices,
-            numPoints: this.set.coords.length / 3,  // input-count heuristic for splitTile
+            numPoints: inputPoints,
             source: null
         };
         if (ringSizes) tile.ringSizes = ringSizes;

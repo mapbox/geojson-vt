@@ -3,20 +3,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
 
-import geojsonvt from '../src/index.js';
+import GeoJSONVT from '../src/index.js';
 
 const square = [{
     geometry: [[[-64, 4160], [-64, -64], [4160, -64], [4160, 4160], [-64, 4160]]],
     type: 3,
     tags: {name: 'Pennsylvania', density: 284.3},
-    id: '42'
+    id: 42                                                   // v5: ids coerced via parseFloat (§4.3)
 }];
 
 test('getTile: us-states.json', () => {
     const log = console.log;
 
     console.log = function () {};
-    const index = geojsonvt(getJSON('us-states.json'), {debug: 2});
+    const index = new GeoJSONVT(getJSON('us-states.json'), {debug: 2});
 
     assert.deepEqual(index.getTile(7, 37, 48).features, getJSON('us-states-z7-37-48.json'), 'z7-37-48');
     assert.deepEqual(index.getTile('7', '37', '48').features, getJSON('us-states-z7-37-48.json'), 'z, x, y as strings');
@@ -29,11 +29,11 @@ test('getTile: us-states.json', () => {
 
     console.log = log;
 
-    assert.equal(index.total, 37);
+    assert.equal(index.tileCoords.length, 29);              // v5: empty intermediate tiles aren't created (was 37 in v4)
 });
 
 test('getTile: unbuffered tile left/right edges', () => {
-    const index = geojsonvt({
+    const index = new GeoJSONVT({
         type: 'LineString',
         coordinates: [[0, 90], [0, -90]]
     }, {
@@ -45,7 +45,7 @@ test('getTile: unbuffered tile left/right edges', () => {
 });
 
 test('getTile: unbuffered tile top/bottom edges', () => {
-    const index = geojsonvt({
+    const index = new GeoJSONVT({
         type: 'LineString',
         coordinates: [[-90, 66.51326044311188], [90, 66.51326044311188]]
     }, {
@@ -53,11 +53,11 @@ test('getTile: unbuffered tile top/bottom edges', () => {
     });
 
     assert.deepEqual(index.getTile(2, 1, 0).features, [{geometry: [[[0, 4096], [4096, 4096]]], type: 2, tags: null}]);
-    assert.deepEqual(index.getTile(2, 1, 1).features, []);
+    assert.equal(index.getTile(2, 1, 1), null);              // v5: empty tiles aren't created (plan §3 / §6)
 });
 
 test('getTile: polygon clipping on the boundary', () => {
-    const index = geojsonvt({
+    const index = new GeoJSONVT({
         type: 'Polygon',
         coordinates: [[
             [42.1875, 57.32652122521708],
@@ -78,20 +78,22 @@ test('getTile: polygon clipping on the boundary', () => {
 });
 
 test('getTile: polygon with vertex exactly on tile boundary (#118)', () => {
-    const index = geojsonvt({
+    const index = new GeoJSONVT({
         type: 'Polygon',
         coordinates: [[[-90, -90], [0, -90], [90, -90], [0, 0], [-90, -90]]]
     }, {indexMaxZoom: 0, maxZoom: 24, tolerance: 1.5, extent: 4096, buffer: 0});
 
+    // Ring starts at a different vertex in v5 (clip iterates from the first inward crossing,
+    // which shifted with the bump-pointer write order); the closed ring is geometrically identical.
     assert.deepEqual(index.getTile(1, 1, 1).features, [{
-        geometry: [[[0, 4096], [0, 0], [0, 0], [2048, 4096], [0, 4096]]],
+        geometry: [[[0, 0], [0, 0], [2048, 4096], [0, 4096], [0, 0]]],
         type: 3,
         tags: null
     }]);
 });
 
 test('getTile: polygon with collinear vertex on tile boundary (#161)', () => {
-    const index = geojsonvt({
+    const index = new GeoJSONVT({
         type: 'Polygon',
         coordinates: [[
             [20, 34.365234375],
@@ -111,7 +113,7 @@ test('getTile: polygon with collinear vertex on tile boundary (#161)', () => {
 });
 
 test('getTile: line metrics with vertex on tile border (geojson-vt-cpp#92)', () => {
-    const index = geojsonvt({
+    const index = new GeoJSONVT({
         type: 'Feature',
         geometry: {
             type: 'LineString',

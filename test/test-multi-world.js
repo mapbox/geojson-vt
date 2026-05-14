@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import geojsonvt from '../src/index.js';
+import GeoJSONVT from '../src/index.js';
 
 const leftPoint = {
     type: 'Feature',
@@ -22,27 +22,24 @@ const rightPoint = {
     }
 };
 
+// Default extent 4096; equator wraps to y = 0.5 → 2048 in tile space.
 test('handle point only in the rightside world', () => {
-    const vt = geojsonvt(rightPoint);
-    assert.equal(vt.tiles[0].features[0].geometry[0], 1);
-    assert.equal(vt.tiles[0].features[0].geometry[1], .5);
+    const vt = new GeoJSONVT(rightPoint);
+    assert.deepEqual(vt.getTile(0, 0, 0).features[0].geometry, [[4096, 2048]]);
 });
 
 test('handle point only in the leftside world', () => {
-    const vt = geojsonvt(leftPoint);
-    assert.equal(vt.tiles[0].features[0].geometry[0], 0);
-    assert.equal(vt.tiles[0].features[0].geometry[1], .5);
+    const vt = new GeoJSONVT(leftPoint);
+    assert.deepEqual(vt.getTile(0, 0, 0).features[0].geometry, [[0, 2048]]);
 });
 
 test('handle points in the leftside world and the rightside world', () => {
-    const vt = geojsonvt({
+    const vt = new GeoJSONVT({
         type: 'FeatureCollection',
         features: [leftPoint, rightPoint]
     });
 
-    assert.equal(vt.tiles[0].features[0].geometry[0], 0);
-    assert.equal(vt.tiles[0].features[0].geometry[1], .5);
-
-    assert.equal(vt.tiles[0].features[1].geometry[0], 1);
-    assert.equal(vt.tiles[0].features[1].geometry[1], .5);
+    const features = vt.getTile(0, 0, 0).features;
+    assert.deepEqual(features[0].geometry, [[0, 2048]]);
+    assert.deepEqual(features[1].geometry, [[4096, 2048]]);
 });
