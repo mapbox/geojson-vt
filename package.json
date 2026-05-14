@@ -5,6 +5,7 @@
   "homepage": "https://github.com/mapbox/geojson-vt",
   "type": "module",
   "exports": "./src/index.js",
+  "types": "./src/index.d.ts",
   "sideEffects": false,
   "keywords": [
     "spatial",
@@ -23,14 +24,16 @@
   "unpkg": "geojson-vt.js",
   "devDependencies": {
     "@rollup/plugin-terser": "^1.0.0",
+    "@types/geojson": "^7946.0.16",
     "benchmark": "^2.1.4",
     "eslint": "^10.3.0",
     "eslint-config-mourner": "^4.1.0",
-    "rollup": "^4.60.3"
+    "rollup": "^4.60.3",
+    "typescript": "^6.0.3"
   },
   "license": "ISC",
   "scripts": {
-    "pretest": "eslint src/*.js test/*.js debug/viz.js",
+    "pretest": "eslint src/*.js test/*.js debug/viz.js && tsc --noEmit",
     "test": "node --test",
     "cov": "node --experimental-test-coverage --test",
     "bench": "node --expose-gc bench/bench.js",

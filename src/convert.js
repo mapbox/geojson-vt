@@ -46,14 +46,14 @@ function convertFeature(features, geojson, options, index) {
         }
 
     } else if (type === 'LineString') {
-        convertLine(coords, geometry, tolerance, false);
+        convertLine(coords, geometry, tolerance, false, false);
 
     } else if (type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into linestrings to be able to track metrics
             for (const line of coords) {
                 geometry = [];
-                convertLine(line, geometry, tolerance, false);
+                convertLine(line, geometry, tolerance, false, false);
                 features.push(createFeature(id, 'LineString', geometry, geojson.properties));
             }
             return;
@@ -89,7 +89,7 @@ function convertPoint(coords, out) {
     out.push(projectX(coords[0]), projectY(coords[1]), 0);
 }
 
-function convertLine(ring, out, tolerance, isPolygon) {
+function convertLine(ring, out, tolerance, isPolygon, isOuter) {
     let x0, y0;
     let size = 0;
 
@@ -110,6 +110,22 @@ function convertLine(ring, out, tolerance, isPolygon) {
         y0 = y;
     }
 
+    // canonical winding: outer rings get one orientation, holes the opposite,
+    // determined structurally from GeoJSON nesting (not from input winding)
+    if (isPolygon && ((isOuter && size < 0) || (!isOuter && size >= 0))) {
+        for (let i = 0, len = out.length; i < len / 2; i += 3) {
+            const x = out[i];
+            const y = out[i + 1];
+            const z = out[i + 2];
+            out[i]     = out[len - 3 - i];
+            out[i + 1] = out[len - 2 - i];
+            out[i + 2] = out[len - 1 - i];
+            out[len - 3 - i] = x;
+            out[len - 2 - i] = y;
+            out[len - 1 - i] = z;
+        }
+    }
+
     const last = out.length - 3;
     out[2] = 1;
     simplify(out, 0, last, tolerance);
@@ -123,7 +139,8 @@ function convertLine(ring, out, tolerance, isPolygon) {
 function convertLines(rings, out, tolerance, isPolygon) {
     for (let i = 0; i < rings.length; i++) {
         const geom = [];
-        convertLine(rings[i], geom, tolerance, isPolygon);
+        // for polygons, ring index 0 is outer per GeoJSON spec; others are holes
+        convertLine(rings[i], geom, tolerance, isPolygon, isPolygon && i === 0);
         out.push(geom);
     }
 }

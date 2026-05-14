@@ -53,7 +53,7 @@ function shiftFeatureCoords(features, offset) {
 }
 
 function shiftCoords(points, offset) {
-    const newPoints = [];
+    const newPoints = /** @type {number[] & {size: number, start?: number, end?: number}} */ ([]);
     newPoints.size = points.size;
 
     if (points.start !== undefined) {

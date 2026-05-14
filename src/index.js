@@ -2,7 +2,6 @@
 import convert from './convert.js';     // GeoJSON conversion and preprocessing
 import clip from './clip.js';           // stripe clipping algorithm
 import wrap from './wrap.js';           // date line processing
-import transform from './transform.js'; // coordinate transformation
 import createTile from './tile.js';     // final simplified tile generation
 
 const defaultOptions = {
@@ -161,7 +160,7 @@ class GeoJSONVT {
         y = +y;
 
         const options = this.options;
-        const {extent, debug} = options;
+        const debug = options.debug;
 
         if (z < 0 || z > 24) return null;
 
@@ -169,7 +168,7 @@ class GeoJSONVT {
         x = (x + z2) & (z2 - 1); // wrap tile x coordinate
 
         const id = toID(z, x, y);
-        if (this.tiles[id]) return transform(this.tiles[id], extent);
+        if (this.tiles[id]) return materializeTile(this.tiles[id]);
 
         if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -195,8 +194,51 @@ class GeoJSONVT {
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
 
-        return this.tiles[id] ? transform(this.tiles[id], extent) : null;
+        return this.tiles[id] ? materializeTile(this.tiles[id]) : null;
     }
+}
+
+// Walks the retained internal tile (flat integer coord arrays) into the legacy
+// nested envelope: [x, y] pairs grouped per ring. The retained tile is
+// immutable; each call produces a fresh envelope.
+function materializeTile(tile) {
+    const features = [];
+    for (const f of tile.features) {
+        const geom = f.geometry;
+        let outGeom;
+        if (f.type === 1) {
+            outGeom = [];
+            for (let i = 0; i < geom.length; i += 2) {
+                outGeom.push([geom[i], geom[i + 1]]);
+            }
+        } else {
+            outGeom = [];
+            for (const ring of geom) {
+                const pairs = [];
+                for (let i = 0; i < ring.length; i += 2) {
+                    pairs.push([ring[i], ring[i + 1]]);
+                }
+                outGeom.push(pairs);
+            }
+        }
+        const legacy = {geometry: outGeom, type: f.type, tags: f.tags};
+        if (f.id !== undefined) legacy.id = f.id;
+        features.push(legacy);
+    }
+    return {
+        features,
+        numPoints: tile.numPoints,
+        numSimplified: tile.numSimplified,
+        numFeatures: tile.numFeatures,
+        source: tile.source,
+        x: tile.x,
+        y: tile.y,
+        z: tile.z,
+        minX: tile.minX,
+        minY: tile.minY,
+        maxX: tile.maxX,
+        maxY: tile.maxY
+    };
 }
 
 function toID(z, x, y) {

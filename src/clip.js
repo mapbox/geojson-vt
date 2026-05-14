@@ -169,8 +169,12 @@ function clipLine(geom, newGeom, k1, k2, axis, isPolygon, trackMetrics) {
     }
 }
 
+/**
+ * @typedef {number[] & {size: number, start: number, end: number}} CoordRing
+ */
+
 function newSlice(line) {
-    const slice = [];
+    const slice = /** @type {CoordRing} */ ([]);
     slice.size = line.size;
     slice.start = line.start;
     slice.end = line.end;
