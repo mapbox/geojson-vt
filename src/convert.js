@@ -270,11 +270,4 @@ function projectY(y) {
     return y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
 }
 
-/**
- * @param {GeoJSON} data
- * @param {Options} options
- * @returns {{set: FeatureSet, source: SourceData}}
- */
-export default function convert(data, options) {
-    return new Converter(options).run(data);
-}
+export default Converter;

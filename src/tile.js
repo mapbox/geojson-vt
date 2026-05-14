@@ -36,7 +36,7 @@ class TileBuilder {
     }
 
     /** @returns {Tile} */
-    build() {
+    run() {
         const {numFeatures, numRings, numKeptPoints} = this.scan();
 
         const coords         = new this.CoordCtor(numKeptPoints * 2);
@@ -157,13 +157,4 @@ class TileBuilder {
     }
 }
 
-/**
- * @param {FeatureSet} set @param {SourceData} source
- * @param {number} z @param {number} tx @param {number} ty
- * @param {Options} options
- * @param {CoordCtor} CoordCtor
- * @returns {Tile}
- */
-export default function createTile(set, source, z, tx, ty, options, CoordCtor) {
-    return new TileBuilder(set, source, z, tx, ty, options, CoordCtor).build();
-}
+export default TileBuilder;

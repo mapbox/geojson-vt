@@ -318,16 +318,4 @@ class Clipper {
     }
 }
 
-/**
- * @param {FeatureSet} set
- * @param {SourceData} source
- * @param {number} scale
- * @param {number} k1
- * @param {number} k2
- * @param {0 | 1} axis
- * @param {boolean} lineMetrics
- * @returns {FeatureSet | null}
- */
-export default function clip(set, source, scale, k1, k2, axis, lineMetrics) {
-    return new Clipper(set, source, scale, k1, k2, axis, lineMetrics).run();
-}
+export default Clipper;

@@ -1,5 +1,5 @@
 
-import clip from './clip.js';
+import Clipper from './clip.js';
 
 /** @typedef {import('./featureset.js').FeatureSet} FeatureSet */
 /** @typedef {import('./featureset.js').SourceData} SourceData */
@@ -26,12 +26,12 @@ export default function wrap(set, source, options) {
     const buffer = options.buffer / options.extent;
     const lm = !!options.lineMetrics;
 
-    const left  = clip(set, source, 1, -1 - buffer, buffer,     0, lm);
-    const right = clip(set, source, 1,  1 - buffer, 2 + buffer, 0, lm);
+    const left  = new Clipper(set, source, 1, -1 - buffer, buffer,     0, lm).run();
+    const right = new Clipper(set, source, 1,  1 - buffer, 2 + buffer, 0, lm).run();
 
     if (left === null && right === null) return set;            // already fits in center
 
-    const center = clip(set, source, 1, -buffer, 1 + buffer, 0, lm);
+    const center = new Clipper(set, source, 1, -buffer, 1 + buffer, 0, lm).run();
 
     /** @type {FeatureSet[]} */
     const parts = [];

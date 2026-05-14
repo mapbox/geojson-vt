@@ -1,10 +1,22 @@
 
-// calculate simplification data using optimized Douglas-Peucker algorithm
+// Marks Douglas–Peucker survival importance into the z-slot of each retained pivot, so
+// downstream tile finalization can drop points whose importance falls below the per-zoom
+// tolerance with a single compare. Endpoints are written separately by the caller (z = 1);
+// non-pivot intermediates retain their initial z = 0 and get filtered out.
+//
+// Operates in place on a flat stride-3 coord buffer.
 
+/**
+ * @param {number[]} coords      stride-3 (x, y, z) flat buffer
+ * @param {number} first         coord-array index of the ring's first point (multiple of 3)
+ * @param {number} last          coord-array index of the ring's last point (multiple of 3)
+ * @param {number} sqTolerance   squared tolerance in the same units as coords (finest zoom)
+ */
 export default function simplify(coords, first, last, sqTolerance) {
     let maxSqDist = sqTolerance;
     const mid = first + ((last - first) >> 1);
     let minPosToMid = last - first;
+    /** @type {number | undefined} */
     let index;
 
     const ax = coords[first];
@@ -31,14 +43,20 @@ export default function simplify(coords, first, last, sqTolerance) {
         }
     }
 
-    if (maxSqDist > sqTolerance) {
+    if (index !== undefined && maxSqDist > sqTolerance) {
         if (index - first > 3) simplify(coords, first, index, sqTolerance);
         coords[index + 2] = maxSqDist;
         if (last - index > 3) simplify(coords, index, last, sqTolerance);
     }
 }
 
-// square distance from a point to a segment
+/**
+ * Squared distance from point (px, py) to segment (x, y)–(bx, by).
+ * @param {number} px @param {number} py
+ * @param {number} x  @param {number} y
+ * @param {number} bx @param {number} by
+ * @returns {number}
+ */
 function getSqSegDist(px, py, x, y, bx, by) {
 
     let dx = bx - x;
