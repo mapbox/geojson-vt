@@ -33,6 +33,7 @@
     "pretest": "eslint src/*.js test/*.js debug/viz.js",
     "test": "node --test",
     "cov": "node --experimental-test-coverage --test",
+    "bench": "node --expose-gc bench/bench.js",
     "build": "rollup -c",
     "watch": "rollup -cw",
     "prepublishOnly": "npm run test && npm run build"
