@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "noEmit": true,
+        "target": "es2020",
+        "module": "nodenext",
+        "moduleResolution": "nodenext"
+    },
+    "files": ["src/index.d.ts", "src/featureset.d.ts"]
+}
