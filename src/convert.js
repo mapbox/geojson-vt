@@ -1,139 +1,280 @@
 
 import simplify from './simplify.js';
-import createFeature from './feature.js';
 
-// converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
+/** @typedef {import('./featureset.js').FeatureSet} FeatureSet */
+/** @typedef {import('./featureset.js').SourceData} SourceData */
+/** @typedef {import('./featureset.js').Properties} Properties */
+/** @typedef {import('./index.js').Options} Options */
+/** @typedef {import('geojson').GeoJSON} GeoJSON */
+/** @typedef {import('geojson').Geometry} Geometry */
+/** @typedef {import('geojson').Feature} Feature */
 
-export default function convert(data, options) {
-    const features = [];
-    if (data.type === 'FeatureCollection') {
-        for (let i = 0; i < data.features.length; i++) {
-            convertFeature(features, data.features[i], options, i);
-        }
+// Reads input GeoJSON, emits the initial pipeline FeatureSet, and allocates the index-global
+// SourceData. Projects coords to mercator [0, 1], fuses per-feature bbox into the projection
+// loop, enforces canonical polygon winding (outer = positive area), and explodes
+// MultiLineString into per-line features under lineMetrics — all sharing the source row.
+class Converter {
+    /** @param {Options} options */
+    constructor(options) {
+        this.sqTolerance = (options.tolerance / ((1 << options.maxZoom) * options.extent)) ** 2;
+        this.lineMetrics = !!options.lineMetrics;
+        this.promoteId = options.promoteId;
+        this.generateId = !!options.generateId;
 
-    } else if (data.type === 'Feature') {
-        convertFeature(features, data, options);
+        /** @type {FeatureSet} */
+        this.set = {
+            coords: [], rings: [], ringOffsets: [], sourceIndices: [], bboxes: [],
+            bounds: [Infinity, Infinity, -Infinity, -Infinity],
+            numFeatures: 0
+        };
+        /** @type {number[] | null} */ this.ringSizes = null;                            // lazy; omitted for pure-point sets
+        /** @type {number[] | null} */ this.ringClips = this.lineMetrics ? [] : null;    // only under lineMetrics
 
-    } else {
-        // single geometry or a geometry collection
-        convertFeature(features, {geometry: data}, options);
+        /** @type {number[]} */     this.sourceTypes = [];
+        /** @type {number[]} */     this.sourceIds = [];
+        /** @type {Properties[]} */ this.sourceProperties = [];
+
+        // per-feature bbox scratch — reset by startFeature, drained by finishFeature
+        this.fMinX = 0; this.fMinY = 0; this.fMaxX = 0; this.fMaxY = 0;
     }
 
-    return features;
-}
-
-function convertFeature(features, geojson, options, index) {
-    if (!geojson.geometry) return;
-
-    const coords = geojson.geometry.coordinates;
-    if (coords && coords.length === 0) return;
-
-    const type = geojson.geometry.type;
-    const tolerance = Math.pow(options.tolerance / ((1 << options.maxZoom) * options.extent), 2);
-    let geometry = [];
-    let id = geojson.id;
-    if (options.promoteId) {
-        id = geojson.properties[options.promoteId];
-    } else if (options.generateId) {
-        id = index || 0;
-    }
-    if (type === 'Point') {
-        convertPoint(coords, geometry);
-
-    } else if (type === 'MultiPoint') {
-        for (const p of coords) {
-            convertPoint(p, geometry);
+    /**
+     * @param {GeoJSON} data
+     * @returns {{set: FeatureSet, source: SourceData}}
+     */
+    run(data) {
+        if (data.type === 'FeatureCollection') {
+            for (let i = 0; i < data.features.length; i++) this.convertFeature(data.features[i], i);
+        } else if (data.type === 'Feature') {
+            this.convertFeature(data, 0);
+        } else {
+            this.convertGeometry(data, NaN, null);  // bare Geometry / GeometryCollection
         }
 
-    } else if (type === 'LineString') {
-        convertLine(coords, geometry, tolerance, false);
+        const set = this.set;
+        set.rings.push(set.coords.length / 3);         // trailing point-count sentinel
+        set.ringOffsets.push(set.rings.length - 1);    // trailing ring-count sentinel
+        if (this.ringSizes !== null) set.ringSizes = this.ringSizes;
+        if (this.ringClips !== null) set.ringClips = this.ringClips;
 
-    } else if (type === 'MultiLineString') {
-        if (options.lineMetrics) {
-            // explode into linestrings to be able to track metrics
-            for (const line of coords) {
-                geometry = [];
-                convertLine(line, geometry, tolerance, false);
-                features.push(createFeature(id, 'LineString', geometry, geojson.properties));
+        return {
+            set,
+            source: {
+                types: Uint8Array.from(this.sourceTypes),
+                ids: Float64Array.from(this.sourceIds),
+                properties: this.sourceProperties
             }
+        };
+    }
+
+    /** @param {Feature} geojson @param {number} index */
+    convertFeature(geojson, index) {
+        if (!geojson.geometry) return;
+        let id = geojson.id;
+        if (this.promoteId != null) id = geojson.properties && geojson.properties[this.promoteId];
+        else if (this.generateId) id = index || 0;
+        // non-numeric ids coerce to NaN (= absent); see plan §4.3
+        this.convertGeometry(geojson.geometry, parseFloat(id), geojson.properties || null);
+    }
+
+    /** @param {Geometry} geom @param {number} id @param {Properties} props */
+    convertGeometry(geom, id, props) {
+        if (geom.type === 'GeometryCollection') {
+            for (const sub of geom.geometries) this.convertGeometry(sub, id, props);
             return;
         }
-        convertLines(coords, geometry, tolerance, false);
+        const coords = geom.coordinates;
+        if (!coords || coords.length === 0) return;
 
-    } else if (type === 'Polygon') {
-        convertLines(coords, geometry, tolerance, true);
-
-    } else if (type === 'MultiPolygon') {
-        for (const polygon of coords) {
-            const newPolygon = [];
-            convertLines(polygon, newPolygon, tolerance, true);
-            geometry.push(newPolygon);
+        let type;
+        switch (geom.type) {
+            case 'Point': case 'MultiPoint':           type = 1; break;
+            case 'LineString': case 'MultiLineString': type = 2; break;
+            case 'Polygon': case 'MultiPolygon':       type = 3; break;
+            default: throw new Error('Input data is not a valid GeoJSON object.');
         }
-    } else if (type === 'GeometryCollection') {
-        for (const singleGeometry of geojson.geometry.geometries) {
-            convertFeature(features, {
-                id,
-                geometry: singleGeometry,
-                properties: geojson.properties
-            }, options, index);
-        }
-        return;
-    } else {
-        throw new Error('Input data is not a valid GeoJSON object.');
-    }
+        const src = this.addSource(type, id, props);
 
-    features.push(createFeature(id, type, geometry, geojson.properties));
-}
+        if (type === 1) {
+            // single feature, single ring of N points
+            const points = geom.type === 'Point' ? [coords] : coords;
+            this.startFeature(src);
+            this.writePoints(points);
+            this.finishFeature();
 
-function convertPoint(coords, out) {
-    out.push(projectX(coords[0]), projectY(coords[1]), 0);
-}
-
-function convertLine(ring, out, tolerance, isPolygon) {
-    let x0, y0;
-    let size = 0;
-
-    for (let j = 0; j < ring.length; j++) {
-        const x = projectX(ring[j][0]);
-        const y = projectY(ring[j][1]);
-
-        out.push(x, y, 0);
-
-        if (j > 0) {
-            if (isPolygon) {
-                size += (x0 * y - x * y0) / 2; // area
+        } else if (type === 2) {
+            const lines = geom.type === 'LineString' ? [coords] : coords;
+            if (this.lineMetrics) {
+                // explode: one feature per line, all sharing the source row
+                for (const line of lines) {
+                    this.startFeature(src);
+                    this.writeLineRing(line, false);
+                    this.finishFeature();
+                }
             } else {
-                size += Math.sqrt(Math.pow(x - x0, 2) + Math.pow(y - y0, 2)); // length
+                this.startFeature(src);
+                for (const line of lines) this.writeLineRing(line, false);
+                this.finishFeature();
             }
+
+        } else {
+            // single feature; rings of all polygons in this geometry concatenated (winding-corrected per group)
+            const polygons = geom.type === 'Polygon' ? [coords] : coords;
+            this.startFeature(src);
+            for (const polygon of polygons) this.writePolygonRings(polygon);
+            this.finishFeature();
         }
-        x0 = x;
-        y0 = y;
     }
 
-    const last = out.length - 3;
-    out[2] = 1;
-    simplify(out, 0, last, tolerance);
-    out[last + 2] = 1;
+    /**
+     * @param {number} type 1=point, 2=line, 3=polygon
+     * @param {number} id
+     * @param {Properties} props
+     * @returns {number} source-row index
+     */
+    addSource(type, id, props) {
+        const idx = this.sourceTypes.length;
+        this.sourceTypes.push(type);
+        this.sourceIds.push(id);
+        this.sourceProperties.push(props);
+        return idx;
+    }
 
-    out.size = Math.abs(size);
-    out.start = 0;
-    out.end = out.size;
-}
+    /** @param {number} sourceIndex */
+    startFeature(sourceIndex) {
+        this.set.ringOffsets.push(this.set.rings.length);
+        this.set.sourceIndices.push(sourceIndex);
+        this.fMinX = Infinity; this.fMinY = Infinity;
+        this.fMaxX = -Infinity; this.fMaxY = -Infinity;
+    }
 
-function convertLines(rings, out, tolerance, isPolygon) {
-    for (let i = 0; i < rings.length; i++) {
-        const geom = [];
-        convertLine(rings[i], geom, tolerance, isPolygon);
-        out.push(geom);
+    finishFeature() {
+        const set = this.set;
+        set.bboxes.push(this.fMinX, this.fMinY, this.fMaxX, this.fMaxY);
+        if (this.fMinX < set.bounds[0]) set.bounds[0] = this.fMinX;
+        if (this.fMinY < set.bounds[1]) set.bounds[1] = this.fMinY;
+        if (this.fMaxX > set.bounds[2]) set.bounds[2] = this.fMaxX;
+        if (this.fMaxY > set.bounds[3]) set.bounds[3] = this.fMaxY;
+        set.numFeatures++;
+    }
+
+    /** @param {number} x @param {number} y */
+    updateBBox(x, y) {
+        if (x < this.fMinX) this.fMinX = x;
+        if (y < this.fMinY) this.fMinY = y;
+        if (x > this.fMaxX) this.fMaxX = x;
+        if (y > this.fMaxY) this.fMaxY = y;
+    }
+
+    /**
+     * Writes one ring containing all given points (Point: [coords]; MultiPoint: coords).
+     * @param {number[][]} points
+     */
+    writePoints(points) {
+        const set = this.set;
+        set.rings.push(set.coords.length / 3);
+        for (const p of points) {
+            const x = projectX(p[0]);
+            const y = projectY(p[1]);
+            set.coords.push(x, y, 0);
+            this.updateBBox(x, y);
+        }
+        if (this.ringSizes !== null) this.ringSizes.push(0);
+        if (this.ringClips !== null) this.ringClips.push(0, 0);
+    }
+
+    /**
+     * Projects, simplifies, and writes one line or polygon ring.
+     * Returns *signed* size (area for polygon, length for line); writePolygonRings reads
+     * the sign for winding correction. ringSizes stores |size|.
+     * @param {number[][]} line
+     * @param {boolean} isPolygon
+     * @returns {number}
+     */
+    writeLineRing(line, isPolygon) {
+        this.ensureRingSizes();
+        const set = this.set;
+        const ringStart = set.coords.length;
+        set.rings.push(ringStart / 3);
+
+        let x0 = 0, y0 = 0;
+        let size = 0;
+        for (let j = 0; j < line.length; j++) {
+            const x = projectX(line[j][0]);
+            const y = projectY(line[j][1]);
+            set.coords.push(x, y, 0);
+            this.updateBBox(x, y);
+            if (j > 0) {
+                if (isPolygon) size += (x0 * y - x * y0) / 2;
+                else size += Math.hypot(x - x0, y - y0);
+            }
+            x0 = x; y0 = y;
+        }
+
+        const lastIdx = set.coords.length - 3;
+        if (lastIdx > ringStart) {
+            set.coords[ringStart + 2] = 1;
+            simplify(set.coords, ringStart, lastIdx, this.sqTolerance);
+            set.coords[lastIdx + 2] = 1;
+        }
+
+        /** @type {number[]} */ (this.ringSizes).push(isPolygon ? Math.abs(size) : size);
+        if (this.ringClips !== null) this.ringClips.push(0, isPolygon ? 0 : size);
+        return size;
+    }
+
+    /**
+     * Canonical winding: outer ring (r === 0) positive area, holes negative.
+     * @param {number[][][]} rings
+     */
+    writePolygonRings(rings) {
+        for (let r = 0; r < rings.length; r++) {
+            const signed = this.writeLineRing(rings[r], true);
+            if ((r === 0) === (signed < 0)) this.reverseLastRing();
+        }
+    }
+
+    // Reverses the most recently written ring in-place against the flat coord buffer.
+    reverseLastRing() {
+        const set = this.set;
+        let i = set.rings[set.rings.length - 1] * 3;
+        let j = set.coords.length - 3;
+        while (i < j) {
+            const tx = set.coords[i], ty = set.coords[i + 1], tz = set.coords[i + 2];
+            set.coords[i]     = set.coords[j];
+            set.coords[i + 1] = set.coords[j + 1];
+            set.coords[i + 2] = set.coords[j + 2];
+            set.coords[j]     = tx;
+            set.coords[j + 1] = ty;
+            set.coords[j + 2] = tz;
+            i += 3; j -= 3;
+        }
+    }
+
+    // Backfills zero entries for any point rings already written, so ring indexing
+    // stays aligned regardless of when the first line/polygon ring shows up.
+    ensureRingSizes() {
+        if (this.ringSizes === null) this.ringSizes = new Array(this.set.rings.length).fill(0);
     }
 }
 
+/** @param {number} x */
 function projectX(x) {
     return x / 360 + 0.5;
 }
 
+/** @param {number} y */
 function projectY(y) {
     const sin = Math.sin(y * Math.PI / 180);
     const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
     return y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
+}
+
+/**
+ * @param {GeoJSON} data
+ * @param {Options} options
+ * @returns {{set: FeatureSet, source: SourceData}}
+ */
+export default function convert(data, options) {
+    return new Converter(options).run(data);
 }
