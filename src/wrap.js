@@ -1,6 +1,6 @@
 
 import clip from './clip.js';
-import createFeature from './feature.js';
+import createFeature, {POINT} from './feature.js';
 
 export default function wrap(features, options) {
     const buffer = options.buffer / options.extent;
@@ -11,58 +11,37 @@ export default function wrap(features, options) {
     if (left || right) {
         merged = clip(features, 1, -buffer, 1 + buffer, 0, -1, 2, options) || []; // center world copy
 
-        if (left) merged = shiftFeatureCoords(left, 1).concat(merged); // merge left into center
+        if (left)  merged = shiftFeatureCoords(left,  1).concat(merged); // merge left into center
         if (right) merged = merged.concat(shiftFeatureCoords(right, -1)); // merge right into center
     }
-
     return merged;
 }
 
 function shiftFeatureCoords(features, offset) {
-    const newFeatures = [];
-
-    for (let i = 0; i < features.length; i++) {
-        const feature = features[i];
-        const type = feature.type;
-
-        let newGeometry;
-
-        if (type === 'Point' || type === 'MultiPoint' || type === 'LineString') {
-            newGeometry = shiftCoords(feature.geometry, offset);
-
-        } else if (type === 'MultiLineString' || type === 'Polygon') {
-            newGeometry = [];
-            for (const line of feature.geometry) {
-                newGeometry.push(shiftCoords(line, offset));
-            }
-        } else if (type === 'MultiPolygon') {
-            newGeometry = [];
-            for (const polygon of feature.geometry) {
-                const newPolygon = [];
-                for (const line of polygon) {
-                    newPolygon.push(shiftCoords(line, offset));
-                }
-                newGeometry.push(newPolygon);
-            }
+    const out = [];
+    for (const feature of features) {
+        let newGeom;
+        if (feature.type === POINT) {
+            newGeom = shiftRing(feature.geometry, offset);
+        } else {
+            newGeom = [];
+            for (const ring of feature.geometry) newGeom.push(shiftRing(ring, offset));
         }
-
-        newFeatures.push(createFeature(feature.id, type, newGeometry, feature.tags));
+        const shifted = createFeature(feature.id, feature.type, newGeom, feature.tags);
+        if (feature.start !== undefined) {
+            shifted.start = feature.start;
+            shifted.end = feature.end;
+        }
+        out.push(shifted);
     }
-
-    return newFeatures;
+    return out;
 }
 
-function shiftCoords(points, offset) {
-    const newPoints = /** @type {number[] & {size: number, start?: number, end?: number}} */ ([]);
-    newPoints.size = points.size;
-
-    if (points.start !== undefined) {
-        newPoints.start = points.start;
-        newPoints.end = points.end;
+function shiftRing(ring, offset) {
+    const out = /** @type {number[] & {size: number}} */ ([]);
+    out.size = ring.size;
+    for (let i = 0; i < ring.length; i += 3) {
+        out.push(ring[i] + offset, ring[i + 1], ring[i + 2]);
     }
-
-    for (let i = 0; i < points.length; i += 3) {
-        newPoints.push(points[i] + offset, points[i + 1], points[i + 2]);
-    }
-    return newPoints;
+    return out;
 }

@@ -1,4 +1,6 @@
 
+import {POINT, LINE, POLYGON} from './feature.js';
+
 export default function createTile(features, z, tx, ty, options) {
     const tolerance = z === options.maxZoom ? 0 : options.tolerance / ((1 << z) * options.extent);
     const z2 = 1 << z;
@@ -36,59 +38,40 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
     const type = feature.type;
     const simplified = [];
 
-    tile.minX = Math.min(tile.minX, feature.minX);
-    tile.minY = Math.min(tile.minY, feature.minY);
-    tile.maxX = Math.max(tile.maxX, feature.maxX);
-    tile.maxY = Math.max(tile.maxY, feature.maxY);
+    if (feature.minX < tile.minX) tile.minX = feature.minX;
+    if (feature.minY < tile.minY) tile.minY = feature.minY;
+    if (feature.maxX > tile.maxX) tile.maxX = feature.maxX;
+    if (feature.maxY > tile.maxY) tile.maxY = feature.maxY;
 
-    if (type === 'Point' || type === 'MultiPoint') {
+    if (type === POINT) {
         for (let i = 0; i < geom.length; i += 3) {
             simplified.push(projectX(geom[i], z2, tx, extent), projectY(geom[i + 1], z2, ty, extent));
             tile.numPoints++;
             tile.numSimplified++;
         }
 
-    } else if (type === 'LineString') {
-        addLine(simplified, geom, tile, tolerance, false, z2, tx, ty, extent);
-
-    } else if (type === 'MultiLineString' || type === 'Polygon') {
-        for (let i = 0; i < geom.length; i++) {
-            addLine(simplified, geom[i], tile, tolerance, type === 'Polygon', z2, tx, ty, extent);
-        }
-
-    } else if (type === 'MultiPolygon') {
-
-        for (let k = 0; k < geom.length; k++) {
-            const polygon = geom[k];
-            for (let i = 0; i < polygon.length; i++) {
-                addLine(simplified, polygon[i], tile, tolerance, true, z2, tx, ty, extent);
-            }
-        }
+    } else {
+        const isPolygon = type === POLYGON;
+        for (const ring of geom) addLine(simplified, ring, tile, tolerance, isPolygon, z2, tx, ty, extent);
     }
 
-    if (simplified.length) {
-        let tags = feature.tags || null;
+    if (!simplified.length) return;
 
-        if (type === 'LineString' && options.lineMetrics) {
-            tags = {};
-            for (const key in feature.tags) tags[key] = feature.tags[key];
-            /* eslint-disable dot-notation */
-            tags['mapbox_clip_start'] = geom.start / geom.size;
-            tags['mapbox_clip_end'] = geom.end / geom.size;
-            /* eslint-enable dot-notation */
-        }
-
-        const tileFeature = {
-            geometry: simplified,
-            type: type === 'Polygon' || type === 'MultiPolygon' ? 3 :
-            (type === 'LineString' || type === 'MultiLineString' ? 2 : 1),
-            tags
-        };
-        if (feature.id !== null) {
-            tileFeature.id = feature.id;
-        }
-        tile.features.push(tileFeature);
+    let tags = feature.tags || null;
+    if (type === LINE && options.lineMetrics) {
+        tags = {};
+        for (const key in feature.tags) tags[key] = feature.tags[key];
+        const size = geom[0].size;
+        /* eslint-disable camelcase */
+        tags.mapbox_clip_start = feature.start / size;
+        tags.mapbox_clip_end = feature.end / size;
+        /* eslint-enable camelcase */
     }
+
+    // internal type values are intentionally identical to the public ones
+    const tileFeature = {geometry: simplified, type, tags};
+    if (feature.id !== null) tileFeature.id = feature.id;
+    tile.features.push(tileFeature);
 }
 
 function addLine(result, geom, tile, tolerance, isPolygon, z2, tx, ty, extent) {
@@ -100,7 +83,6 @@ function addLine(result, geom, tile, tolerance, isPolygon, z2, tx, ty, extent) {
     }
 
     const ring = [];
-
     for (let i = 0; i < geom.length; i += 3) {
         if (tolerance === 0 || geom[i + 2] > sqTolerance) {
             tile.numSimplified++;
@@ -108,6 +90,5 @@ function addLine(result, geom, tile, tolerance, isPolygon, z2, tx, ty, extent) {
         }
         tile.numPoints++;
     }
-
     result.push(ring);
 }

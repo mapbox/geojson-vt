@@ -50,6 +50,7 @@ const __filename = fileURLToPath(import.meta.url);
 
 const DATASETS = [
     {name: 'earthquakes', file: 'debug/data/earthquakes.json',           note: 'points',          deep: {indexMaxZoom: 10, indexMaxPoints: 0}},
+    {name: 'places',      file: 'debug/data/ne_10m_populated_places_simple.json', note: 'points (7k)', deep: {indexMaxZoom: 10, indexMaxPoints: 0}},
     {name: 'route',       file: 'debug/data/route.json',                 note: 'linestring',      deep: {indexMaxZoom: 12, indexMaxPoints: 0}},
     {name: 'hrr',         file: 'debug/data/hrr.json',                   note: 'polygons',        deep: {indexMaxZoom: 8,  indexMaxPoints: 0}},
     {name: 'us-2010',     file: 'debug/data/gz_2010_us_050_00_500k.json', note: 'polygons (22M)', deep: {indexMaxZoom: 7,  indexMaxPoints: 0}},
