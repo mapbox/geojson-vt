@@ -19,9 +19,14 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
     if (maxAll < k1 || minAll >= k2) return null;     // trivial reject
 
     const isMetrics = options.lineMetrics;
-    const clipped = [];
+    // Lazy-init: stay null while every feature so far trivially accepts. As
+    // soon as any feature rejects or needs clipping, materialize `clipped`
+    // by copying the accepted prefix. If the whole loop stays trivial-accept,
+    // we return `features` directly and skip the Array allocation entirely.
+    let clipped = null;
 
-    for (const feature of features) {
+    for (let fi = 0; fi < features.length; fi++) {
+        const feature = features[fi];
         const type = feature.type;
         const geometry = feature.geometry;
 
@@ -29,10 +34,14 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
         const max = axis === 0 ? feature.maxX : feature.maxY;
 
         if (min >= k1 && max < k2) { // trivial accept
-            clipped.push(feature);
+            if (clipped !== null) clipped.push(feature);
             continue;
         }
-        if (max < k1 || min >= k2) continue; // trivial reject
+        if (max < k1 || min >= k2) { // trivial reject
+            if (clipped === null) clipped = features.slice(0, fi);
+            continue;
+        }
+        if (clipped === null) clipped = features.slice(0, fi);
 
         if (type === POINT) {
             const out = [];
@@ -66,6 +75,7 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
         }
     }
 
+    if (clipped === null) return features; // every feature trivially accepted
     return clipped.length ? clipped : null;
 }
 
