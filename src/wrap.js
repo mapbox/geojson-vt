@@ -32,21 +32,26 @@ function shiftFeatureCoords(features, offset) {
 }
 
 // Build a shifted copy of a feature's geometry — a single new buffer per
-// feature (POINT: flat coords; LINE/POLYGON: inline-header rings).
+// feature (POINT: flat coords; LINE/POLYGON: inline-header rings). Output
+// size is identical to input, so we can pre-size exactly.
 function shiftGeom(geom, type, offset) {
-    const out = [];
+    const out = new Array(geom.length);
     if (type === POINT) {
         for (let i = 0; i < geom.length; i += 3) {
-            out.push(geom[i] + offset, geom[i + 1], geom[i + 2]);
+            out[i]     = geom[i] + offset;
+            out[i + 1] = geom[i + 1];
+            out[i + 2] = geom[i + 2];
         }
     } else {
         for (let i = 0; i < geom.length;) {
             const ringLen = geom[i];
-            const ringSize = geom[i + 1];
-            out.push(ringLen, ringSize);
+            out[i]     = ringLen;
+            out[i + 1] = geom[i + 1];
             const coordsEnd = i + 2 + ringLen * 3;
             for (let j = i + 2; j < coordsEnd; j += 3) {
-                out.push(geom[j] + offset, geom[j + 1], geom[j + 2]);
+                out[j]     = geom[j] + offset;
+                out[j + 1] = geom[j + 1];
+                out[j + 2] = geom[j + 2];
             }
             i = coordsEnd;
         }
