@@ -2,41 +2,51 @@
 //
 // Run:  npm run bench
 //   or: node --expose-gc bench/bench.js [dataset1 dataset2 ...]
-//   or: node --expose-gc --max-old-space-size=8192 bench/bench.js
 //
-// Reports per dataset, three phases:
+// Reports per dataset, two phases:
 //
 //   init   — geojsonvt(data, {})                  default options
-//   drill  — init, then a fixed sample of getTile() calls across z=7..10
 //   deep   — geojsonvt(data, {indexMaxZoom, indexMaxPoints: 0})
 //
-// Measurement methodology (important — original bench had two bugs):
+// Methodology:
 //
-//   1. WARM-UP first. JSON.parse leaves V8's heap badly fragmented;
-//      compaction triggered by the *first* index build dominates the delta
-//      and can produce negative "held" numbers. We build-then-discard once
-//      to settle V8 before measuring.
+//   1. PER-DATASET CHILD PROCESS. Each dataset runs in a fresh `node`
+//      so prior dataset state can't pollute the baseline.
 //
-//   2. COUNT arrayBuffers + external. `process.memoryUsage().heapUsed` does
-//      NOT include ArrayBuffer backing stores or other off-heap memory.
-//      A refactor that moves coords into Float64Array would APPEAR to free
-//      huge amounts of memory when it actually just relocated bytes off-heap.
-//      We report heap + ab + ext as the "total" V8-tracked memory.
+//   2. PEAK FROM GCProfiler.
+//      Naïve heap_used / committed-pages / RSS snapshots all fail in
+//      different ways (GC schedule, V8 page-chunk granularity, kernel
+//      RSS lag). Instead we use `v8.GCProfiler`, which captures every
+//      major-GC event during the build along with the heap state
+//      before and after each GC. From that we derive:
+//        - `alloc` = held + Σ(bytes freed by each GC)
+//                    True total bytes allocated by the build, including
+//                    everything that was created and freed. This is the
+//                    metric for "did we make a lot of trash?"
+//        - `peak`  = max(usedHeapSize-before-GC) across all GCs.
+//                    The actual in-build heap high-water mark. This is
+//                    the metric for "could a constrained device OOM?"
+//      Both are GC-schedule-immune: re-running a build with different
+//      GC timing produces nearly identical alloc/peak numbers because
+//      we sum across GCs rather than relying on a single snapshot.
 //
-//   3. RSS is the OS-level truth but doesn't shrink immediately when V8 frees
-//      memory; useful as sanity check, not for fine deltas.
+//   3. HELD = heap + external after multi-pass forced GC.
+//      Retained state. `heapUsed` alone misses ArrayBuffer backing.
 //
-// Numbers are not directly comparable across machines but ARE comparable
+//   4. WARMUP build before each phase. JSON.parse leaves V8 fragmented;
+//      one throwaway build settles it.
+//
+// Numbers aren't directly comparable across machines but ARE comparable
 // across geojson-vt versions on the same machine.
 
 import {readFileSync, existsSync} from 'fs';
 import {performance} from 'perf_hooks';
+import {spawn} from 'child_process';
+import {fileURLToPath} from 'url';
+import v8 from 'v8';
 import GeoJSONVT from '../src/index.js';
 
-if (!global.gc) {
-    console.error('run with --expose-gc (or via `npm run bench`)');
-    process.exit(1);
-}
+const __filename = fileURLToPath(import.meta.url);
 
 const DATASETS = [
     {name: 'earthquakes', file: 'debug/data/earthquakes.json',           note: 'points',          deep: {indexMaxZoom: 10, indexMaxPoints: 0}},
@@ -46,190 +56,187 @@ const DATASETS = [
     {name: 'county',      file: 'debug/data/county.json',                note: 'polygons (205M)', deep: null}
 ];
 
-const DRILL = [
-    {z: 7,  xs: [30, 31, 32],    ys: [45, 46, 47]},
-    {z: 8,  xs: [60, 61, 62],    ys: [90, 91, 92]},
-    {z: 10, xs: [240, 241, 242], ys: [360, 361, 362]}
-];
-
-const wantNames = process.argv.slice(2);
-const datasets = (wantNames.length ? DATASETS.filter(d => wantNames.includes(d.name)) : DATASETS)
-    .filter(d => {
-        const ok = existsSync(new URL('../' + d.file, import.meta.url));
-        if (!ok) console.error(`skipping ${d.name}: ${d.file} not found`);
-        return ok;
-    });
-
-function settle() {
-    // Many GC passes — V8's incremental GC + external memory cleanup
-    // sometimes needs several rounds to reach steady state.
-    for (let i = 0; i < 8; i++) global.gc();
-}
-function mem() {
-    settle();
-    const m = process.memoryUsage();
-    // total = heap + off-heap (ArrayBuffer backing stores + other external memory)
-    // arrayBuffers is reported as a *subset* of external on Node.
-    return {
-        heap: m.heapUsed,
-        ab: m.arrayBuffers,
-        ext: m.external,
-        rss: m.rss,
-        total: m.heapUsed + m.external
-    };
-}
-function memNoGC() {
-    const m = process.memoryUsage();
-    return {
-        heap: m.heapUsed,
-        ab: m.arrayBuffers,
-        ext: m.external,
-        rss: m.rss,
-        total: m.heapUsed + m.external
-    };
-}
-
-function kb(bytes) { return Math.round(bytes / 1024); }
-function fmtKB(b)  { return b == null ? '—' : `${kb(b)} KB`; }
-function fmtMs(t)  { return t == null ? '—' : t.toFixed(1); }
-
-function buildIndex(data, opts) {
-    const t0 = performance.now();
-    let index, error;
+if (process.argv.includes('--single')) {
+    if (!global.gc) { console.error('child needs --expose-gc'); process.exit(2); }
+    const name = process.argv[process.argv.indexOf('--single') + 1];
+    const ds = DATASETS.find(d => d.name === name);
+    if (!ds) { console.error(`unknown dataset: ${name}`); process.exit(2); }
     try {
-        index = new GeoJSONVT(data, opts);
+        const r = runOne(ds);
+        process.stdout.write(JSON.stringify(r) + '\n');
     } catch (e) {
-        error = e;
+        process.stdout.write(JSON.stringify({name: ds.name, error: e.message}) + '\n');
+        process.exit(1);
     }
-    const elapsed = performance.now() - t0;
-    return {index, elapsed, error};
+} else {
+    const wantNames = process.argv.slice(2).filter(a => !a.startsWith('-'));
+    const datasets = (wantNames.length ? DATASETS.filter(d => wantNames.includes(d.name)) : DATASETS)
+        .filter(d => {
+            const ok = existsSync(new URL('../' + d.file, import.meta.url));
+            if (!ok) console.error(`skipping ${d.name}: ${d.file} not found`);
+            return ok;
+        });
+
+    const results = [];
+    for (const ds of datasets) {
+        process.stderr.write(`${ds.name}… `);
+        const r = await spawnChild(ds.name);
+        results.push(r);
+        process.stderr.write(r.error ? `error: ${r.error}\n` : 'done\n');
+    }
+    printTable(results);
 }
 
-function runDrill(index) {
-    const t0 = performance.now();
-    let calls = 0;
-    for (const {z, xs, ys} of DRILL) {
-        for (const x of xs) for (const y of ys) {
-            index.getTile(z, x, y);
-            calls++;
-        }
-    }
-    return (performance.now() - t0) / calls;
+// ──────────────────────────── child ───────────────────────────────
+
+function settle() { for (let i = 0; i < 8; i++) global.gc(); }
+
+function snap() {
+    const m = process.memoryUsage();
+    return {heap: m.heapUsed, ext: m.external, total: m.heapUsed + m.external};
 }
 
-function runOne(dataset) {
-    process.stderr.write(`${dataset.name}… `);
-
-    // Load data
-    const data = JSON.parse(readFileSync(new URL('../' + dataset.file, import.meta.url), 'utf8'));
-
-    // Warm-up: build + discard + GC. This settles V8's heap into a steady
-    // state, so the actual measurement isn't dominated by the heap
-    // fragmentation that JSON.parse left behind. One warmup is enough on
-    // average; two for safety on the biggest datasets.
-    buildIndex(data, {});
-    settle();
-
-    const baseline = mem();
-    process.stderr.write(`baseline heap=${kb(baseline.heap)} ext=${kb(baseline.ext)} rss=${kb(baseline.rss)} `);
-
-    // Phase 1: init (default options)
-    const init = buildIndex(data, {});
-    if (init.error) {
-        process.stderr.write(`init failed: ${init.error.message}\n`);
-        return {name: dataset.name, note: dataset.note, error: init.error.message};
-    }
-    const peakSnap = memNoGC();
-    const afterInit = mem();
-    const initPeak = peakSnap.total - baseline.total;
-    const initHeld = afterInit.total - baseline.total;
-
-    // Phase 2: drill (same index, lazy drilldown via getTile)
-    const drillMs = runDrill(init.index);
-    const afterDrill = mem();
-    const drillHeld = afterDrill.total - baseline.total;
-
-    // release init index before phase 3
-    let initIndex = init.index; void initIndex; initIndex = null;
-    settle();
-
-    // Phase 3: deep (eager pre-tiling, separate index build)
-    let deep = null;
-    if (dataset.deep) {
-        // warm-up for deep as well, since options differ
-        buildIndex(data, dataset.deep);
+// Measure one build of `geojsonvt(data, opts)` using `v8.GCProfiler`:
+//   - `alloc` total bytes allocated (held + Σ freed during build)
+//   - `peak`  in-build heap high-water mark (max before-GC heap_used, or
+//             post-build heap_used if no GC fired)
+//   - `held`  retained heap+ext after multi-pass forced GC
+//   - `ms`    build time
+//
+// GCProfiler.start/stop captures every GC that completes within the window
+// (in current Node, both scavenges and major GCs). Across runs, GC trigger
+// points jitter — sometimes a GC straddles the stop boundary and isn't
+// fully captured, which undercounts `freed`. So we run N iterations and
+// take the max: missed GCs only undercount, so max is closest to truth.
+// Median ms (peak/held don't drift across iterations so max is fine).
+function measureBuild(data, opts, baseline, iterations) {
+    const samples = [];
+    for (let i = 0; i < iterations; i++) {
+        const prof = new v8.GCProfiler();
+        prof.start();
+        const t0 = performance.now();
+        const idx = new GeoJSONVT(data, opts);
+        const ms = performance.now() - t0;
+        const result = prof.stop();
+        const postBuild = snap();
         settle();
-        const deepBase = mem();
-        const r = buildIndex(data, dataset.deep);
-        if (r.error) {
-            deep = {error: r.error.message};
-        } else {
-            const dp = memNoGC();
-            const da = mem();
-            deep = {
-                elapsed: r.elapsed,
-                peak: dp.total - deepBase.total,
-                held: da.total - deepBase.total,
-                opts: dataset.deep
-            };
-            void r.index;
+        const heldSnap = snap();
+
+        let freed = 0;
+        let peakHeap = postBuild.heap;
+        for (const e of result.statistics) {
+            const before = e.beforeGC.heapStatistics.usedHeapSize;
+            const after  = e.afterGC.heapStatistics.usedHeapSize;
+            if (before > after) freed += before - after;
+            if (before > peakHeap) peakHeap = before;
         }
+
+        samples.push({
+            ms,
+            alloc: (heldSnap.total - baseline.total) + freed,
+            peak: peakHeap + postBuild.ext - baseline.total,
+            held: heldSnap.total - baseline.total,
+            gcCount: result.statistics.length,
+            index: i === iterations - 1 ? idx : null
+        });
+        void idx;
+        settle();
+    }
+    const max = key => Math.max(...samples.map(s => s[key]));
+    const median = key => {
+        const sorted = [...samples].map(s => s[key]).sort((a, b) => a - b);
+        return sorted[sorted.length >> 1];
+    };
+    return {
+        ms: median('ms'),
+        alloc: max('alloc'),
+        peak: max('peak'),
+        held: median('held'),
+        gcCount: max('gcCount'),
+        index: samples[samples.length - 1].index
+    };
+}
+
+function runOne(ds) {
+    const data = JSON.parse(readFileSync(new URL('../' + ds.file, import.meta.url), 'utf8'));
+    const ITER = 3;
+
+    // ─── init phase
+    void new GeoJSONVT(data, {});
+    settle();
+    const initBase = snap();
+    const init = measureBuild(data, {}, initBase, ITER);
+    let idx = init.index; void idx; idx = null;
+    settle();
+
+    // ─── deep phase
+    let deep = null;
+    if (ds.deep) {
+        void new GeoJSONVT(data, ds.deep);
+        settle();
+        const dBase = snap();
+        const d = measureBuild(data, ds.deep, dBase, ITER);
+        deep = {ms: d.ms, alloc: d.alloc, peak: d.peak, held: d.held, opts: ds.deep};
+        void d.index;
     }
 
-    process.stderr.write('done\n');
     return {
-        name: dataset.name,
-        note: dataset.note,
-        init: {elapsed: init.elapsed, peak: initPeak, held: initHeld,
-               heapHeld: afterInit.heap - baseline.heap,
-               abHeld:   afterInit.ab   - baseline.ab,
-               extHeld:  afterInit.ext  - baseline.ext},
-        drill: {meanMs: drillMs, held: drillHeld},
+        name: ds.name,
+        note: ds.note,
+        init: {ms: init.ms, alloc: init.alloc, peak: init.peak, held: init.held},
         deep
     };
 }
 
-const results = [];
-for (const ds of datasets) {
-    try {
-        results.push(runOne(ds));
-    } catch (e) {
-        process.stderr.write(`crashed: ${e.message}\n`);
-        results.push({name: ds.name, note: ds.note, error: e.message});
+// ──────────────────────────── parent ──────────────────────────────
+
+function spawnChild(name) {
+    return new Promise((resolve) => {
+        const args = [
+            '--expose-gc',
+            '--max-old-space-size=8192',
+            __filename,
+            '--single', name
+        ];
+        const child = spawn(process.execPath, args, {stdio: ['ignore', 'pipe', 'inherit']});
+        let out = '';
+        child.stdout.on('data', d => { out += d; });
+        child.on('close', (code) => {
+            const line = out.trim().split('\n').pop();
+            try { resolve(JSON.parse(line)); }
+            catch (e) { resolve({name, error: `bad child output (code=${code}): ${e.message}`}); }
+        });
+    });
+}
+
+function kb(b)    { return Math.round(b / 1024); }
+function fmtKB(b) { return b == null ? '—' : `${kb(b)} KB`; }
+function fmtMs(t) { return t == null ? '—' : t.toFixed(1); }
+
+function printTable(results) {
+    const cols = [
+        {h: 'dataset',     w: 12, get: r => r.name},
+        {h: 'init ms',     w:  9, get: r => fmtMs(r.init?.ms)},
+        {h: 'init alloc',  w: 11, get: r => fmtKB(r.init?.alloc)},
+        {h: 'init peak',   w: 11, get: r => fmtKB(r.init?.peak)},
+        {h: 'init held',   w: 11, get: r => fmtKB(r.init?.held)},
+        {h: 'deep ms',     w:  9, get: r => fmtMs(r.deep?.ms)},
+        {h: 'deep alloc',  w: 11, get: r => fmtKB(r.deep?.alloc)},
+        {h: 'deep peak',   w: 11, get: r => fmtKB(r.deep?.peak)},
+        {h: 'deep held',   w: 11, get: r => fmtKB(r.deep?.held)}
+    ];
+    const pad = (s, n) => String(s).padStart(n);
+    const line = arr => arr.map((s, i) => pad(s, cols[i].w)).join(' ');
+
+    console.log();
+    console.log(line(cols.map(c => c.h)));
+    console.log('-'.repeat(cols.reduce((s, c) => s + c.w + 1, -1)));
+    for (const r of results) {
+        console.log(line(cols.map(c => c.get(r) ?? '—')));
     }
+    console.log();
+    console.log('alloc = held + Σ(bytes freed by GC during build) — true total bytes allocated');
+    console.log('peak  = max heap_used right before any in-build GC (or post-build if no GC fired)');
+    console.log('held  = (heap + external) after multi-pass forced GC');
+    console.log('deep  = geojsonvt(data, {indexMaxZoom: N, indexMaxPoints: 0})');
 }
-
-// Table
-const cols = [
-    {h: 'dataset',     w: 12, get: r => r.name},
-    {h: 'init ms',     w:  9, get: r => fmtMs(r.init?.elapsed)},
-    {h: 'init peak',   w: 11, get: r => fmtKB(r.init?.peak)},
-    {h: 'init held',   w: 11, get: r => fmtKB(r.init?.held)},
-    {h: 'heap held',   w: 11, get: r => fmtKB(r.init?.heapHeld)},
-    {h: 'ext held',    w: 11, get: r => fmtKB(r.init?.extHeld)},
-    {h: 'getTile ms',  w: 11, get: r => fmtMs(r.drill?.meanMs)},
-    {h: 'drill held',  w: 11, get: r => fmtKB(r.drill?.held)},
-    {h: 'deep ms',     w:  9, get: r => fmtMs(r.deep?.elapsed)},
-    {h: 'deep peak',   w: 11, get: r => fmtKB(r.deep?.peak)},
-    {h: 'deep held',   w: 11, get: r => fmtKB(r.deep?.held)}
-];
-
-const pad = (s, n) => String(s).padStart(n);
-const line = arr => arr.map((s, i) => pad(s, cols[i].w)).join(' ');
-
-console.log();
-console.log(line(cols.map(c => c.h)));
-console.log('-'.repeat(cols.reduce((s, c) => s + c.w + 1, -1)));
-for (const r of results) {
-    console.log(line(cols.map(c => c.get(r) ?? '—')));
-}
-console.log();
-console.log('init peak  = (heap + external) right after build, before forced GC');
-console.log('init held  = (heap + external) after multi-pass forced GC');
-console.log('heap held  = V8 heap delta only (subset of held)');
-console.log('ext held   = off-heap delta (ArrayBuffer backing + other external; subset of held)');
-console.log('drill held = held after init + getTile() drilldown sample');
-console.log('deep       = geojsonvt(data, {indexMaxZoom: N, indexMaxPoints: 0})');
-console.log();
-console.log('All measurements use a warm-up build before baseline to settle V8 heap');
-console.log('fragmentation left by JSON.parse. Data file read as utf8 string (no Buffer).');
