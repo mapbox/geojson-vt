@@ -20,13 +20,7 @@ export default function wrap(features, options) {
 function shiftFeatureCoords(features, offset) {
     const out = [];
     for (const feature of features) {
-        let newGeom;
-        if (feature.type === POINT) {
-            newGeom = shiftRing(feature.geometry, offset);
-        } else {
-            newGeom = [];
-            for (const ring of feature.geometry) newGeom.push(shiftRing(ring, offset));
-        }
+        const newGeom = shiftGeom(feature.geometry, feature.type, offset);
         const shifted = createFeature(feature.id, feature.type, newGeom, feature.tags);
         if (feature.start !== undefined) {
             shifted.start = feature.start;
@@ -37,11 +31,25 @@ function shiftFeatureCoords(features, offset) {
     return out;
 }
 
-function shiftRing(ring, offset) {
-    const out = /** @type {number[] & {size: number}} */ ([]);
-    out.size = ring.size;
-    for (let i = 0; i < ring.length; i += 3) {
-        out.push(ring[i] + offset, ring[i + 1], ring[i + 2]);
+// Build a shifted copy of a feature's geometry — a single new buffer per
+// feature (POINT: flat coords; LINE/POLYGON: inline-header rings).
+function shiftGeom(geom, type, offset) {
+    const out = [];
+    if (type === POINT) {
+        for (let i = 0; i < geom.length; i += 3) {
+            out.push(geom[i] + offset, geom[i + 1], geom[i + 2]);
+        }
+    } else {
+        for (let i = 0; i < geom.length;) {
+            const ringLen = geom[i];
+            const ringSize = geom[i + 1];
+            out.push(ringLen, ringSize);
+            const coordsEnd = i + 2 + ringLen * 3;
+            for (let j = i + 2; j < coordsEnd; j += 3) {
+                out.push(geom[j] + offset, geom[j + 1], geom[j + 2]);
+            }
+            i = coordsEnd;
+        }
     }
     return out;
 }

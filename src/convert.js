@@ -34,45 +34,52 @@ function convertFeature(features, geojson, options, index) {
     else if (options.generateId) id = index || 0;
 
     if (type === 'Point') {
-        const ring = [];
-        convertPoint(coords, ring);
-        pushFeature(features, id, POINT, ring, tags, options);
+        const geom = [];
+        convertPoint(coords, geom);
+        pushFeature(features, id, POINT, geom, tags, options);
 
     } else if (type === 'MultiPoint') {
-        const ring = [];
-        for (const p of coords) convertPoint(p, ring);
-        pushFeature(features, id, POINT, ring, tags, options);
+        const geom = [];
+        for (const p of coords) convertPoint(p, geom);
+        pushFeature(features, id, POINT, geom, tags, options);
 
     } else if (type === 'LineString') {
-        const line = convertLine(coords, tolerance, false, false);
-        pushFeature(features, id, LINE, [line], tags, options);
+        const geom = [];
+        appendLine(geom, coords, tolerance, false, false);
+        pushFeature(features, id, LINE, geom, tags, options);
 
     } else if (type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into separate features so each carries its own metrics
             for (const lineCoords of coords) {
-                const line = convertLine(lineCoords, tolerance, false, false);
-                pushFeature(features, id, LINE, [line], tags, options);
+                const geom = [];
+                appendLine(geom, lineCoords, tolerance, false, false);
+                pushFeature(features, id, LINE, geom, tags, options);
             }
         } else {
-            const rings = [];
-            for (const lineCoords of coords) rings.push(convertLine(lineCoords, tolerance, false, false));
-            pushFeature(features, id, LINE, rings, tags, options);
+            const geom = [];
+            for (const lineCoords of coords) appendLine(geom, lineCoords, tolerance, false, false);
+            pushFeature(features, id, LINE, geom, tags, options);
         }
 
     } else if (type === 'Polygon') {
-        pushFeature(features, id, POLYGON, convertRings(coords, tolerance), tags, options);
+        const geom = [];
+        // for polygons, ring index 0 is outer per GeoJSON spec; others are holes
+        for (let i = 0; i < coords.length; i++) {
+            appendLine(geom, coords[i], tolerance, true, i === 0);
+        }
+        pushFeature(features, id, POLYGON, geom, tags, options);
 
     } else if (type === 'MultiPolygon') {
         // flatten all polygons' rings into one list; winding distinguishes
         // outer rings (positive area) from holes (negative area).
-        const rings = [];
+        const geom = [];
         for (const polyCoords of coords) {
             for (let i = 0; i < polyCoords.length; i++) {
-                rings.push(convertLine(polyCoords[i], tolerance, true, i === 0));
+                appendLine(geom, polyCoords[i], tolerance, true, i === 0);
             }
         }
-        pushFeature(features, id, POLYGON, rings, tags, options);
+        pushFeature(features, id, POLYGON, geom, tags, options);
 
     } else if (type === 'GeometryCollection') {
         for (const g of geojson.geometry.geometries) {
@@ -87,26 +94,21 @@ function pushFeature(features, id, type, geom, tags, options) {
     const feature = createFeature(id, type, geom, tags);
     if (type === LINE && options.lineMetrics) {
         feature.start = 0;
-        feature.end = geom[0].size;
+        feature.end = geom[1]; // first ring's ringSize (line length)
     }
     features.push(feature);
-}
-
-function convertRings(rings, tolerance) {
-    const out = [];
-    for (let i = 0; i < rings.length; i++) {
-        // for polygons, ring index 0 is outer per GeoJSON spec; others are holes
-        out.push(convertLine(rings[i], tolerance, true, i === 0));
-    }
-    return out;
 }
 
 function convertPoint(coords, out) {
     out.push(projectX(coords[0]), projectY(coords[1]), 0);
 }
 
-function convertLine(ring, tolerance, isPolygon, isOuter) {
-    const out = /** @type {number[] & {size: number}} */ ([]);
+// Append one ring (header + coords) to the inline-header geometry buffer.
+function appendLine(out, ring, tolerance, isPolygon, isOuter) {
+    const headerIdx = out.length;
+    out.push(0, 0); // reserve [ringLen, ringSize]; backfilled below
+    const coords0 = out.length;
+
     let x0, y0;
     let size = 0;
 
@@ -127,29 +129,36 @@ function convertLine(ring, tolerance, isPolygon, isOuter) {
         y0 = y;
     }
 
+    const coordsEnd = out.length;
+
     // canonical winding: outer rings get one orientation, holes the opposite,
     // determined structurally from GeoJSON nesting (not from input winding)
     if (isPolygon && ((isOuter && size < 0) || (!isOuter && size >= 0))) {
-        for (let i = 0, len = out.length; i < len / 2; i += 3) {
+        const nCoords = coordsEnd - coords0;
+        for (let k = 0; k < nCoords / 2; k += 3) {
+            const i = coords0 + k;
+            const j = coordsEnd - 3 - k;
             const x = out[i];
             const y = out[i + 1];
             const z = out[i + 2];
-            out[i]     = out[len - 3 - i];
-            out[i + 1] = out[len - 2 - i];
-            out[i + 2] = out[len - 1 - i];
-            out[len - 3 - i] = x;
-            out[len - 2 - i] = y;
-            out[len - 1 - i] = z;
+            out[i]     = out[j];
+            out[i + 1] = out[j + 1];
+            out[i + 2] = out[j + 2];
+            out[j]     = x;
+            out[j + 1] = y;
+            out[j + 2] = z;
         }
+        size = -size; // sign now matches canonical winding (outer positive, hole negative)
     }
 
-    const last = out.length - 3;
-    out[2] = 1;
-    simplify(out, 0, last, tolerance);
-    out[last + 2] = 1;
+    const lastIdx = coordsEnd - 3;
+    out[coords0 + 2] = 1;
+    simplify(out, coords0, lastIdx, tolerance);
+    out[lastIdx + 2] = 1;
 
-    out.size = Math.abs(size);
-    return out;
+    // backfill header
+    out[headerIdx] = (coordsEnd - coords0) / 3;
+    out[headerIdx + 1] = isPolygon ? size : Math.abs(size);
 }
 
 function projectX(x) {

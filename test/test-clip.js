@@ -10,22 +10,51 @@ import {POINT, LINE, POLYGON} from '../src/feature.js';
 const geom1 = [0,0,0,50,0,0,50,10,0,20,10,0,20,20,0,30,20,0,30,30,0,50,30,0,50,40,0,25,40,0,25,50,0,0,50,0,0,60,0,25,60,0];
 const geom2 = [0,0,0,50,0,0,50,10,0,0,10,0];
 
+// Build an inline-header geometry from one or more flat rings.
+function lineGeom(...rings) {
+    const out = [];
+    for (const ring of rings) {
+        let size = 0;
+        for (let i = 0; i < ring.length - 3; i += 3) {
+            const dx = ring[i + 3] - ring[i];
+            const dy = ring[i + 4] - ring[i + 1];
+            size += Math.sqrt(dx * dx + dy * dy);
+        }
+        out.push(ring.length / 3, size, ...ring);
+    }
+    return out;
+}
+
+function polyGeom(...rings) {
+    const out = [];
+    for (const ring of rings) {
+        let area = 0;
+        for (let i = 0; i < ring.length - 3; i += 3) {
+            area += (ring[i] * ring[i + 4] - ring[i + 3] * ring[i + 1]) / 2;
+        }
+        out.push(ring.length / 3, area, ...ring);
+    }
+    return out;
+}
+
 test('clips polylines', () => {
 
     const clipped = clip([
-        {geometry: [geom1], type: LINE, tags: 1, minX: 0, minY: 0, maxX: 50, maxY: 60},
-        {geometry: [geom2], type: LINE, tags: 2, minX: 0, minY: 0, maxX: 50, maxY: 10}
+        {geometry: lineGeom(geom1), type: LINE, tags: 1, minX: 0, minY: 0, maxX: 50, maxY: 60},
+        {geometry: lineGeom(geom2), type: LINE, tags: 2, minX: 0, minY: 0, maxX: 50, maxY: 10}
     ], 1, 10, 40, 0, -Infinity, Infinity, {});
 
+    const g1size = lineGeom(geom1)[1];
+    const g2size = lineGeom(geom2)[1];
     const expected = [
         {id: null, type: LINE, geometry: [
-            [10,0,1,40,0,1],
-            [40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1],
-            [40,40,1,25,40,0,25,50,0,10,50,1],
-            [10,60,1,25,60,0]], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
+            2, g1size, 10,0,1,40,0,1,
+            6, g1size, 40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1,
+            4, g1size, 40,40,1,25,40,0,25,50,0,10,50,1,
+            2, g1size, 10,60,1,25,60,0], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
         {id: null, type: LINE, geometry: [
-            [10,0,1,40,0,1],
-            [40,10,1,10,10,1]], tags: 2, minX: 10, minY: 0, maxX: 40, maxY: 10}
+            2, g2size, 10,0,1,40,0,1,
+            2, g2size, 40,10,1,10,10,1], tags: 2, minX: 10, minY: 0, maxX: 40, maxY: 10}
     ];
 
     assert.equal(JSON.stringify(clipped), JSON.stringify(expected));
@@ -33,16 +62,10 @@ test('clips polylines', () => {
 
 test('clips lines with line metrics on', () => {
 
-    const geom = geom1.slice();
-    let size = 0;
-    for (let i = 0; i < geom.length - 3; i += 3) {
-        const dx = geom[i + 3] - geom[i];
-        const dy = geom[i + 4] - geom[i + 1];
-        size += Math.sqrt(dx * dx + dy * dy);
-    }
-    geom.size = size;
+    const geom = lineGeom(geom1);
+    const size = geom[1];
 
-    const feature = {geometry: [geom], type: LINE, tags: null, start: 0, end: size, minX: 0, minY: 0, maxX: 50, maxY: 60};
+    const feature = {geometry: geom, type: LINE, tags: null, start: 0, end: size, minX: 0, minY: 0, maxX: 50, maxY: 60};
     const clipped = clip([feature], 1, 10, 40, 0, -Infinity, Infinity, {lineMetrics: true});
 
     assert.deepEqual(
@@ -52,19 +75,28 @@ test('clips lines with line metrics on', () => {
 });
 
 function closed(geometry) {
-    return [geometry.concat(geometry.slice(0, 3))];
+    return geometry.concat(geometry.slice(0, 3));
 }
 
 test('clips polygons', () => {
 
+    const ring1 = closed(geom1);
+    const ring2 = closed(geom2);
+
     const clipped = clip([
-        {geometry: closed(geom1), type: POLYGON, tags: 1, minX: 0, minY: 0, maxX: 50, maxY: 60},
-        {geometry: closed(geom2), type: POLYGON, tags: 2, minX: 0, minY: 0, maxX: 50, maxY: 10}
+        {geometry: polyGeom(ring1), type: POLYGON, tags: 1, minX: 0, minY: 0, maxX: 50, maxY: 60},
+        {geometry: polyGeom(ring2), type: POLYGON, tags: 2, minX: 0, minY: 0, maxX: 50, maxY: 10}
     ], 1, 10, 40, 0, -Infinity, Infinity, {});
 
+    const g1size = polyGeom(ring1)[1];
+    const g2size = polyGeom(ring2)[1];
     const expected = [
-        {id: null, type: POLYGON, geometry: [[10,0,1,40,0,1,40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1,40,40,1,25,40,0,25,50,0,10,50,1,10,60,1,25,60,0,10,24,1,10,0,1]], tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
-        {id: null, type: POLYGON, geometry: [[10,0,1,40,0,1,40,10,1,10,10,1,10,0,1]], tags: 2,  minX: 10, minY: 0, maxX: 40, maxY: 10}
+        {id: null, type: POLYGON, geometry: [
+            16, g1size, 10,0,1,40,0,1,40,10,1,20,10,0,20,20,0,30,20,0,30,30,0,40,30,1,40,40,1,25,40,0,25,50,0,10,50,1,10,60,1,25,60,0,10,24,1,10,0,1],
+        tags: 1, minX: 10, minY: 0, maxX: 40, maxY: 60},
+        {id: null, type: POLYGON, geometry: [
+            5, g2size, 10,0,1,40,0,1,40,10,1,10,10,1,10,0,1],
+        tags: 2,  minX: 10, minY: 0, maxX: 40, maxY: 10}
     ];
 
     assert.equal(JSON.stringify(clipped), JSON.stringify(expected));

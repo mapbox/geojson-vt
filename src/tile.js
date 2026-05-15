@@ -52,7 +52,14 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
 
     } else {
         const isPolygon = type === POLYGON;
-        for (const ring of geom) addLine(simplified, ring, tile, tolerance, isPolygon, z2, tx, ty, extent);
+        for (let i = 0; i < geom.length;) {
+            const ringLen = geom[i];
+            const ringSize = geom[i + 1];
+            const coords0 = i + 2;
+            const coordsEnd = coords0 + ringLen * 3;
+            addLine(simplified, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent);
+            i = coordsEnd;
+        }
     }
 
     if (!simplified.length) return;
@@ -61,7 +68,7 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
     if (type === LINE && options.lineMetrics) {
         tags = {};
         for (const key in feature.tags) tags[key] = feature.tags[key];
-        const size = geom[0].size;
+        const size = geom[1]; // first ring's ringSize (line length)
         /* eslint-disable camelcase */
         tags.mapbox_clip_start = feature.start / size;
         tags.mapbox_clip_end = feature.end / size;
@@ -74,16 +81,16 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
     tile.features.push(tileFeature);
 }
 
-function addLine(result, geom, tile, tolerance, isPolygon, z2, tx, ty, extent) {
+function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent) {
     const sqTolerance = tolerance * tolerance;
 
-    if (tolerance > 0 && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
-        tile.numPoints += geom.length / 3;
+    if (tolerance > 0 && (Math.abs(ringSize) < (isPolygon ? sqTolerance : tolerance))) {
+        tile.numPoints += (coordsEnd - coords0) / 3;
         return;
     }
 
     const ring = [];
-    for (let i = 0; i < geom.length; i += 3) {
+    for (let i = coords0; i < coordsEnd; i += 3) {
         if (tolerance === 0 || geom[i + 2] > sqTolerance) {
             tile.numSimplified++;
             ring.push(projectX(geom[i], z2, tx, extent), projectY(geom[i + 1], z2, ty, extent));
