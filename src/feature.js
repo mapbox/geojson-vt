@@ -1,24 +1,45 @@
 
-// Internal feature type tags match MVT output types (and the legacy envelope's
-// numeric type field). Single-vs-multi is encoded by "feature has 1+ rings".
+// Internal feature type tags. The first three match MVT output types (and the
+// legacy envelope's numeric `type` field); SINGLE_POINT is an internal-only
+// specialization that tile.js maps back to POINT in public output.
+//
+//   POINT (1)        — MultiPoint (and Point with >1 coord): flat [x,y,z, ...]
+//   LINE (2)         — LineString / MultiLineString:         inline-header rings
+//   POLYGON (3)      — Polygon / MultiPolygon:               inline-header rings
+//   SINGLE_POINT (4) — single-Point specialization:          {x, y} on the feature
+//
 // Polygon outer-vs-hole is encoded by winding order (canonicalized in convert)
-// AND by the sign of the ring's stored `ringSize` (positive = outer, negative
-// = hole) — so Polygon and MultiPolygon share one flat ring list.
-export const POINT  = 1; // Point / MultiPoint:           flat [x,y,z, ...]
-export const LINE   = 2; // LineString / MultiLineString: inline-header rings
-export const POLYGON = 3; // Polygon / MultiPolygon:       inline-header rings
+// AND by the sign of the ring's stored `ringSize` — so Polygon and MultiPolygon
+// share one flat ring list.
 //
 // Inline-header layout for LINE / POLYGON geometry:
 //     [ringLen, ringSize, x,y,z, ..., ringLen, ringSize, x,y,z, ..., ...]
-// where `ringLen` is the coord-triple count for the ring, and `ringSize` is
-// the ring's length (LINE, unsigned) or signed area (POLYGON). The whole
-// feature lives in a single Array — no per-ring sub-arrays.
+// where `ringLen` is the coord-triple count and `ringSize` is the ring's length
+// (LINE, unsigned) or signed area (POLYGON). The whole feature lives in a
+// single Array — no per-ring sub-arrays.
 //
 // When lineMetrics is on, LINE features always have a single ring, and
 // `feature.start` / `feature.end` carry the clip metrics (in source-length
 // units). They are absent otherwise.
 
-export default function createFeature(id, type, geom, tags) {
+export const POINT = 1;
+export const LINE = 2;
+export const POLYGON = 3;
+export const SINGLE_POINT = 4;
+
+// Specialized 5-slot wrapper for single-Point features. No geometry array,
+// no bbox slots (x/y are the bbox).
+export function createSinglePoint(id, x, y, tags) {
+    return {
+        id: id == null ? null : id,
+        type: SINGLE_POINT,
+        x,
+        y,
+        tags
+    };
+}
+
+export function createFeature(id, type, geom, tags) {
     const feature = {
         id: id == null ? null : id,
         type,

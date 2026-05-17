@@ -1,6 +1,6 @@
 
 import clip from './clip.js';
-import createFeature, {POINT} from './feature.js';
+import {createFeature, createSinglePoint, POINT, SINGLE_POINT} from './feature.js';
 
 export default function wrap(features, options) {
     const buffer = options.buffer / options.extent;
@@ -20,6 +20,10 @@ export default function wrap(features, options) {
 function shiftFeatureCoords(features, offset) {
     const out = [];
     for (const feature of features) {
+        if (feature.type === SINGLE_POINT) {
+            out.push(createSinglePoint(feature.id, feature.x + offset, feature.y, feature.tags));
+            continue;
+        }
         const newGeom = shiftGeom(feature.geometry, feature.type, offset);
         const shifted = createFeature(feature.id, feature.type, newGeom, feature.tags);
         if (feature.start !== undefined) {

@@ -1,5 +1,5 @@
 
-import {POINT, LINE, POLYGON} from './feature.js';
+import {POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
 
 export default function createTile(features, z, tx, ty, options) {
     const tolerance = z === options.maxZoom ? 0 : options.tolerance / ((1 << z) * options.extent);
@@ -34,8 +34,30 @@ function projectY(y, z2, ty, extent) {
 }
 
 function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
-    const geom = feature.geometry;
     const type = feature.type;
+
+    if (type === SINGLE_POINT) {
+        const x = feature.x;
+        const y = feature.y;
+        if (x < tile.minX) tile.minX = x;
+        if (y < tile.minY) tile.minY = y;
+        if (x > tile.maxX) tile.maxX = x;
+        if (y > tile.maxY) tile.maxY = y;
+
+        tile.numPoints++;
+        tile.numSimplified++;
+
+        const tileFeature = {
+            geometry: [projectX(x, z2, tx, extent), projectY(y, z2, ty, extent)],
+            type: POINT,
+            tags: feature.tags || null
+        };
+        if (feature.id !== null) tileFeature.id = feature.id;
+        tile.features.push(tileFeature);
+        return;
+    }
+
+    const geom = feature.geometry;
     const simplified = [];
 
     if (feature.minX < tile.minX) tile.minX = feature.minX;

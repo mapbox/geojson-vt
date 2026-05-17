@@ -1,6 +1,6 @@
 
 import simplify from './simplify.js';
-import createFeature, {POINT, LINE, POLYGON} from './feature.js';
+import {createFeature, createSinglePoint, POINT, LINE, POLYGON} from './feature.js';
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
@@ -34,9 +34,7 @@ function convertFeature(features, geojson, options, index) {
     else if (options.generateId) id = index || 0;
 
     if (type === 'Point') {
-        const geom = new Array(3);
-        writePoint(geom, 0, coords);
-        pushFeature(features, id, POINT, geom, tags, options);
+        features.push(createSinglePoint(id, projectX(coords[0]), projectY(coords[1]), tags));
 
     } else if (type === 'MultiPoint') {
         const geom = new Array(coords.length * 3);

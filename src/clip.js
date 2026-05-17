@@ -1,5 +1,5 @@
 
-import createFeature, {POINT, LINE, POLYGON} from './feature.js';
+import {createFeature, POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
 
 /* clip features between two vertical or horizontal axis-parallel lines:
  *     |        |
@@ -28,6 +28,18 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
     for (let fi = 0; fi < features.length; fi++) {
         const feature = features[fi];
         const type = feature.type;
+
+        if (type === SINGLE_POINT) {
+            // x/y stored directly on the feature; no geometry array, no bbox.
+            const a = axis === 0 ? feature.x : feature.y;
+            if (a >= k1 && a <= k2) {
+                if (clipped !== null) clipped.push(feature);
+            } else if (clipped === null) {
+                clipped = features.slice(0, fi);
+            }
+            continue;
+        }
+
         const geometry = feature.geometry;
 
         const min = axis === 0 ? feature.minX : feature.minY;
