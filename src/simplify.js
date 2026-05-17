@@ -1,5 +1,8 @@
 
-// calculate simplification data using optimized Douglas-Peucker algorithm
+// calculate simplification data using optimized Douglas-Peucker algorithm.
+// stored z-slot is sqrt(maxSqDist) (linear) so it fits Int32 quanta when
+// the index runs in the Int32 source-coord path, and unifies the tile.js
+// keep-or-drop comparison to `> tolerance` (linear) across both paths.
 
 export default function simplify(coords, first, last, sqTolerance) {
     let maxSqDist = sqTolerance;
@@ -33,7 +36,7 @@ export default function simplify(coords, first, last, sqTolerance) {
 
     if (maxSqDist > sqTolerance) {
         if (index - first > 3) simplify(coords, first, index, sqTolerance);
-        coords[index + 2] = maxSqDist;
+        coords[index + 2] = Math.sqrt(maxSqDist);
         if (last - index > 3) simplify(coords, index, last, sqTolerance);
     }
 }

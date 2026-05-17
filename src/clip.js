@@ -7,18 +7,18 @@ import {createFeature, POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
  * /   |   \____|____/
  *     |        |
  *
- * k1 and k2 are the line coordinates
+ * k1, k2: storage-space clip-line coordinates (caller has already converted
+ *         from tile-grid units, multiplied by worldScale, shifted by
+ *         originShift). Same scale as feature coords.
  * axis: 0 for x, 1 for y
- * minAll and maxAll: minimum and maximum coordinate value for all features
+ * minAll, maxAll: storage-space bbox bounds across all features
  */
-export default function clip(features, scale, k1, k2, axis, minAll, maxAll, options) {
-    k1 /= scale;
-    k2 /= scale;
-
+export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
     if (minAll >= k1 && maxAll < k2) return features; // trivial accept
     if (maxAll < k1 || minAll >= k2) return null;     // trivial reject
 
     const isMetrics = options.lineMetrics;
+    const CoordArray = options.CoordArray;
     // Lazy-init: stay null while every feature so far trivially accepts. As
     // soon as any feature rejects or needs clipping, materialize `clipped`
     // by copying the accepted prefix.
@@ -54,23 +54,23 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
         if (clipped === null) clipped = features.slice(0, fi);
 
         if (type === POINT) {
-            clipPoint(geometry, k1, k2, axis, feature, clipped);
+            clipPoint(geometry, k1, k2, axis, feature, clipped, CoordArray);
             continue;
         }
-        clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isMetrics);
+        clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isMetrics, CoordArray);
     }
 
     if (clipped === null) return features; // every feature trivially accepted
     return clipped.length ? clipped : null;
 }
 
-function clipPoint(geometry, k1, k2, axis, feature, clipped) {
+function clipPoint(geometry, k1, k2, axis, feature, clipped, CoordArray) {
     let n = 0;
     for (let i = 0; i < geometry.length; i += 3) {
         if (geometry[i + axis] >= k1 && geometry[i + axis] <= k2) n += 3;
     }
     if (n === 0) return;
-    const out = new Float64Array(n);
+    const out = new CoordArray(n);
     let w = 0;
     for (let i = 0; i < geometry.length; i += 3) {
         if (geometry[i + axis] >= k1 && geometry[i + axis] <= k2) {
@@ -83,7 +83,7 @@ function clipPoint(geometry, k1, k2, axis, feature, clipped) {
     clipped.push(createFeature(feature.id, POINT, out, feature.tags));
 }
 
-function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isMetrics) {
+function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isMetrics, CoordArray) {
     const isPolygon = type === POLYGON;
     const trackMetrics = isMetrics && type === LINE;
 
@@ -98,8 +98,8 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
         const sliceSizes = [];
         countClipRing(geometry, 2, 2 + ringLen * 3, k1, k2, axis, false, sliceSizes);
         if (sliceSizes.length === 0) return;
-        const out = new Float64Array(2 + sliceSizes[0] * 3);
-        clipRing(geometry, 2, 2 + ringLen * 3, ringSize, out, 0, k1, k2, axis, false, feature, sliceSizes, clipped);
+        const out = new CoordArray(2 + sliceSizes[0] * 3);
+        clipRing(geometry, 2, 2 + ringLen * 3, ringSize, out, 0, k1, k2, axis, false, feature, sliceSizes, clipped, CoordArray);
         return;
     }
 
@@ -111,13 +111,13 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
         i = coordsEnd;
     }
     if (total === 0) return;
-    const out = new Float64Array(total);
+    const out = new CoordArray(total);
     let w = 0;
     for (let i = 0; i < geometry.length;) {
         const ringLen = geometry[i];
         const ringSize = geometry[i + 1];
         const coordsEnd = i + 2 + ringLen * 3;
-        w = clipRing(geometry, i + 2, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, null, null, null);
+        w = clipRing(geometry, i + 2, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, null, null, null, CoordArray);
         i = coordsEnd;
     }
     clipped.push(createFeature(feature.id, type, out, feature.tags));
@@ -185,7 +185,7 @@ function countClipRing(geom, coords0, coordsEnd, k1, k2, axis, isPolygon, sliceS
 // instead emitted as its own feature into `clipped`, and `out` is swapped to
 // the next slice's exact-sized buffer (per `sliceSizes`, produced by the
 // precount). In that mode the returned `w` is meaningless.
-function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, metricsSource, sliceSizes, clipped) {
+function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, metricsSource, sliceSizes, clipped, CoordArray) {
     const trackMetrics = metricsSource !== null;
     let sliceIdx = 0;
     let headerIdx = w;
@@ -248,7 +248,7 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
                     emitMetricsSlice(clipped, metricsSource, out, sliceStart, len + segLen * t);
                     sliceIdx++;
                     if (sliceIdx < sliceSizes.length) {
-                        out = new Float64Array(2 + sliceSizes[sliceIdx] * 3);
+                        out = new CoordArray(2 + sliceSizes[sliceIdx] * 3);
                         w = 0;
                     }
                 }
@@ -307,8 +307,12 @@ function emitMetricsSlice(clipped, source, geom, start, end) {
 }
 
 // Compute the segment/clip-line intersection point at axis-parallel value `k`,
-// write its (x, y, z=1) triple into `out` at position `w`, and return the
+// write its (x, y, z=KEEP) triple into `out` at position `w`, and return the
 // parametric `t` along the segment for the metrics path's start/end.
+// `k` is integer-valued in storage space (axis component falls on a
+// quantum-aligned clip line); the non-axis component is a real intersection
+// that Int32Array auto-coerces on store. The KEEP sentinel ensures the
+// intersection is never simplified away.
 function intersect(out, w, ax, ay, bx, by, k, axis) {
     let t;
     if (axis === 0) {
@@ -320,6 +324,6 @@ function intersect(out, w, ax, ay, bx, by, k, axis) {
         out[w]     = ax + (bx - ax) * t;
         out[w + 1] = k;
     }
-    out[w + 2] = 1;
+    out[w + 2] = 0x7FFFFFFF;
     return t;
 }

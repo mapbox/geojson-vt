@@ -28,6 +28,16 @@ class GeoJSONVT {
         if (options.maxZoom < 0 || options.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
         if (options.promoteId && options.generateId) throw new Error('promoteId and generateId cannot be used together.');
 
+        // Int32 source-coord gate: world + wrap buffer must fit signed 32-bit.
+        // When the gate fails, fall back to Float64Array storage (uncentered
+        // [0, 1] source space — historical encoding).
+        const worldSpan = (options.extent + 2 * options.buffer) * (1 << options.maxZoom);
+        const useInt32 = worldSpan <= 0x100000000; // 2^32
+        options.useInt32 = useInt32;
+        options.CoordArray = useInt32 ? Int32Array : Float64Array;
+        options.worldScale = useInt32 ? options.extent * (1 << options.maxZoom) : 1;
+        options.originShift = useInt32 ? 0.5 : 0;
+
         // projects and adds simplification info
         let features = convert(data, options);
 
@@ -121,28 +131,33 @@ class GeoJSONVT {
 
             if (debug > 1) console.time('clipping');
 
-            // values we'll use for clipping
-            const k1 = 0.5 * options.buffer / options.extent;
-            const k2 = 0.5 - k1;
-            const k3 = 0.5 + k1;
-            const k4 = 1 + k1;
+            // Convert tile-grid clip thresholds to storage space:
+            //   source = (gridCoord ± k) / z2
+            //   storage = (source - originShift) * worldScale
+            // (b is the half-buffer in storage units; tile-step in storage = S/z2.)
+            const S = options.worldScale;
+            const O = options.originShift;
+            const step = S / z2;
+            const b = 0.5 * options.buffer * S / (z2 * options.extent);
+            const xc = (x / z2 - O) * S; // tile's left edge in storage
+            const yc = (y / z2 - O) * S; // tile's top edge in storage
 
             let tl = null;
             let bl = null;
             let tr = null;
             let br = null;
 
-            const left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX, options);
-            const right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX, options);
+            const left  = clip(features, xc - b,        xc + step / 2 + b, 0, tile.minX, tile.maxX, options);
+            const right = clip(features, xc + step / 2 - b, xc + step + b, 0, tile.minX, tile.maxX, options);
 
             if (left) {
-                tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
-                bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
+                tl = clip(left, yc - b,        yc + step / 2 + b, 1, tile.minY, tile.maxY, options);
+                bl = clip(left, yc + step / 2 - b, yc + step + b, 1, tile.minY, tile.maxY, options);
             }
 
             if (right) {
-                tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
-                br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
+                tr = clip(right, yc - b,        yc + step / 2 + b, 1, tile.minY, tile.maxY, options);
+                br = clip(right, yc + step / 2 - b, yc + step + b, 1, tile.minY, tile.maxY, options);
             }
 
             if (debug > 1) console.timeEnd('clipping');
@@ -168,7 +183,7 @@ class GeoJSONVT {
         x = (x + z2) & (z2 - 1); // wrap tile x coordinate
 
         const id = toID(z, x, y);
-        if (this.tiles[id]) return materializeTile(this.tiles[id]);
+        if (this.tiles[id]) return materializeTile(this.tiles[id], options);
 
         if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -194,14 +209,21 @@ class GeoJSONVT {
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
 
-        return this.tiles[id] ? materializeTile(this.tiles[id]) : null;
+        return this.tiles[id] ? materializeTile(this.tiles[id], options) : null;
     }
 }
 
 // Walks the retained internal tile (flat integer coord arrays) into the legacy
 // nested envelope: [x, y] pairs grouped per ring. The retained tile is
 // immutable; each call produces a fresh envelope.
-function materializeTile(tile) {
+function materializeTile(tile, options) {
+    const S = options.worldScale;
+    const O = options.originShift;
+    // Convert storage-space bbox back to source [0,1] for the public envelope.
+    const minX = tile.minX === Infinity  ? tile.minX : tile.minX / S + O;
+    const minY = tile.minY === Infinity  ? tile.minY : tile.minY / S + O;
+    const maxX = tile.maxX === -Infinity ? tile.maxX : tile.maxX / S + O;
+    const maxY = tile.maxY === -Infinity ? tile.maxY : tile.maxY / S + O;
     const features = [];
     for (const f of tile.features) {
         let outGeom;
@@ -238,10 +260,7 @@ function materializeTile(tile) {
         x: tile.x,
         y: tile.y,
         z: tile.z,
-        minX: tile.minX,
-        minY: tile.minY,
-        maxX: tile.maxX,
-        maxY: tile.maxY
+        minX, minY, maxX, maxY
     };
 }
 

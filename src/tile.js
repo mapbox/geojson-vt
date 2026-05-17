@@ -1,10 +1,25 @@
 
 import {POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
+
+// `createTile` reads features in *storage space* (the units convert.js
+// established — centered Int32 quanta when the Int32 gate passed, or
+// uncentered Float64 source [0,1] otherwise) and projects each coord into
+// the public per-tile integer extent space. `tolerance` is in storage
+// units at the current zoom (linear, since z-slot and POLYGON ringSize
+// were stored sqrt-linear at convert).
+
 export default function createTile(features, z, tx, ty, options) {
-    const tolerance = z === options.maxZoom ? 0 : options.tolerance / ((1 << z) * options.extent);
-    const z2 = 1 << z;
     const extent = options.extent;
-    // Pick smallest typed-array dtype that fits projected coord range [-buffer, extent+buffer].
+    const S = options.worldScale;
+    const O = options.originShift;
+    // storage-space tolerance at this zoom: pixel-tolerance scaled to quanta,
+    // then narrowed by the current zoom factor. At z=maxZoom this equals
+    // options.tolerance in storage units (1 pixel = 1 quantum on the Int32
+    // path; equivalent ratio on the Float64 path).
+    const tolerance = z === options.maxZoom ? 0 : options.tolerance * S / ((1 << z) * extent);
+    const z2 = 1 << z;
+    // Committed-tile coord type: smallest typed-array dtype that fits the
+    // tile-extent projected range [-buffer, extent+buffer].
     const CoordArray = (extent + options.buffer) <= 32767 ? Int16Array : Int32Array;
     const tile = {
         features: [],
@@ -15,26 +30,28 @@ export default function createTile(features, z, tx, ty, options) {
         x: tx,
         y: ty,
         z,
-        minX: 2,
-        minY: 1,
-        maxX: -1,
-        maxY: 0
+        minX: Infinity,
+        minY: Infinity,
+        maxX: -Infinity,
+        maxY: -Infinity
     };
     for (const feature of features) {
-        addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray);
+        addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray, S, O);
     }
     return tile;
 }
 
-function projectX(x, z2, tx, extent) {
-    return Math.round(extent * (x * z2 - tx));
+// Project a storage-space x back to tile-extent integer space.
+// storage_x / S + O = source_x ∈ [0, 1]; then (source_x * z2 - tx) * extent.
+function projectX(x, z2, tx, extent, S, O) {
+    return Math.round(extent * ((x / S + O) * z2 - tx));
 }
 
-function projectY(y, z2, ty, extent) {
-    return Math.round(extent * (y * z2 - ty));
+function projectY(y, z2, ty, extent, S, O) {
+    return Math.round(extent * ((y / S + O) * z2 - ty));
 }
 
-function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray) {
+function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray, S, O) {
     const type = feature.type;
 
     if (type === SINGLE_POINT) {
@@ -49,8 +66,8 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
         tile.numSimplified++;
 
         const tileFeature = {
-            x: projectX(x, z2, tx, extent),
-            y: projectY(y, z2, ty, extent),
+            x: projectX(x, z2, tx, extent, S, O),
+            y: projectY(y, z2, ty, extent, S, O),
             type: SINGLE_POINT,
             tags: feature.tags || null
         };
@@ -71,8 +88,8 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
         const n = geom.length / 3;
         simplified = new CoordArray(n * 2);
         for (let i = 0, j = 0; i < geom.length; i += 3, j += 2) {
-            simplified[j] = projectX(geom[i], z2, tx, extent);
-            simplified[j + 1] = projectY(geom[i + 1], z2, ty, extent);
+            simplified[j] = projectX(geom[i], z2, tx, extent, S, O);
+            simplified[j + 1] = projectY(geom[i + 1], z2, ty, extent, S, O);
         }
         tile.numPoints += n;
         tile.numSimplified += n;
@@ -86,7 +103,7 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
             const ringSize = geom[i + 1];
             const coords0 = i + 2;
             const coordsEnd = coords0 + ringLen * 3;
-            addLine(simplified, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray);
+            addLine(simplified, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray, S, O);
             i = coordsEnd;
         }
         if (!simplified.length) return;
@@ -97,9 +114,13 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
         tags = {};
         for (const key in feature.tags) tags[key] = feature.tags[key];
         const size = geom[1]; // first ring's ringSize (line length)
+        // Clamp to [0, 1] — the mathematical bounds by definition. On the
+        // integer-coord path, `size` is the truncated Int32 length while
+        // clip's `feature.end` is a Float64 running sum, so a slice ending
+        // at the line end would otherwise emit mapbox_clip_end slightly > 1.
         /* eslint-disable camelcase */
-        tags.mapbox_clip_start = feature.start / size;
-        tags.mapbox_clip_end = feature.end / size;
+        tags.mapbox_clip_start = Math.max(0, feature.start / size);
+        tags.mapbox_clip_end = Math.min(1, feature.end / size);
         /* eslint-enable camelcase */
     }
 
@@ -109,13 +130,14 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
     tile.features.push(tileFeature);
 }
 
-function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray) {
-    const sqTolerance = tolerance * tolerance;
+function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray, S, O) {
     const ringLen = (coordsEnd - coords0) / 3;
 
     if (ringLen === 0) return; // tolerate over-allocated trailing slack from clip's heuristic count
 
-    if (tolerance > 0 && (Math.abs(ringSize) < (isPolygon ? sqTolerance : tolerance))) {
+    // z-slot and POLYGON ringSize are stored sqrt-linear, LINE ringSize linear,
+    // so both ringSize and per-coord weight compare linearly against tolerance.
+    if (tolerance > 0 && Math.abs(ringSize) < tolerance) {
         tile.numPoints += ringLen;
         return;
     }
@@ -126,7 +148,7 @@ function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, is
         kept = ringLen;
     } else {
         for (let i = coords0; i < coordsEnd; i += 3) {
-            if (geom[i + 2] > sqTolerance) kept++;
+            if (geom[i + 2] > tolerance) kept++;
         }
     }
     tile.numPoints += ringLen;
@@ -135,9 +157,9 @@ function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, is
     const ring = new CoordArray(kept * 2);
     let w = 0;
     for (let i = coords0; i < coordsEnd; i += 3) {
-        if (tolerance === 0 || geom[i + 2] > sqTolerance) {
-            ring[w++] = projectX(geom[i], z2, tx, extent);
-            ring[w++] = projectY(geom[i + 1], z2, ty, extent);
+        if (tolerance === 0 || geom[i + 2] > tolerance) {
+            ring[w++] = projectX(geom[i], z2, tx, extent, S, O);
+            ring[w++] = projectY(geom[i + 1], z2, ty, extent, S, O);
         }
     }
     result.push(ring);

@@ -2,29 +2,39 @@
 import clip from './clip.js';
 import {createFeature, createSinglePoint, POINT, SINGLE_POINT} from './feature.js';
 
+// All thresholds and feature coords here live in storage space (centered
+// Int32 quanta when the gate passed, source [0,1] doubles otherwise). The
+// wrap shift (one full world width) is `worldScale` in storage units.
+
 export default function wrap(features, options) {
-    const buffer = options.buffer / options.extent;
+    const S = options.worldScale;
+    const O = options.originShift;
+    // buffer width in storage units
+    const buf = options.buffer * S / options.extent;
+    // world [0, 1] in storage units: [-O*S, (1-O)*S]
+    const w0 = -O * S;
+    const w1 = (1 - O) * S;
     let merged = features;
-    const left  = clip(features, 1, -1 - buffer, buffer,     0, -1, 2, options); // left world copy
-    const right = clip(features, 1,  1 - buffer, 2 + buffer, 0, -1, 2, options); // right world copy
+    const left  = clip(features, w0 - S - buf, w0 + buf, 0, w0 - S, w1 + S, options); // left world copy
+    const right = clip(features, w1 - buf,     w1 + S + buf, 0, w0 - S, w1 + S, options); // right world copy
 
     if (left || right) {
-        merged = clip(features, 1, -buffer, 1 + buffer, 0, -1, 2, options) || []; // center world copy
+        merged = clip(features, w0 - buf, w1 + buf, 0, w0 - S, w1 + S, options) || []; // center world copy
 
-        if (left)  merged = shiftFeatureCoords(left,  1).concat(merged); // merge left into center
-        if (right) merged = merged.concat(shiftFeatureCoords(right, -1)); // merge right into center
+        if (left)  merged = shiftFeatureCoords(left,  S, options).concat(merged); // merge left into center
+        if (right) merged = merged.concat(shiftFeatureCoords(right, -S, options)); // merge right into center
     }
     return merged;
 }
 
-function shiftFeatureCoords(features, offset) {
+function shiftFeatureCoords(features, offset, options) {
     const out = [];
     for (const feature of features) {
         if (feature.type === SINGLE_POINT) {
             out.push(createSinglePoint(feature.id, feature.x + offset, feature.y, feature.tags));
             continue;
         }
-        const newGeom = shiftGeom(feature.geometry, feature.type, offset);
+        const newGeom = shiftGeom(feature.geometry, feature.type, offset, options.CoordArray);
         const shifted = createFeature(feature.id, feature.type, newGeom, feature.tags);
         if (feature.start !== undefined) {
             shifted.start = feature.start;
@@ -38,8 +48,8 @@ function shiftFeatureCoords(features, offset) {
 // Build a shifted copy of a feature's geometry — a single new buffer per
 // feature (POINT: flat coords; LINE/POLYGON: inline-header rings). Output
 // size is identical to input, so we can pre-size exactly.
-function shiftGeom(geom, type, offset) {
-    const out = new Float64Array(geom.length);
+function shiftGeom(geom, type, offset, CoordArray) {
+    const out = new CoordArray(geom.length);
     if (type === POINT) {
         for (let i = 0; i < geom.length; i += 3) {
             out[i]     = geom[i] + offset;

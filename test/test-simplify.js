@@ -58,7 +58,7 @@ test('simplifies points correctly with the given tolerance', () => {
 
     const result = [];
     for (let i = 0; i < coords.length; i += 3) {
-        if (coords[i + 2] > 0.005 * 0.005) {
+        if (coords[i + 2] > 0.005) {
             result.push([coords[i], coords[i + 1]]);
         }
     }

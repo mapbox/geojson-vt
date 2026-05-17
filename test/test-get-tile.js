@@ -52,8 +52,15 @@ test('getTile: unbuffered tile top/bottom edges', () => {
         buffer: 0
     });
 
-    assert.deepEqual(index.getTile(2, 1, 0).features, [{geometry: [[[0, 4096], [4096, 4096]]], type: 2, tags: null}]);
-    assert.deepEqual(index.getTile(2, 1, 1).features, []);
+    // Line at lat=66.51326044311188 inverse-projects to y=0.25 source. The
+    // Int32 source-coord path truncates the sub-quantum fraction (Float64
+    // y = 0.24999999999999983) toward zero, landing the storage value
+    // exactly on the (2,1,0)/(2,1,1) tile boundary; clip's `min >= k1 &&
+    // max < k2` places the boundary in the upper-numbered tile. The line is
+    // geometrically the same place either way — top edge (y=0) of (2,1,1)
+    // is the bottom edge (y=4096) of (2,1,0).
+    assert.deepEqual(index.getTile(2, 1, 0).features, []);
+    assert.deepEqual(index.getTile(2, 1, 1).features, [{geometry: [[[0, 0], [4096, 0]]], type: 2, tags: null}]);
 });
 
 test('getTile: polygon clipping on the boundary', () => {
@@ -104,7 +111,7 @@ test('getTile: polygon with collinear vertex on tile boundary (#161)', () => {
 
     const tile = index.getTile(3, 4, 3);
     assert.deepEqual(tile.features, [{
-        geometry: [[[1820, 762], [4096, 1986], [4096, 3700], [1820, 3700], [1820, 762]]],
+        geometry: [[[1820, 762], [4096, 1987], [4096, 3701], [1820, 3701], [1820, 762]]],
         type: 3,
         tags: null
     }]);
@@ -125,8 +132,11 @@ test('getTile: line metrics with vertex on tile border (geojson-vt-cpp#92)', () 
 
     const tile = index.getTile(13, 2344, 3134);
     assert.equal(tile.features.length, 1);
-    assert.deepEqual(tile.features[0].geometry, [[[-2048, 2747], [408, 5037]]]);
-    assert.ok(Math.abs(tile.features[0].tags.mapbox_clip_start - 0.660622) < 1e-5);
+    assert.deepEqual(tile.features[0].geometry, [[[-2048, 2748], [408, 5037]]]);
+    // Loosened tolerance from 1e-5 to 1e-4: the slice-start intersection
+    // is computed inside clip from the integer storage coords, which shift
+    // the ratio by ~3e-5 vs the historical Float64 source-coord path.
+    assert.ok(Math.abs(tile.features[0].tags.mapbox_clip_start - 0.660622) < 1e-4);
     assert.equal(tile.features[0].tags.mapbox_clip_end, 1);
 });
 
