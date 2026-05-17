@@ -1,9 +1,5 @@
 
 import {POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
-
-// Below this kept-point count, addLine builds rings as a JS Array (less overhead on tiny rings)
-const TYPED_RING_THRESHOLD = 8;
-
 export default function createTile(features, z, tx, ty, options) {
     const tolerance = z === options.maxZoom ? 0 : options.tolerance / ((1 << z) * options.extent);
     const z2 = 1 << z;
@@ -134,26 +130,13 @@ function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, is
     tile.numPoints += ringLen;
     tile.numSimplified += kept;
 
-    // Two fill loops on purpose: a single loop over a polymorphic ring (JS Array | typed)
-    // deopts the inner write and costs ~40% on deep polygons.
-    if (kept < TYPED_RING_THRESHOLD) {
-        // push keeps it PACKED_SMI; pre-sized `new Array(N)` would be HOLEY.
-        const ring = [];
-        for (let i = coords0; i < coordsEnd; i += 3) {
-            if (tolerance === 0 || geom[i + 2] > sqTolerance) {
-                ring.push(projectX(geom[i], z2, tx, extent), projectY(geom[i + 1], z2, ty, extent));
-            }
+    const ring = new CoordArray(kept * 2);
+    let w = 0;
+    for (let i = coords0; i < coordsEnd; i += 3) {
+        if (tolerance === 0 || geom[i + 2] > sqTolerance) {
+            ring[w++] = projectX(geom[i], z2, tx, extent);
+            ring[w++] = projectY(geom[i + 1], z2, ty, extent);
         }
-        result.push(ring);
-    } else {
-        const ring = new CoordArray(kept * 2);
-        let w = 0;
-        for (let i = coords0; i < coordsEnd; i += 3) {
-            if (tolerance === 0 || geom[i + 2] > sqTolerance) {
-                ring[w++] = projectX(geom[i], z2, tx, extent);
-                ring[w++] = projectY(geom[i + 1], z2, ty, extent);
-            }
-        }
-        result.push(ring);
     }
+    result.push(ring);
 }
