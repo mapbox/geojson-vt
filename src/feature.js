@@ -16,7 +16,7 @@
 //     [ringLen, ringSize, x,y,z, ..., ringLen, ringSize, x,y,z, ..., ...]
 // where `ringLen` is the coord-triple count and `ringSize` is the ring's length
 // (LINE, unsigned) or signed area (POLYGON). The whole feature lives in a
-// single Array — no per-ring sub-arrays.
+// single Float64Array — no per-ring sub-arrays.
 //
 // When lineMetrics is on, LINE features always have a single ring, and
 // `feature.start` / `feature.end` carry the clip metrics (in source-length
@@ -53,11 +53,15 @@ export function createFeature(id, type, geom, tags) {
     if (type === POINT) {
         calcBBox(feature, geom, 0, geom.length);
     } else {
+        // polygon holes lie inside their outer ring, so they can't extend the
+        // bbox — skip them (ringSize < 0 after canonical winding)
+        const outerOnly = type === POLYGON;
         for (let i = 0; i < geom.length;) {
             const ringLen = geom[i];
+            const ringSize = geom[i + 1];
             const coords0 = i + 2;
             const coordsEnd = coords0 + ringLen * 3;
-            calcBBox(feature, geom, coords0, coordsEnd);
+            if (!outerOnly || ringSize > 0) calcBBox(feature, geom, coords0, coordsEnd);
             i = coordsEnd;
         }
     }
