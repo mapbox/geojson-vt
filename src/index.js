@@ -204,16 +204,20 @@ class GeoJSONVT {
 function materializeTile(tile) {
     const features = [];
     for (const f of tile.features) {
-        const geom = f.geometry;
         let outGeom;
-        if (f.type === 1) {
+        let outType = f.type;
+        if (outType === 4) { // SINGLE_POINT → narrow to public POINT envelope
+            outGeom = [[f.x, f.y]];
+            outType = 1;
+        } else if (outType === 1) {
+            const geom = f.geometry;
             outGeom = [];
             for (let i = 0; i < geom.length; i += 2) {
                 outGeom.push([geom[i], geom[i + 1]]);
             }
         } else {
             outGeom = [];
-            for (const ring of geom) {
+            for (const ring of f.geometry) {
                 const pairs = [];
                 for (let i = 0; i < ring.length; i += 2) {
                     pairs.push([ring[i], ring[i + 1]]);
@@ -221,7 +225,7 @@ function materializeTile(tile) {
                 outGeom.push(pairs);
             }
         }
-        const legacy = {geometry: outGeom, type: f.type, tags: f.tags};
+        const legacy = {geometry: outGeom, type: outType, tags: f.tags};
         if (f.id !== undefined) legacy.id = f.id;
         features.push(legacy);
     }

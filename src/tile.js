@@ -1,10 +1,15 @@
 
 import {POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
 
+// Below this kept-point count, addLine builds rings as a JS Array (less overhead on tiny rings)
+const TYPED_RING_THRESHOLD = 8;
+
 export default function createTile(features, z, tx, ty, options) {
     const tolerance = z === options.maxZoom ? 0 : options.tolerance / ((1 << z) * options.extent);
     const z2 = 1 << z;
     const extent = options.extent;
+    // Pick smallest typed-array dtype that fits projected coord range [-buffer, extent+buffer].
+    const CoordArray = (extent + options.buffer) <= 32767 ? Int16Array : Int32Array;
     const tile = {
         features: [],
         numPoints: 0,
@@ -20,7 +25,7 @@ export default function createTile(features, z, tx, ty, options) {
         maxY: 0
     };
     for (const feature of features) {
-        addFeature(tile, feature, tolerance, options, z2, tx, ty, extent);
+        addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray);
     }
     return tile;
 }
@@ -33,7 +38,7 @@ function projectY(y, z2, ty, extent) {
     return Math.round(extent * (y * z2 - ty));
 }
 
-function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
+function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray) {
     const type = feature.type;
 
     if (type === SINGLE_POINT) {
@@ -48,8 +53,9 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
         tile.numSimplified++;
 
         const tileFeature = {
-            geometry: [projectX(x, z2, tx, extent), projectY(y, z2, ty, extent)],
-            type: POINT,
+            x: projectX(x, z2, tx, extent),
+            y: projectY(y, z2, ty, extent),
+            type: SINGLE_POINT,
             tags: feature.tags || null
         };
         if (feature.id !== null) tileFeature.id = feature.id;
@@ -58,7 +64,7 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
     }
 
     const geom = feature.geometry;
-    const simplified = [];
+    let simplified;
 
     if (feature.minX < tile.minX) tile.minX = feature.minX;
     if (feature.minY < tile.minY) tile.minY = feature.minY;
@@ -66,25 +72,29 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
     if (feature.maxY > tile.maxY) tile.maxY = feature.maxY;
 
     if (type === POINT) {
-        for (let i = 0; i < geom.length; i += 3) {
-            simplified.push(projectX(geom[i], z2, tx, extent), projectY(geom[i + 1], z2, ty, extent));
-            tile.numPoints++;
-            tile.numSimplified++;
+        const n = geom.length / 3;
+        simplified = new CoordArray(n * 2);
+        for (let i = 0, j = 0; i < geom.length; i += 3, j += 2) {
+            simplified[j] = projectX(geom[i], z2, tx, extent);
+            simplified[j + 1] = projectY(geom[i + 1], z2, ty, extent);
         }
+        tile.numPoints += n;
+        tile.numSimplified += n;
+        if (!simplified.length) return;
 
     } else {
+        simplified = [];
         const isPolygon = type === POLYGON;
         for (let i = 0; i < geom.length;) {
             const ringLen = geom[i];
             const ringSize = geom[i + 1];
             const coords0 = i + 2;
             const coordsEnd = coords0 + ringLen * 3;
-            addLine(simplified, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent);
+            addLine(simplified, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray);
             i = coordsEnd;
         }
+        if (!simplified.length) return;
     }
-
-    if (!simplified.length) return;
 
     let tags = feature.tags || null;
     if (type === LINE && options.lineMetrics) {
@@ -103,21 +113,47 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent) {
     tile.features.push(tileFeature);
 }
 
-function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent) {
+function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray) {
     const sqTolerance = tolerance * tolerance;
+    const ringLen = (coordsEnd - coords0) / 3;
 
     if (tolerance > 0 && (Math.abs(ringSize) < (isPolygon ? sqTolerance : tolerance))) {
-        tile.numPoints += (coordsEnd - coords0) / 3;
+        tile.numPoints += ringLen;
         return;
     }
 
-    const ring = [];
-    for (let i = coords0; i < coordsEnd; i += 3) {
-        if (tolerance === 0 || geom[i + 2] > sqTolerance) {
-            tile.numSimplified++;
-            ring.push(projectX(geom[i], z2, tx, extent), projectY(geom[i + 1], z2, ty, extent));
+    // Pre-count kept points so the retained ring is allocated at exact size
+    let kept = 0;
+    if (tolerance === 0) {
+        kept = ringLen;
+    } else {
+        for (let i = coords0; i < coordsEnd; i += 3) {
+            if (geom[i + 2] > sqTolerance) kept++;
         }
-        tile.numPoints++;
     }
-    result.push(ring);
+    tile.numPoints += ringLen;
+    tile.numSimplified += kept;
+
+    // Two fill loops on purpose: a single loop over a polymorphic ring (JS Array | typed)
+    // deopts the inner write and costs ~40% on deep polygons.
+    if (kept < TYPED_RING_THRESHOLD) {
+        // push keeps it PACKED_SMI; pre-sized `new Array(N)` would be HOLEY.
+        const ring = [];
+        for (let i = coords0; i < coordsEnd; i += 3) {
+            if (tolerance === 0 || geom[i + 2] > sqTolerance) {
+                ring.push(projectX(geom[i], z2, tx, extent), projectY(geom[i + 1], z2, ty, extent));
+            }
+        }
+        result.push(ring);
+    } else {
+        const ring = new CoordArray(kept * 2);
+        let w = 0;
+        for (let i = coords0; i < coordsEnd; i += 3) {
+            if (tolerance === 0 || geom[i + 2] > sqTolerance) {
+                ring[w++] = projectX(geom[i], z2, tx, extent);
+                ring[w++] = projectY(geom[i + 1], z2, ty, extent);
+            }
+        }
+        result.push(ring);
+    }
 }

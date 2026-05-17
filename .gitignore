@@ -2,6 +2,11 @@ debug/data/hrr.json
 debug/data/hsa.json
 debug/data/idaho.json
 debug/data/zips.json
+debug/data/gz_*
+debug/data/county.json
+debug/data/earthquakes.json
+debug/data/cities.json
+debug/data/ne*.json
 geojson-vt-dev.js
 geojson-vt.js
 node_modules
