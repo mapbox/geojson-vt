@@ -37,12 +37,12 @@ function convertFeature(features, geojson, options, index) {
         features.push(createSinglePoint(id, projectX(coords[0]), projectY(coords[1]), tags));
 
     } else if (type === 'MultiPoint') {
-        const geom = new Array(coords.length * 3);
+        const geom = new Float64Array(coords.length * 3);
         for (let i = 0; i < coords.length; i++) writePoint(geom, i * 3, coords[i]);
         pushFeature(features, id, POINT, geom, tags, options);
 
     } else if (type === 'LineString') {
-        const geom = new Array(2 + coords.length * 3);
+        const geom = new Float64Array(2 + coords.length * 3);
         writeLine(geom, 0, coords, tolerance, false, false);
         pushFeature(features, id, LINE, geom, tags, options);
 
@@ -50,19 +50,19 @@ function convertFeature(features, geojson, options, index) {
         if (options.lineMetrics) {
             // explode into separate features so each carries its own metrics
             for (const lineCoords of coords) {
-                const geom = new Array(2 + lineCoords.length * 3);
+                const geom = new Float64Array(2 + lineCoords.length * 3);
                 writeLine(geom, 0, lineCoords, tolerance, false, false);
                 pushFeature(features, id, LINE, geom, tags, options);
             }
         } else {
-            const geom = new Array(ringsBufferSize(coords));
+            const geom = new Float64Array(ringsBufferSize(coords));
             let idx = 0;
             for (const lineCoords of coords) idx = writeLine(geom, idx, lineCoords, tolerance, false, false);
             pushFeature(features, id, LINE, geom, tags, options);
         }
 
     } else if (type === 'Polygon') {
-        const geom = new Array(ringsBufferSize(coords));
+        const geom = new Float64Array(ringsBufferSize(coords));
         let idx = 0;
         // for polygons, ring index 0 is outer per GeoJSON spec; others are holes
         for (let i = 0; i < coords.length; i++) {
@@ -75,7 +75,7 @@ function convertFeature(features, geojson, options, index) {
         // outer rings (positive area) from holes (negative area).
         let total = 0;
         for (const polyCoords of coords) total += ringsBufferSize(polyCoords);
-        const geom = new Array(total);
+        const geom = new Float64Array(total);
         let idx = 0;
         for (const polyCoords of coords) {
             for (let i = 0; i < polyCoords.length; i++) {

@@ -39,7 +39,7 @@ function shiftFeatureCoords(features, offset) {
 // feature (POINT: flat coords; LINE/POLYGON: inline-header rings). Output
 // size is identical to input, so we can pre-size exactly.
 function shiftGeom(geom, type, offset) {
-    const out = new Array(geom.length);
+    const out = new Float64Array(geom.length);
     if (type === POINT) {
         for (let i = 0; i < geom.length; i += 3) {
             out[i]     = geom[i] + offset;

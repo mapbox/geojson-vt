@@ -21,8 +21,7 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
     const isMetrics = options.lineMetrics;
     // Lazy-init: stay null while every feature so far trivially accepts. As
     // soon as any feature rejects or needs clipping, materialize `clipped`
-    // by copying the accepted prefix. If the whole loop stays trivial-accept,
-    // we return `features` directly and skip the Array allocation entirely.
+    // by copying the accepted prefix.
     let clipped = null;
 
     for (let fi = 0; fi < features.length; fi++) {
@@ -41,7 +40,6 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
         }
 
         const geometry = feature.geometry;
-
         const min = axis === 0 ? feature.minX : feature.minY;
         const max = axis === 0 ? feature.maxX : feature.maxY;
 
@@ -56,64 +54,149 @@ export default function clip(features, scale, k1, k2, axis, minAll, maxAll, opti
         if (clipped === null) clipped = features.slice(0, fi);
 
         if (type === POINT) {
-            const out = [];
-            for (let i = 0; i < geometry.length; i += 3) {
-                const a = geometry[i + axis];
-                if (a >= k1 && a <= k2) out.push(geometry[i], geometry[i + 1], geometry[i + 2]);
-            }
-            if (out.length) clipped.push(createFeature(feature.id, POINT, out, feature.tags));
+            clipPoint(geometry, k1, k2, axis, feature, clipped);
             continue;
         }
-
-        const isPolygon = type === POLYGON;
-
-        if (isMetrics && type === LINE) {
-            // metrics features always have a single ring (split at convert/clip);
-            // each output slice becomes its own feature with its own start/end.
-            const ringLen = geometry[0];
-            const ringSize = geometry[1];
-            clipRing(geometry, 2, 2 + ringLen * 3, ringSize, clipped, k1, k2, axis, false, feature);
-        } else {
-            const out = [];
-            for (let i = 0; i < geometry.length;) {
-                const ringLen = geometry[i];
-                const ringSize = geometry[i + 1];
-                const coords0 = i + 2;
-                const coordsEnd = coords0 + ringLen * 3;
-                clipRing(geometry, coords0, coordsEnd, ringSize, out, k1, k2, axis, isPolygon, null);
-                i = coordsEnd;
-            }
-            if (out.length) clipped.push(createFeature(feature.id, type, out, feature.tags));
-        }
+        clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isMetrics);
     }
 
     if (clipped === null) return features; // every feature trivially accepted
     return clipped.length ? clipped : null;
 }
 
+function clipPoint(geometry, k1, k2, axis, feature, clipped) {
+    let n = 0;
+    for (let i = 0; i < geometry.length; i += 3) {
+        if (geometry[i + axis] >= k1 && geometry[i + axis] <= k2) n += 3;
+    }
+    if (n === 0) return;
+    const out = new Float64Array(n);
+    let w = 0;
+    for (let i = 0; i < geometry.length; i += 3) {
+        if (geometry[i + axis] >= k1 && geometry[i + axis] <= k2) {
+            out[w]     = geometry[i];
+            out[w + 1] = geometry[i + 1];
+            out[w + 2] = geometry[i + 2];
+            w += 3;
+        }
+    }
+    clipped.push(createFeature(feature.id, POINT, out, feature.tags));
+}
+
+function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isMetrics) {
+    const isPolygon = type === POLYGON;
+    const trackMetrics = isMetrics && type === LINE;
+
+    // Two passes: precount exact output sizes, then allocate and write.
+    // Metrics mode produces one feature per slice (sized individually);
+    // non-metrics packs all rings into a single inline-header buffer.
+    if (trackMetrics) {
+        // metrics features always have a single ring (split at convert/clip);
+        // each output slice becomes its own feature with its own start/end.
+        const ringLen = geometry[0];
+        const ringSize = geometry[1];
+        const sliceSizes = [];
+        countClipRing(geometry, 2, 2 + ringLen * 3, k1, k2, axis, false, sliceSizes);
+        if (sliceSizes.length === 0) return;
+        const out = new Float64Array(2 + sliceSizes[0] * 3);
+        clipRing(geometry, 2, 2 + ringLen * 3, ringSize, out, 0, k1, k2, axis, false, feature, sliceSizes, clipped);
+        return;
+    }
+
+    let total = 0;
+    for (let i = 0; i < geometry.length;) {
+        const ringLen = geometry[i];
+        const coordsEnd = i + 2 + ringLen * 3;
+        total += countClipRing(geometry, i + 2, coordsEnd, k1, k2, axis, isPolygon, null);
+        i = coordsEnd;
+    }
+    if (total === 0) return;
+    const out = new Float64Array(total);
+    let w = 0;
+    for (let i = 0; i < geometry.length;) {
+        const ringLen = geometry[i];
+        const ringSize = geometry[i + 1];
+        const coordsEnd = i + 2 + ringLen * 3;
+        w = clipRing(geometry, i + 2, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, null, null, null);
+        i = coordsEnd;
+    }
+    clipped.push(createFeature(feature.id, type, out, feature.tags));
+}
+
+// Count exact output slot count (headers + coords) for one input ring,
+// mirroring `clipRing`'s topology without intersect math. The polygon-close
+// decision uses the crossing count: for valid closed input rings, close is
+// needed iff at least one segment crossed a clip line (the output then ends
+// in an intersection, which differs from the entry point). Zero crossings
+// means the ring is verbatim-copied and remains naturally closed. When
+// `sliceSizes` is provided (metrics mode), per-slice coord counts are
+// pushed into it instead of summed; the return value is then irrelevant.
+function countClipRing(geom, coords0, coordsEnd, k1, k2, axis, isPolygon, sliceSizes) {
+    let slices = 0;
+    let coordsTotal = 0;
+    let sliceCoords = 0;
+    let crossings = 0;
+
+    for (let i = coords0; i < coordsEnd - 3; i += 3) {
+        const a = geom[i + axis];
+        const b = geom[i + 3 + axis];
+        let exited = false;
+
+        if (a < k1) {
+            if (b >= k1) { sliceCoords++; crossings++; }
+        } else if (a > k2) {
+            if (b <= k2) { sliceCoords++; crossings++; }
+        } else {
+            sliceCoords++;
+        }
+        if (b < k1 && a >= k1) { sliceCoords++; crossings++; exited = true; }
+        if (b > k2 && a <= k2) { sliceCoords++; crossings++; exited = true; }
+
+        if (!isPolygon && exited) {
+            if (sliceCoords > 0) {
+                if (sliceSizes !== null) sliceSizes.push(sliceCoords);
+                coordsTotal += sliceCoords;
+                slices++;
+            }
+            sliceCoords = 0;
+        }
+    }
+
+    const lastA = geom[coordsEnd - 3 + axis];
+    if (lastA >= k1 && lastA <= k2) sliceCoords++;
+    if (isPolygon && sliceCoords >= 2 && crossings >= 1) sliceCoords++;
+
+    if (sliceCoords > 0) {
+        if (sliceSizes !== null) sliceSizes.push(sliceCoords);
+        coordsTotal += sliceCoords;
+        slices++;
+    }
+
+    return coordsTotal * 3 + slices * 2;
+}
+
 // Sutherland–Hodgman clipping (for polygon rings) or split-into-segments
 // (for linestrings). Reads one ring's coords from `geom[coords0..coordsEnd]`
-// and writes inline-header ring(s) into `out`. For polygons: at most one
-// output ring per input ring. For linestrings: any number of output rings.
-// When `metricsSource` is set (line-metrics mode), each output slice is
-// emitted as its own feature pushed into `out` instead — `out` is the
-// `clipped` array of features in that case.
-function clipRing(geom, coords0, coordsEnd, ringSize, out, k1, k2, axis, isPolygon, metricsSource) {
+// and writes inline-header ring(s) into `out` starting at writer position
+// `w`. For polygons: at most one output ring per input ring. For linestrings:
+// any number of output rings. Returns the new `w`.
+//
+// When `metricsSource` is set (line-metrics mode), each finalized slice is
+// instead emitted as its own feature into `clipped`, and `out` is swapped to
+// the next slice's exact-sized buffer (per `sliceSizes`, produced by the
+// precount). In that mode the returned `w` is meaningless.
+function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, metricsSource, sliceSizes, clipped) {
     const trackMetrics = metricsSource !== null;
-    const intersect = axis === 0 ? intersectX : intersectY;
-
-    // `slice` is the buffer we're currently writing coords into. In the normal
-    // case it IS `out` (rings are appended sequentially into the shared geometry
-    // buffer); in the metrics case it's a fresh per-slice buffer that becomes
-    // its own feature when finalized.
-    let slice = trackMetrics ? [] : out;
-    let headerIdx = slice.length;
-    slice.push(0, ringSize); // reserve [ringLen, ringSize]; ringLen backfilled below
-    let sliceStart0 = slice.length;
+    let sliceIdx = 0;
+    let headerIdx = w;
+    out[w]     = 0;        // ringLen, backfilled below
+    out[w + 1] = ringSize;
+    w += 2;
+    let sliceStart0 = w;
 
     let len = trackMetrics ? metricsSource.start : 0;
     let sliceStart = len;
-    let segLen, t;
+    let segLen = 0, t = 0;
 
     for (let i = coords0; i < coordsEnd - 3; i += 3) {
         const ax = geom[i];
@@ -125,44 +208,57 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, k1, k2, axis, isPolyg
         const b = axis === 0 ? bx : by;
         let exited = false;
 
-        if (trackMetrics) segLen = Math.sqrt(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2));
+        if (trackMetrics) segLen = Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by));
 
         if (a < k1) {
             // ---|-->  | (line enters the clip region from the left)
             if (b >= k1) {
-                t = intersect(slice, ax, ay, bx, by, k1);
+                t = intersect(out, w, ax, ay, bx, by, k1, axis); w += 3;
                 if (trackMetrics) sliceStart = len + segLen * t;
             }
         } else if (a > k2) {
             // |  <--|--- (line enters the clip region from the right)
             if (b <= k2) {
-                t = intersect(slice, ax, ay, bx, by, k2);
+                t = intersect(out, w, ax, ay, bx, by, k2, axis); w += 3;
                 if (trackMetrics) sliceStart = len + segLen * t;
             }
         } else {
-            slice.push(ax, ay, az);
+            out[w]     = ax;
+            out[w + 1] = ay;
+            out[w + 2] = az;
+            w += 3;
         }
         if (b < k1 && a >= k1) {
             // <--|---  | or <--|-----|--- (line exits the clip region on the left)
-            t = intersect(slice, ax, ay, bx, by, k1);
+            t = intersect(out, w, ax, ay, bx, by, k1, axis); w += 3;
             exited = true;
         }
         if (b > k2 && a <= k2) {
             // |  ---|--> or ---|-----|--> (line exits the clip region on the right)
-            t = intersect(slice, ax, ay, bx, by, k2);
+            t = intersect(out, w, ax, ay, bx, by, k2, axis); w += 3;
             exited = true;
         }
 
         if (!isPolygon && exited) {
             // finalize current slice, start a new one
-            finalizeSlice(slice, headerIdx, sliceStart0);
-            if (trackMetrics) {
-                emitMetricsSlice(out, metricsSource, slice, sliceStart, len + segLen * t);
-                slice = [];
+            const sliceLen = (w - sliceStart0) / 3;
+            if (sliceLen > 0) {
+                out[headerIdx] = sliceLen;
+                if (trackMetrics) {
+                    emitMetricsSlice(clipped, metricsSource, out, sliceStart, len + segLen * t);
+                    sliceIdx++;
+                    if (sliceIdx < sliceSizes.length) {
+                        out = new Float64Array(2 + sliceSizes[sliceIdx] * 3);
+                        w = 0;
+                    }
+                }
+                headerIdx = w;
+                out[w]     = 0;
+                out[w + 1] = ringSize;
+                w += 2;
+                sliceStart0 = w;
             }
-            headerIdx = slice.length;
-            slice.push(0, ringSize);
-            sliceStart0 = slice.length;
+            // else: empty slice; reuse the reserved header for the next one
         }
 
         if (trackMetrics) len += segLen;
@@ -174,48 +270,56 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, k1, k2, axis, isPolyg
     const ay = geom[last + 1];
     const az = geom[last + 2];
     const a = axis === 0 ? ax : ay;
-    if (a >= k1 && a <= k2) slice.push(ax, ay, az);
+    if (a >= k1 && a <= k2) {
+        out[w]     = ax;
+        out[w + 1] = ay;
+        out[w + 2] = az;
+        w += 3;
+    }
 
     // close the polygon if its endpoints are not the same after clipping
-    const lastIdx = slice.length - 3;
-    if (isPolygon && lastIdx >= sliceStart0 + 3 &&
-        (slice[lastIdx] !== slice[sliceStart0] || slice[lastIdx + 1] !== slice[sliceStart0 + 1])) {
-        slice.push(slice[sliceStart0], slice[sliceStart0 + 1], slice[sliceStart0 + 2]);
+    if (isPolygon && (w - sliceStart0) >= 6 &&
+        (out[w - 3] !== out[sliceStart0] || out[w - 2] !== out[sliceStart0 + 1])) {
+        out[w]     = out[sliceStart0];
+        out[w + 1] = out[sliceStart0 + 1];
+        out[w + 2] = out[sliceStart0 + 2];
+        w += 3;
     }
 
-    // finalize the final slice
-    if (finalizeSlice(slice, headerIdx, sliceStart0) && trackMetrics) {
-        emitMetricsSlice(out, metricsSource, slice, sliceStart, len);
+    // finalize the final slice — backfill ringLen, or roll back the reserved
+    // header if the slice ended up empty
+    const sliceLen = (w - sliceStart0) / 3;
+    if (sliceLen > 0) {
+        out[headerIdx] = sliceLen;
+        if (trackMetrics) emitMetricsSlice(clipped, metricsSource, out, sliceStart, len);
+    } else {
+        w = headerIdx;
     }
+
+    return w;
 }
 
-// Backfill ringLen, or roll back the reserved header if the slice is empty.
-// Returns whether a non-empty slice was written.
-function finalizeSlice(slice, headerIdx, coords0) {
-    const ringLen = (slice.length - coords0) / 3;
-    if (ringLen > 0) {
-        slice[headerIdx] = ringLen;
-        return true;
-    }
-    slice.length = headerIdx;
-    return false;
-}
-
-function emitMetricsSlice(clipped, source, slice, start, end) {
-    const f = createFeature(source.id, LINE, slice, source.tags);
+function emitMetricsSlice(clipped, source, geom, start, end) {
+    const f = createFeature(source.id, LINE, geom, source.tags);
     f.start = start;
     f.end = end;
     clipped.push(f);
 }
 
-function intersectX(out, ax, ay, bx, by, x) {
-    const t = (x - ax) / (bx - ax);
-    out.push(x, ay + (by - ay) * t, 1);
-    return t;
-}
-
-function intersectY(out, ax, ay, bx, by, y) {
-    const t = (y - ay) / (by - ay);
-    out.push(ax + (bx - ax) * t, y, 1);
+// Compute the segment/clip-line intersection point at axis-parallel value `k`,
+// write its (x, y, z=1) triple into `out` at position `w`, and return the
+// parametric `t` along the segment for the metrics path's start/end.
+function intersect(out, w, ax, ay, bx, by, k, axis) {
+    let t;
+    if (axis === 0) {
+        t = (k - ax) / (bx - ax);
+        out[w]     = k;
+        out[w + 1] = ay + (by - ay) * t;
+    } else {
+        t = (k - ay) / (by - ay);
+        out[w]     = ax + (bx - ax) * t;
+        out[w + 1] = k;
+    }
+    out[w + 2] = 1;
     return t;
 }

@@ -113,6 +113,8 @@ function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, is
     const sqTolerance = tolerance * tolerance;
     const ringLen = (coordsEnd - coords0) / 3;
 
+    if (ringLen === 0) return; // tolerate over-allocated trailing slack from clip's heuristic count
+
     if (tolerance > 0 && (Math.abs(ringSize) < (isPolygon ? sqTolerance : tolerance))) {
         tile.numPoints += ringLen;
         return;
