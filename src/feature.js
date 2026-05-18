@@ -27,6 +27,10 @@ export const LINE = 2;
 export const POLYGON = 3;
 export const SINGLE_POINT = 4;
 
+// Z-slot sentinel marking a coord as "always kept" by simplify (exceeds any
+// tolerance at any zoom). Int32 max so it survives ToInt32 on Int32Array.
+export const KEEP_Z = 0x7FFFFFFF;
+
 // Specialized 5-slot wrapper for single-Point features. No geometry array,
 // no bbox slots (x/y are the bbox).
 export function createSinglePoint(id, x, y, tags) {
@@ -39,6 +43,9 @@ export function createSinglePoint(id, x, y, tags) {
     };
 }
 
+// LINE features with `options.lineMetrics` get a `start`/`end` pair attached
+// later (in convert.js for full lines, in clip.js for per-slice features).
+// Absent on all other feature types.
 export function createFeature(id, type, geom, tags) {
     const feature = {
         id: id == null ? null : id,

@@ -1,6 +1,6 @@
 
 import simplify from './simplify.js';
-import {createFeature, createSinglePoint, POINT, LINE, POLYGON} from './feature.js';
+import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './feature.js';
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data.
 //
@@ -192,10 +192,9 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
     }
 
     const lastIdx = coordsEnd - 3;
-    // KEEP_Z: sentinel exceeding any tolerance at any zoom; Int32 max.
-    out[coords0 + 2] = 0x7FFFFFFF;
+    out[coords0 + 2] = KEEP_Z;
     simplify(out, coords0, lastIdx, sqTolerance);
-    out[lastIdx + 2] = 0x7FFFFFFF;
+    out[lastIdx + 2] = KEEP_Z;
 
     // backfill header. POLYGON: sign(area)*sqrt(|area|) — keeps sign for
     // outer/hole distinction, fits Int32 since |area| ≤ W², sqrt ≤ W ≤ 2^32.

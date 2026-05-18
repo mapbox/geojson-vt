@@ -1,5 +1,5 @@
 
-import {createFeature, POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
+import {createFeature, POINT, LINE, POLYGON, SINGLE_POINT, KEEP_Z} from './feature.js';
 
 /* clip features between two vertical or horizontal axis-parallel lines:
  *     |        |
@@ -192,10 +192,10 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
     out[w]     = 0;        // ringLen, backfilled below
     out[w + 1] = ringSize;
     w += 2;
-    let sliceStart0 = w;
+    let sliceWriteStart = w;
 
     let len = trackMetrics ? metricsSource.start : 0;
-    let sliceStart = len;
+    let sliceMetricStart = len;
     let segLen = 0, t = 0;
 
     for (let i = coords0; i < coordsEnd - 3; i += 3) {
@@ -214,13 +214,13 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
             // ---|-->  | (line enters the clip region from the left)
             if (b >= k1) {
                 t = intersect(out, w, ax, ay, bx, by, k1, axis); w += 3;
-                if (trackMetrics) sliceStart = len + segLen * t;
+                if (trackMetrics) sliceMetricStart = len + segLen * t;
             }
         } else if (a > k2) {
             // |  <--|--- (line enters the clip region from the right)
             if (b <= k2) {
                 t = intersect(out, w, ax, ay, bx, by, k2, axis); w += 3;
-                if (trackMetrics) sliceStart = len + segLen * t;
+                if (trackMetrics) sliceMetricStart = len + segLen * t;
             }
         } else {
             out[w]     = ax;
@@ -241,11 +241,11 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
 
         if (!isPolygon && exited) {
             // finalize current slice, start a new one
-            const sliceLen = (w - sliceStart0) / 3;
+            const sliceLen = (w - sliceWriteStart) / 3;
             if (sliceLen > 0) {
                 out[headerIdx] = sliceLen;
                 if (trackMetrics) {
-                    emitMetricsSlice(clipped, metricsSource, out, sliceStart, len + segLen * t);
+                    emitMetricsSlice(clipped, metricsSource, out, sliceMetricStart, len + segLen * t);
                     sliceIdx++;
                     if (sliceIdx < sliceSizes.length) {
                         out = new CoordArray(2 + sliceSizes[sliceIdx] * 3);
@@ -256,7 +256,7 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
                 out[w]     = 0;
                 out[w + 1] = ringSize;
                 w += 2;
-                sliceStart0 = w;
+                sliceWriteStart = w;
             }
             // else: empty slice; reuse the reserved header for the next one
         }
@@ -278,20 +278,20 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
     }
 
     // close the polygon if its endpoints are not the same after clipping
-    if (isPolygon && (w - sliceStart0) >= 6 &&
-        (out[w - 3] !== out[sliceStart0] || out[w - 2] !== out[sliceStart0 + 1])) {
-        out[w]     = out[sliceStart0];
-        out[w + 1] = out[sliceStart0 + 1];
-        out[w + 2] = out[sliceStart0 + 2];
+    if (isPolygon && (w - sliceWriteStart) >= 6 &&
+        (out[w - 3] !== out[sliceWriteStart] || out[w - 2] !== out[sliceWriteStart + 1])) {
+        out[w]     = out[sliceWriteStart];
+        out[w + 1] = out[sliceWriteStart + 1];
+        out[w + 2] = out[sliceWriteStart + 2];
         w += 3;
     }
 
     // finalize the final slice — backfill ringLen, or roll back the reserved
     // header if the slice ended up empty
-    const sliceLen = (w - sliceStart0) / 3;
+    const sliceLen = (w - sliceWriteStart) / 3;
     if (sliceLen > 0) {
         out[headerIdx] = sliceLen;
-        if (trackMetrics) emitMetricsSlice(clipped, metricsSource, out, sliceStart, len);
+        if (trackMetrics) emitMetricsSlice(clipped, metricsSource, out, sliceMetricStart, len);
     } else {
         w = headerIdx;
     }
@@ -324,6 +324,6 @@ function intersect(out, w, ax, ay, bx, by, k, axis) {
         out[w]     = Math.round(ax + (bx - ax) * t);
         out[w + 1] = k;
     }
-    out[w + 2] = 0x7FFFFFFF;
+    out[w + 2] = KEEP_Z;
     return t;
 }

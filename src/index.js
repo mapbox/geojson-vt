@@ -3,6 +3,7 @@ import convert from './convert.js';     // GeoJSON conversion and preprocessing
 import clip from './clip.js';           // stripe clipping algorithm
 import wrap from './wrap.js';           // date line processing
 import createTile from './tile.js';     // final simplified tile generation
+import {POINT, SINGLE_POINT} from './feature.js';
 
 const defaultOptions = {
     maxZoom: 14,            // max zoom to preserve detail on
@@ -221,10 +222,10 @@ function materializeTile(tile) {
     for (const f of tile.features) {
         let outGeom;
         let outType = f.type;
-        if (outType === 4) { // SINGLE_POINT → narrow to public POINT envelope
+        if (outType === SINGLE_POINT) { // narrow to public POINT envelope
             outGeom = [[f.x, f.y]];
-            outType = 1;
-        } else if (outType === 1) {
+            outType = POINT;
+        } else if (outType === POINT) {
             const geom = f.geometry;
             outGeom = [];
             for (let i = 0; i < geom.length; i += 2) {
