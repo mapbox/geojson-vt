@@ -2,10 +2,13 @@
 import clip from './clip.js';
 import {createFeature, createSinglePoint, POINT, SINGLE_POINT} from './feature.js';
 
+/** @import {AnyFeature, CoordArray, CoordArrayCtor, InternalOptions as Options} from './internal.d.ts' */
+
 // All thresholds and feature coords here live in storage space (centered
 // Int32 quanta when the gate passed, source [0,1] doubles otherwise). The
 // wrap shift (one full world width) is `worldScale` in storage units.
 
+/** @param {AnyFeature[]} features @param {Options} options @returns {AnyFeature[]} */
 export default function wrap(features, options) {
     const S = options.worldScale;
     const O = options.originShift;
@@ -27,6 +30,7 @@ export default function wrap(features, options) {
     return merged;
 }
 
+/** @param {AnyFeature[]} features @param {number} offset @param {Options} options @returns {AnyFeature[]} */
 function shiftFeatureCoords(features, offset, options) {
     const out = [];
     for (const feature of features) {
@@ -48,6 +52,7 @@ function shiftFeatureCoords(features, offset, options) {
 // Build a shifted copy of a feature's geometry — a single new buffer per
 // feature (POINT: flat coords; LINE/POLYGON: inline-header rings). Output
 // size is identical to input, so we can pre-size exactly.
+/** @param {CoordArray} geom @param {1|2|3} type @param {number} offset @param {CoordArrayCtor} CoordArray @returns {CoordArray} */
 function shiftGeom(geom, type, offset, CoordArray) {
     const out = new CoordArray(geom.length);
     if (type === POINT) {

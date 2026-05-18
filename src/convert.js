@@ -2,6 +2,8 @@
 import simplify from './simplify.js';
 import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './feature.js';
 
+/** @import {AnyFeature, CoordArray, InternalOptions as Options, Tags, FeatureId as Id} from './internal.d.ts' */
+
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data.
 //
 // Source coords are projected once here into "storage space" and stay there
@@ -17,7 +19,9 @@ import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './
 // sqrt-linear so they stay in Int32 range and so tile.js's keep-or-drop
 // comparison is `> tolerance` (linear) for both paths.
 
+/** @param {any} data @param {Options} options @returns {AnyFeature[]} */
 export default function convert(data, options) {
+    /** @type {AnyFeature[]} */
     const features = [];
     if (data.type === 'FeatureCollection') {
         for (let i = 0; i < data.features.length; i++) {
@@ -32,6 +36,7 @@ export default function convert(data, options) {
     return features;
 }
 
+/** @param {AnyFeature[]} features @param {any} geojson @param {Options} options @param {number} [index] */
 function convertFeature(features, geojson, options, index) {
     if (!geojson.geometry) return;
 
@@ -112,12 +117,14 @@ function convertFeature(features, geojson, options, index) {
     }
 }
 
+/** @param {number[][][]} rings */
 function ringsBufferSize(rings) {
     let n = 0;
     for (const ring of rings) if (ring.length > 0) n += 2 + ring.length * 3;
     return n;
 }
 
+/** @param {AnyFeature[]} features @param {Id|undefined} id @param {1|2|3} type @param {CoordArray} geom @param {Tags} tags @param {Options} options */
 function pushFeature(features, id, type, geom, tags, options) {
     const feature = createFeature(id, type, geom, tags);
     if (type === LINE && options.lineMetrics) {
@@ -127,6 +134,7 @@ function pushFeature(features, id, type, geom, tags, options) {
     features.push(feature);
 }
 
+/** @param {CoordArray} out @param {number} idx @param {number[]} coords @param {number} S @param {number} O */
 function writePoint(out, idx, coords, S, O) {
     out[idx]     = projectX(coords[0], S, O);
     out[idx + 1] = projectY(coords[1], S, O);
@@ -137,6 +145,7 @@ function writePoint(out, idx, coords, S, O) {
 // buffer. Returns the next write position. `ringSize` is stored sqrt-linear
 // for POLYGON (sign(area) * sqrt(|area|)) and linear length for LINE — both
 // stay in Int32 range at the worst-case world span.
+/** @param {CoordArray} out @param {number} idx @param {number[][]} ring @param {number} sqTolerance @param {boolean} isPolygon @param {boolean} isOuter @param {number} S @param {number} O @returns {number} */
 function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
     // empty rings are skipped at the call sites; this guard prevents
     // KEEP_Z scribbling past the reserved header into the next ring
@@ -145,7 +154,7 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
     idx += 2; // reserve [ringLen, ringSize]; backfilled below
     const coords0 = idx;
 
-    let x0, y0;
+    let x0 = 0, y0 = 0;
     let size = 0;
 
     for (let j = 0; j < ring.length; j++) {
@@ -205,10 +214,12 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
     return idx;
 }
 
+/** @param {number} x @param {number} S @param {number} O */
 function projectX(x, S, O) {
     return (x / 360 + 0.5 - O) * S;
 }
 
+/** @param {number} y @param {number} S @param {number} O */
 function projectY(y, S, O) {
     const sin = Math.sin(y * Math.PI / 180);
     const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;

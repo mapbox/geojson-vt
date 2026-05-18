@@ -1,6 +1,8 @@
 
 import {POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
 
+/** @import {AnyFeature, CoordArray, InternalOptions as Options, Tile, TileCoordArray, TileCoordArrayCtor, TileFeature, TileFeatureSinglePoint} from './internal.d.ts' */
+
 // `createTile` reads features in *storage space* (the units convert.js
 // established — centered Int32 quanta when the Int32 gate passed, or
 // uncentered Float64 source [0,1] otherwise) and projects each coord into
@@ -8,6 +10,7 @@ import {POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
 // units at the current zoom (linear, since z-slot and POLYGON ringSize
 // were stored sqrt-linear at convert).
 
+/** @param {AnyFeature[]} features @param {number} z @param {number} tx @param {number} ty @param {Options} options @returns {Tile} */
 export default function createTile(features, z, tx, ty, options) {
     const extent = options.extent;
     const S = options.worldScale;
@@ -21,6 +24,7 @@ export default function createTile(features, z, tx, ty, options) {
     // Committed-tile coord type: smallest typed-array dtype that fits the
     // tile-extent projected range [-buffer, extent+buffer].
     const CoordArray = (extent + options.buffer) <= 32767 ? Int16Array : Int32Array;
+    /** @type {Tile} */
     const tile = {
         features: [],
         numPoints: 0,
@@ -43,14 +47,17 @@ export default function createTile(features, z, tx, ty, options) {
 
 // Project a storage-space x back to tile-extent integer space.
 // storage_x / S + O = source_x ∈ [0, 1]; then (source_x * z2 - tx) * extent.
+/** @param {number} x @param {number} z2 @param {number} tx @param {number} extent @param {number} S @param {number} O */
 function projectX(x, z2, tx, extent, S, O) {
     return Math.round(extent * ((x / S + O) * z2 - tx));
 }
 
+/** @param {number} y @param {number} z2 @param {number} ty @param {number} extent @param {number} S @param {number} O */
 function projectY(y, z2, ty, extent, S, O) {
     return Math.round(extent * ((y / S + O) * z2 - ty));
 }
 
+/** @param {Tile} tile @param {AnyFeature} feature @param {number} tolerance @param {Options} options @param {number} z2 @param {number} tx @param {number} ty @param {number} extent @param {TileCoordArrayCtor} CoordArray @param {number} S @param {number} O */
 function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray, S, O) {
     const type = feature.type;
 
@@ -65,6 +72,7 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
         tile.numPoints++;
         tile.numSimplified++;
 
+        /** @type {TileFeatureSinglePoint} */
         const tileFeature = {
             x: projectX(x, z2, tx, extent, S, O),
             y: projectY(y, z2, ty, extent, S, O),
@@ -77,6 +85,7 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
     }
 
     const geom = feature.geometry;
+    /** @type {TileCoordArray | TileCoordArray[]} */
     let simplified;
 
     if (feature.minX < tile.minX) tile.minX = feature.minX;
@@ -114,22 +123,28 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
         tags = {};
         for (const key in feature.tags) tags[key] = feature.tags[key];
         const size = geom[1]; // first ring's ringSize (line length)
+        // start/end are set together by convert/clip on lineMetrics LINE features
+        const start = /** @type {number} */ (feature.start);
+        const end = /** @type {number} */ (feature.end);
         // Clamp to [0, 1] — the mathematical bounds by definition. On the
         // integer-coord path, `size` is the truncated Int32 length while
         // clip's `feature.end` is a Float64 running sum, so a slice ending
         // at the line end would otherwise emit mapbox_clip_end slightly > 1.
         /* eslint-disable camelcase */
-        tags.mapbox_clip_start = Math.max(0, feature.start / size);
-        tags.mapbox_clip_end = Math.min(1, feature.end / size);
+        tags.mapbox_clip_start = Math.max(0, start / size);
+        tags.mapbox_clip_end = Math.min(1, end / size);
         /* eslint-enable camelcase */
     }
 
-    // internal type values are intentionally identical to the public ones
-    const tileFeature = {geometry: simplified, type, tags};
+    // internal type values are intentionally identical to the public ones; the cast
+    // bridges the parallel narrowing of `type` (POINT vs LINE/POLYGON) and `simplified`
+    // (flat vs ring-array) that TS can't follow across branches.
+    const tileFeature = /** @type {TileFeature} */ ({geometry: simplified, type, tags});
     if (feature.id !== null) tileFeature.id = feature.id;
     tile.features.push(tileFeature);
 }
 
+/** @param {TileCoordArray[]} result @param {CoordArray} geom @param {number} coords0 @param {number} coordsEnd @param {number} ringSize @param {Tile} tile @param {number} tolerance @param {boolean} isPolygon @param {number} z2 @param {number} tx @param {number} ty @param {number} extent @param {TileCoordArrayCtor} CoordArray @param {number} S @param {number} O */
 function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray, S, O) {
     const ringLen = (coordsEnd - coords0) / 3;
 

@@ -27,12 +27,15 @@ export const LINE = 2;
 export const POLYGON = 3;
 export const SINGLE_POINT = 4;
 
+/** @import {CoordArray, Feature, SinglePointFeature, FeatureId, Tags} from './internal.d.ts' */
+
 // Z-slot sentinel marking a coord as "always kept" by simplify (exceeds any
 // tolerance at any zoom). Int32 max so it survives ToInt32 on Int32Array.
 export const KEEP_Z = 0x7FFFFFFF;
 
 // Specialized 5-slot wrapper for single-Point features. No geometry array,
 // no bbox slots (x/y are the bbox).
+/** @param {FeatureId|undefined} id @param {number} x @param {number} y @param {Tags} tags @returns {SinglePointFeature} */
 export function createSinglePoint(id, x, y, tags) {
     return {
         id: id == null ? null : id,
@@ -46,6 +49,7 @@ export function createSinglePoint(id, x, y, tags) {
 // LINE features with `options.lineMetrics` get a `start`/`end` pair attached
 // later (in convert.js for full lines, in clip.js for per-slice features).
 // Absent on all other feature types.
+/** @param {FeatureId|undefined} id @param {1|2|3} type @param {CoordArray} geom @param {Tags} tags @returns {Feature} */
 export function createFeature(id, type, geom, tags) {
     const feature = {
         id: id == null ? null : id,
@@ -75,6 +79,7 @@ export function createFeature(id, type, geom, tags) {
     return feature;
 }
 
+/** @param {Feature} feature @param {CoordArray} coords @param {number} start @param {number} end */
 function calcBBox(feature, coords, start, end) {
     for (let i = start; i < end; i += 3) {
         const x = coords[i];

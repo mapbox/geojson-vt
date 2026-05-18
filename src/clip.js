@@ -1,6 +1,8 @@
 
 import {createFeature, POINT, LINE, POLYGON, SINGLE_POINT, KEEP_Z} from './feature.js';
 
+/** @import {AnyFeature, Feature, CoordArray, CoordArrayCtor, InternalOptions as Options} from './internal.d.ts' */
+
 /* clip features between two vertical or horizontal axis-parallel lines:
  *     |        |
  *  ___|___     |     /
@@ -13,6 +15,7 @@ import {createFeature, POINT, LINE, POLYGON, SINGLE_POINT, KEEP_Z} from './featu
  * axis: 0 for x, 1 for y
  * minAll, maxAll: storage-space bbox bounds across all features
  */
+/** @param {AnyFeature[]} features @param {number} k1 @param {number} k2 @param {0|1} axis @param {number} minAll @param {number} maxAll @param {Options} options @returns {AnyFeature[]|null} */
 export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
     if (minAll >= k1 && maxAll < k2) return features; // trivial accept
     if (maxAll < k1 || minAll >= k2) return null;     // trivial reject
@@ -22,6 +25,7 @@ export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
     // Lazy-init: stay null while every feature so far trivially accepts. As
     // soon as any feature rejects or needs clipping, materialize `clipped`
     // by copying the accepted prefix.
+    /** @type {AnyFeature[]|null} */
     let clipped = null;
 
     for (let fi = 0; fi < features.length; fi++) {
@@ -64,6 +68,7 @@ export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
     return clipped.length ? clipped : null;
 }
 
+/** @param {CoordArray} geometry @param {number} k1 @param {number} k2 @param {0|1} axis @param {Feature} feature @param {AnyFeature[]} clipped @param {CoordArrayCtor} CoordArray */
 function clipPoint(geometry, k1, k2, axis, feature, clipped, CoordArray) {
     let n = 0;
     for (let i = 0; i < geometry.length; i += 3) {
@@ -83,6 +88,7 @@ function clipPoint(geometry, k1, k2, axis, feature, clipped, CoordArray) {
     clipped.push(createFeature(feature.id, POINT, out, feature.tags));
 }
 
+/** @param {CoordArray} geometry @param {1|2|3} type @param {number} k1 @param {number} k2 @param {0|1} axis @param {Feature} feature @param {AnyFeature[]} clipped @param {boolean} isMetrics @param {CoordArrayCtor} CoordArray */
 function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isMetrics, CoordArray) {
     const isPolygon = type === POLYGON;
     const trackMetrics = isMetrics && type === LINE;
@@ -95,6 +101,7 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
         // each output slice becomes its own feature with its own start/end.
         const ringLen = geometry[0];
         const ringSize = geometry[1];
+        /** @type {number[]} */
         const sliceSizes = [];
         countClipRing(geometry, 2, 2 + ringLen * 3, k1, k2, axis, false, sliceSizes);
         if (sliceSizes.length === 0) return;
@@ -131,6 +138,7 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
 // means the ring is verbatim-copied and remains naturally closed. When
 // `sliceSizes` is provided (metrics mode), per-slice coord counts are
 // pushed into it instead of summed; the return value is then irrelevant.
+/** @param {CoordArray} geom @param {number} coords0 @param {number} coordsEnd @param {number} k1 @param {number} k2 @param {0|1} axis @param {boolean} isPolygon @param {number[]|null} sliceSizes */
 function countClipRing(geom, coords0, coordsEnd, k1, k2, axis, isPolygon, sliceSizes) {
     let slices = 0;
     let coordsTotal = 0;
@@ -185,6 +193,7 @@ function countClipRing(geom, coords0, coordsEnd, k1, k2, axis, isPolygon, sliceS
 // instead emitted as its own feature into `clipped`, and `out` is swapped to
 // the next slice's exact-sized buffer (per `sliceSizes`, produced by the
 // precount). In that mode the returned `w` is meaningless.
+/** @param {CoordArray} geom @param {number} coords0 @param {number} coordsEnd @param {number} ringSize @param {CoordArray} out @param {number} w @param {number} k1 @param {number} k2 @param {0|1} axis @param {boolean} isPolygon @param {Feature|null} metricsSource @param {number[]|null} sliceSizes @param {AnyFeature[]|null} clipped @param {CoordArrayCtor} CoordArray */
 function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, metricsSource, sliceSizes, clipped, CoordArray) {
     const trackMetrics = metricsSource !== null;
     let sliceIdx = 0;
@@ -194,7 +203,7 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
     w += 2;
     let sliceWriteStart = w;
 
-    let len = trackMetrics ? metricsSource.start : 0;
+    let len = trackMetrics ? /** @type {Feature} */(metricsSource).start || 0 : 0;
     let sliceMetricStart = len;
     let segLen = 0, t = 0;
 
@@ -245,10 +254,10 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
             if (sliceLen > 0) {
                 out[headerIdx] = sliceLen;
                 if (trackMetrics) {
-                    emitMetricsSlice(clipped, metricsSource, out, sliceMetricStart, len + segLen * t);
+                    emitMetricsSlice(/** @type {AnyFeature[]} */(clipped), /** @type {Feature} */(metricsSource), out, sliceMetricStart, len + segLen * t);
                     sliceIdx++;
-                    if (sliceIdx < sliceSizes.length) {
-                        out = new CoordArray(2 + sliceSizes[sliceIdx] * 3);
+                    if (sliceIdx < /** @type {number[]} */(sliceSizes).length) {
+                        out = new CoordArray(2 + /** @type {number[]} */(sliceSizes)[sliceIdx] * 3);
                         w = 0;
                     }
                 }
@@ -291,7 +300,7 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
     const sliceLen = (w - sliceWriteStart) / 3;
     if (sliceLen > 0) {
         out[headerIdx] = sliceLen;
-        if (trackMetrics) emitMetricsSlice(clipped, metricsSource, out, sliceMetricStart, len);
+        if (trackMetrics) emitMetricsSlice(/** @type {AnyFeature[]} */(clipped), /** @type {Feature} */(metricsSource), out, sliceMetricStart, len);
     } else {
         w = headerIdx;
     }
@@ -299,6 +308,7 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
     return w;
 }
 
+/** @param {AnyFeature[]} clipped @param {Feature} source @param {CoordArray} geom @param {number} start @param {number} end */
 function emitMetricsSlice(clipped, source, geom, start, end) {
     const f = createFeature(source.id, LINE, geom, source.tags);
     f.start = start;
@@ -313,6 +323,7 @@ function emitMetricsSlice(clipped, source, geom, start, end) {
 // quantum-aligned clip line); the non-axis component is a real intersection
 // that Int32Array auto-coerces on store. The KEEP sentinel ensures the
 // intersection is never simplified away.
+/** @param {CoordArray} out @param {number} w @param {number} ax @param {number} ay @param {number} bx @param {number} by @param {number} k @param {0|1} axis @returns {number} */
 function intersect(out, w, ax, ay, bx, by, k, axis) {
     let t;
     if (axis === 0) {
