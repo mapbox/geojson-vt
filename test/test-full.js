@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
 
-import geojsonvt from '../src/index.js';
+import GeoJSONVT from '../src/index.js';
 
 testTiles('us-states.json', 'us-states-tiles.json', {indexMaxZoom: 7, indexMaxPoints: 200});
 testTiles('dateline.json', 'dateline-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
@@ -47,7 +47,7 @@ function getJSON(name) {
 }
 
 function genTiles(data, options) {
-    const index = geojsonvt(data, Object.assign({
+    const index = new GeoJSONVT(data, Object.assign({
         indexMaxZoom: 0,
         indexMaxPoints: 10000
     }, options));

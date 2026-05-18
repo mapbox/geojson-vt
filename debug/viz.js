@@ -65,7 +65,7 @@ canvas.ondrop = function (e) {
             data = topojson.feature(data, data.objects[firstKey]);
         }
 
-        tileIndex = geojsonvt(data, options); //eslint-disable-line
+        tileIndex = new GeoJSONVT(data, options); //eslint-disable-line
 
         drawTile();
     };

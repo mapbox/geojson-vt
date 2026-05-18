@@ -4,8 +4,8 @@
 //   or: node --expose-gc bench/bench.js [dataset1 dataset2 ...]
 //
 // Reports per dataset, two phases:
-//   init   — geojsonvt(data, {})                          default options
-//   deep   — geojsonvt(data, {indexMaxZoom: 10,
+//   init   — new GeoJSONVT(data, {})                          default options
+//   deep   — new GeoJSONVT(data, {indexMaxZoom: 10,
 //                              indexMaxPoints: 1000})      denser pre-tiling
 //
 // `deep` represents a realistic "pre-tile more aggressively" config: deeper
@@ -178,7 +178,7 @@ function printTable(results) {
     console.log('-'.repeat(cols.reduce((s, c) => s + c.w + 1, -1)));
     for (const r of results) console.log(row(cols.map(c => c.get(r) ?? '—')));
     console.log();
-    console.log(`deep  = geojsonvt(data, {indexMaxZoom: ${DEEP_OPTS.indexMaxZoom}, indexMaxPoints: ${DEEP_OPTS.indexMaxPoints}})`);
+    console.log(`deep  = new GeoJSONVT(data, {indexMaxZoom: ${DEEP_OPTS.indexMaxZoom}, indexMaxPoints: ${DEEP_OPTS.indexMaxPoints}})`);
     console.log('alloc = held + Σ(bytes freed by GC during build)');
     console.log('peak  = max usedHeapSize before any in-build GC');
     console.log('held  = heap + external after multi-pass forced GC');

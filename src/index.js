@@ -17,7 +17,7 @@ const defaultOptions = {
     debug: 0                // logging level (0, 1 or 2)
 };
 
-class GeoJSONVT {
+export default class GeoJSONVT {
     constructor(data, options) {
         options = this.options = extend(Object.create(defaultOptions), options);
 
@@ -183,7 +183,7 @@ class GeoJSONVT {
         x = (x + z2) & (z2 - 1); // wrap tile x coordinate
 
         const id = toID(z, x, y);
-        if (this.tiles[id]) return materializeTile(this.tiles[id], options);
+        if (this.tiles[id]) return materializeTile(this.tiles[id]);
 
         if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -209,21 +209,14 @@ class GeoJSONVT {
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
 
-        return this.tiles[id] ? materializeTile(this.tiles[id], options) : null;
+        return this.tiles[id] ? materializeTile(this.tiles[id]) : null;
     }
 }
 
 // Walks the retained internal tile (flat integer coord arrays) into the legacy
 // nested envelope: [x, y] pairs grouped per ring. The retained tile is
 // immutable; each call produces a fresh envelope.
-function materializeTile(tile, options) {
-    const S = options.worldScale;
-    const O = options.originShift;
-    // Convert storage-space bbox back to source [0,1] for the public envelope.
-    const minX = tile.minX === Infinity  ? tile.minX : tile.minX / S + O;
-    const minY = tile.minY === Infinity  ? tile.minY : tile.minY / S + O;
-    const maxX = tile.maxX === -Infinity ? tile.maxX : tile.maxX / S + O;
-    const maxY = tile.maxY === -Infinity ? tile.maxY : tile.maxY / S + O;
+function materializeTile(tile) {
     const features = [];
     for (const f of tile.features) {
         let outGeom;
@@ -251,17 +244,7 @@ function materializeTile(tile, options) {
         if (f.id !== undefined) legacy.id = f.id;
         features.push(legacy);
     }
-    return {
-        features,
-        numPoints: tile.numPoints,
-        numSimplified: tile.numSimplified,
-        numFeatures: tile.numFeatures,
-        source: tile.source,
-        x: tile.x,
-        y: tile.y,
-        z: tile.z,
-        minX, minY, maxX, maxY
-    };
+    return {features};
 }
 
 function toID(z, x, y) {
@@ -271,8 +254,4 @@ function toID(z, x, y) {
 function extend(dest, src) {
     for (const i in src) dest[i] = src[i];
     return dest;
-}
-
-export default function geojsonvt(data, options) {
-    return new GeoJSONVT(data, options);
 }

@@ -1,5 +1,5 @@
 
-import geojsonvt from '../src/index.js';
+import GeoJSONVT from '../src/index.js';
 import {getHeapStatistics} from 'v8';
 import {readFileSync} from 'fs';
 
@@ -10,7 +10,7 @@ console.timeEnd('load data');
 global.gc();
 const size = getHeapStatistics().used_heap_size;
 
-const tileIndex = geojsonvt(data, {
+const tileIndex = new GeoJSONVT(data, {
 	debug: 1
 });
 

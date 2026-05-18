@@ -35,7 +35,7 @@ Just drag any GeoJSON on the page, watching the console.
 
 ```js
 // build an initial index of tiles
-var tileIndex = geojsonvt(geoJSON);
+var tileIndex = new GeoJSONVT(geoJSON);
 
 // request a particular tile
 var features = tileIndex.getTile(z, x, y).features;
@@ -50,7 +50,7 @@ You can fine-tune the results with an options object,
 although the defaults are sensible and work well for most use cases.
 
 ```js
-var tileIndex = geojsonvt(data, {
+var tileIndex = new GeoJSONVT(data, {
 	maxZoom: 14,  // max zoom to preserve detail on; can't be higher than 24
 	tolerance: 3, // simplification tolerance (higher means simpler)
 	extent: 4096, // tile extent (both width and height)
@@ -76,10 +76,10 @@ Install using NPM (`npm install geojson-vt`), then:
 
 ```js
 // import as a ES module
-import geojsonvt from 'geojson-vt';
+import GeoJSONVT from 'geojson-vt';
 
 // import from a CDN in the browser:
-import geojsonvt from 'https://esm.run/geojson-vt';
+import GeoJSONVT from 'https://esm.run/geojson-vt';
 ```
 
 Or use a browser build directly:

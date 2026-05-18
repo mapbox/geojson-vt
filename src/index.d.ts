@@ -35,12 +35,9 @@ export interface LegacyTile {
     features: LegacyFeature[];
 }
 
-export class GeoJSONVT {
+export default class GeoJSONVT {
     constructor(data: GeoJSON, options?: Partial<Options>);
-    options: Options;
+    options: Readonly<Options>;
     tileCoords: TileCoord[];
     getTile(z: number | string, x: number | string, y: number | string): LegacyTile | null;
 }
-
-declare function geojsonvt(data: GeoJSON, options?: Partial<Options>): GeoJSONVT;
-export default geojsonvt;
