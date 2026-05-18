@@ -79,7 +79,7 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
             type: SINGLE_POINT,
             tags: feature.tags || null
         };
-        if (feature.id !== null) tileFeature.id = feature.id;
+        if (feature.id !== undefined) tileFeature.id = feature.id;
         tile.features.push(tileFeature);
         return;
     }
@@ -140,7 +140,7 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
     // bridges the parallel narrowing of `type` (POINT vs LINE/POLYGON) and `simplified`
     // (flat vs ring-array) that TS can't follow across branches.
     const tileFeature = /** @type {TileFeature} */ ({geometry: simplified, type, tags});
-    if (feature.id !== null) tileFeature.id = feature.id;
+    if (feature.id !== undefined) tileFeature.id = feature.id;
     tile.features.push(tileFeature);
 }
 

@@ -3,6 +3,7 @@ import simplify from './simplify.js';
 import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './feature.js';
 
 /** @import {AnyFeature, CoordArray, InternalOptions as Options, Tags, FeatureId as Id} from './internal.d.ts' */
+/** @import {Feature, GeoJSON} from 'geojson' */
 
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data.
 //
@@ -19,7 +20,7 @@ import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './
 // sqrt-linear so they stay in Int32 range and so tile.js's keep-or-drop
 // comparison is `> tolerance` (linear) for both paths.
 
-/** @param {any} data @param {Options} options @returns {AnyFeature[]} */
+/** @param {GeoJSON} data @param {Options} options @returns {AnyFeature[]} */
 export default function convert(data, options) {
     /** @type {AnyFeature[]} */
     const features = [];
@@ -30,20 +31,19 @@ export default function convert(data, options) {
     } else if (data.type === 'Feature') {
         convertFeature(features, data, options);
     } else {
-        // single geometry or a geometry collection
-        convertFeature(features, {geometry: data}, options);
+        // bare geometry (incl. GeometryCollection): wrap in a Feature so the recursion sees a uniform shape
+        convertFeature(features, {type: 'Feature', geometry: data, properties: null}, options);
     }
     return features;
 }
 
-/** @param {AnyFeature[]} features @param {any} geojson @param {Options} options @param {number} [index] */
+/** @param {AnyFeature[]} features @param {Feature} geojson @param {Options} options @param {number} [index] */
 function convertFeature(features, geojson, options, index) {
-    if (!geojson.geometry) return;
+    const geom = geojson.geometry;
+    if (!geom) return;
+    // GeometryCollection has `geometries` instead of `coordinates`
+    if (geom.type !== 'GeometryCollection' && geom.coordinates.length === 0) return;
 
-    const coords = geojson.geometry.coordinates;
-    if (coords && coords.length === 0) return;
-
-    const type = geojson.geometry.type;
     // tolerance is given in pixels-at-tile-extent; convert to storage-space
     // distance at maxZoom and square it for simplify's internal comparison.
     const tolerance = options.tolerance * options.worldScale / ((1 << options.maxZoom) * options.extent);
@@ -54,63 +54,63 @@ function convertFeature(features, geojson, options, index) {
     const O = options.originShift;
 
     let id = geojson.id;
-    if (options.promoteId) id = geojson.properties[options.promoteId];
+    if (options.promoteId) id = geojson.properties?.[options.promoteId];
     else if (options.generateId) id = index || 0;
 
-    if (type === 'Point') {
-        features.push(createSinglePoint(id, projectX(coords[0], S, O), projectY(coords[1], S, O), tags));
+    if (geom.type === 'Point') {
+        features.push(createSinglePoint(id, projectX(geom.coordinates[0], S, O), projectY(geom.coordinates[1], S, O), tags));
 
-    } else if (type === 'MultiPoint') {
-        const geom = new CoordArray(coords.length * 3);
-        for (let i = 0; i < coords.length; i++) writePoint(geom, i * 3, coords[i], S, O);
-        pushFeature(features, id, POINT, geom, tags, options);
+    } else if (geom.type === 'MultiPoint') {
+        const out = new CoordArray(geom.coordinates.length * 3);
+        for (let i = 0; i < geom.coordinates.length; i++) writePoint(out, i * 3, geom.coordinates[i], S, O);
+        pushFeature(features, id, POINT, out, tags, options);
 
-    } else if (type === 'LineString') {
-        const geom = new CoordArray(2 + coords.length * 3);
-        writeLine(geom, 0, coords, sqTolerance, false, false, S, O);
-        pushFeature(features, id, LINE, geom, tags, options);
+    } else if (geom.type === 'LineString') {
+        const out = new CoordArray(2 + geom.coordinates.length * 3);
+        writeLine(out, 0, geom.coordinates, sqTolerance, false, false, S, O);
+        pushFeature(features, id, LINE, out, tags, options);
 
-    } else if (type === 'MultiLineString') {
+    } else if (geom.type === 'MultiLineString') {
         if (options.lineMetrics) {
             // explode into separate features so each carries its own metrics
-            for (const lineCoords of coords) {
-                const geom = new CoordArray(2 + lineCoords.length * 3);
-                writeLine(geom, 0, lineCoords, sqTolerance, false, false, S, O);
-                pushFeature(features, id, LINE, geom, tags, options);
+            for (const lineCoords of geom.coordinates) {
+                const out = new CoordArray(2 + lineCoords.length * 3);
+                writeLine(out, 0, lineCoords, sqTolerance, false, false, S, O);
+                pushFeature(features, id, LINE, out, tags, options);
             }
         } else {
-            const geom = new CoordArray(ringsBufferSize(coords));
+            const out = new CoordArray(ringsBufferSize(geom.coordinates));
             let idx = 0;
-            for (const lineCoords of coords) idx = writeLine(geom, idx, lineCoords, sqTolerance, false, false, S, O);
-            pushFeature(features, id, LINE, geom, tags, options);
+            for (const lineCoords of geom.coordinates) idx = writeLine(out, idx, lineCoords, sqTolerance, false, false, S, O);
+            pushFeature(features, id, LINE, out, tags, options);
         }
 
-    } else if (type === 'Polygon') {
-        const geom = new CoordArray(ringsBufferSize(coords));
+    } else if (geom.type === 'Polygon') {
+        const out = new CoordArray(ringsBufferSize(geom.coordinates));
         let idx = 0;
         // for polygons, ring index 0 is outer per GeoJSON spec; others are holes
-        for (let i = 0; i < coords.length; i++) {
-            idx = writeLine(geom, idx, coords[i], sqTolerance, true, i === 0, S, O);
+        for (let i = 0; i < geom.coordinates.length; i++) {
+            idx = writeLine(out, idx, geom.coordinates[i], sqTolerance, true, i === 0, S, O);
         }
-        pushFeature(features, id, POLYGON, geom, tags, options);
+        pushFeature(features, id, POLYGON, out, tags, options);
 
-    } else if (type === 'MultiPolygon') {
+    } else if (geom.type === 'MultiPolygon') {
         // flatten all polygons' rings into one list; winding distinguishes
         // outer rings (positive area) from holes (negative area).
         let total = 0;
-        for (const polyCoords of coords) total += ringsBufferSize(polyCoords);
-        const geom = new CoordArray(total);
+        for (const polyCoords of geom.coordinates) total += ringsBufferSize(polyCoords);
+        const out = new CoordArray(total);
         let idx = 0;
-        for (const polyCoords of coords) {
+        for (const polyCoords of geom.coordinates) {
             for (let i = 0; i < polyCoords.length; i++) {
-                idx = writeLine(geom, idx, polyCoords[i], sqTolerance, true, i === 0, S, O);
+                idx = writeLine(out, idx, polyCoords[i], sqTolerance, true, i === 0, S, O);
             }
         }
-        pushFeature(features, id, POLYGON, geom, tags, options);
+        pushFeature(features, id, POLYGON, out, tags, options);
 
-    } else if (type === 'GeometryCollection') {
-        for (const g of geojson.geometry.geometries) {
-            convertFeature(features, {id, geometry: g, properties: geojson.properties}, options, index);
+    } else if (geom.type === 'GeometryCollection') {
+        for (const g of geom.geometries) {
+            convertFeature(features, {type: 'Feature', id, geometry: g, properties: geojson.properties}, options, index);
         }
     } else {
         throw new Error('Input data is not a valid GeoJSON object.');

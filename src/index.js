@@ -26,7 +26,7 @@ export default class GeoJSONVT {
     /** @param {import('geojson').GeoJSON} data @param {Partial<Options>} [options] */
     constructor(data, options) {
         /** @type {InternalOptions} */
-        const opts = this.options = extend(Object.create(defaultOptions), options);
+        const opts = this.options = Object.assign(Object.create(defaultOptions), options);
 
         const debug = opts.debug;
 
@@ -85,17 +85,19 @@ export default class GeoJSONVT {
     /** @param {AnyFeature[]} features @param {number} z @param {number} x @param {number} y @param {number} [cz] @param {number} [cx] @param {number} [cy] */
     splitTile(features, z, x, y, cz, cx, cy) {
 
-        /** @type {any[]} */
-        const stack = [features, z, x, y];
+        /** @type {AnyFeature[][]} */
+        const featStack = [features];
+        /** @type {number[]} */
+        const numStack = [z, x, y];
         const options = /** @type {InternalOptions} */ (this.options);
         const debug = options.debug;
 
         // avoid recursion by using a processing queue
-        while (stack.length) {
-            y = stack.pop();
-            x = stack.pop();
-            z = stack.pop();
-            features = stack.pop();
+        while (featStack.length) {
+            y = /** @type {number} */ (numStack.pop());
+            x = /** @type {number} */ (numStack.pop());
+            z = /** @type {number} */ (numStack.pop());
+            features = /** @type {AnyFeature[]} */ (featStack.pop());
 
             const z2 = 1 << z;
             const id = toID(z, x, y);
@@ -106,16 +108,12 @@ export default class GeoJSONVT {
 
                 tile = this.tiles[id] = createTile(features, z, x, y, options);
                 this.tileCoords.push({z, x, y});
+                this.stats[z] = (this.stats[z] || 0) + 1;
+                this.total++;
 
-                if (debug) {
-                    if (debug > 1) {
-                        console.log('tile z%d-%d-%d (features: %d, points: %d, simplified: %d)',
-                            z, x, y, tile.numFeatures, tile.numPoints, tile.numSimplified);
-                        console.timeEnd('creation');
-                    }
-                    const key = `z${z}`;
-                    this.stats[key] = (this.stats[key] || 0) + 1;
-                    this.total++;
+                if (debug > 1) {
+                    console.log(`tile z${z}-${x}-${y} (features: ${tile.numFeatures}, points: ${tile.numPoints}, simplified: ${tile.numSimplified})`);
+                    console.timeEnd('creation');
                 }
             }
 
@@ -159,25 +157,27 @@ export default class GeoJSONVT {
             let tr = null;
             let br = null;
 
-            const left  = clip(features, xc - b,        xc + step / 2 + b, 0, tile.minX, tile.maxX, options);
+            const left  = clip(features, xc - b, xc + step / 2 + b, 0, tile.minX, tile.maxX, options);
             const right = clip(features, xc + step / 2 - b, xc + step + b, 0, tile.minX, tile.maxX, options);
 
             if (left) {
-                tl = clip(left, yc - b,        yc + step / 2 + b, 1, tile.minY, tile.maxY, options);
+                tl = clip(left, yc - b, yc + step / 2 + b, 1, tile.minY, tile.maxY, options);
                 bl = clip(left, yc + step / 2 - b, yc + step + b, 1, tile.minY, tile.maxY, options);
             }
 
             if (right) {
-                tr = clip(right, yc - b,        yc + step / 2 + b, 1, tile.minY, tile.maxY, options);
+                tr = clip(right, yc - b, yc + step / 2 + b, 1, tile.minY, tile.maxY, options);
                 br = clip(right, yc + step / 2 - b, yc + step + b, 1, tile.minY, tile.maxY, options);
             }
 
             if (debug > 1) console.timeEnd('clipping');
 
-            stack.push(tl || [], z + 1, x * 2,     y * 2);
-            stack.push(bl || [], z + 1, x * 2,     y * 2 + 1);
-            stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
-            stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
+            featStack.push(tl || [], bl || [], tr || [], br || []);
+            numStack.push(
+                z + 1, x * 2, y * 2,
+                z + 1, x * 2, y * 2 + 1,
+                z + 1, x * 2 + 1, y * 2,
+                z + 1, x * 2 + 1, y * 2 + 1);
         }
     }
 
@@ -260,10 +260,4 @@ function flatToPairs(flat) {
 /** @param {number} z @param {number} x @param {number} y */
 function toID(z, x, y) {
     return (((1 << z) * y + x) * 32) + z;
-}
-
-/** @template T @param {T} dest @param {any} src @returns {T} */
-function extend(dest, src) {
-    for (const i in src) /** @type {any} */ (dest)[i] = src[i];
-    return dest;
 }

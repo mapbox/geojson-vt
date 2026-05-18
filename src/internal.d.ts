@@ -2,13 +2,23 @@
 
 import type {Options} from './index.d.ts';
 
+// Minimal ambient for console (we don't depend on @types/node and the lib
+// doesn't include DOM, which is the usual source of this global).
+declare global {
+    const console: {
+        log(...args: unknown[]): void;
+        time(label: string): void;
+        timeEnd(label: string): void;
+    };
+}
+
 export type CoordArray = Int32Array | Float64Array;
 export type CoordArrayCtor = Int32ArrayConstructor | Float64ArrayConstructor;
 export type TileCoordArray = Int16Array | Int32Array;
 export type TileCoordArrayCtor = Int16ArrayConstructor | Int32ArrayConstructor;
 
 export type Tags = Record<string, unknown> | null | undefined;
-export type FeatureId = number | string | null;
+export type FeatureId = number | string;
 
 export type InternalOptions = Options & {
     useInt32: boolean;
@@ -18,7 +28,7 @@ export type InternalOptions = Options & {
 };
 
 export interface Feature {
-    id: FeatureId;
+    id?: FeatureId;
     type: 1 | 2 | 3;
     geometry: CoordArray;
     tags: Tags;
@@ -31,7 +41,7 @@ export interface Feature {
 }
 
 export interface SinglePointFeature {
-    id: FeatureId;
+    id?: FeatureId;
     type: 4;
     x: number;
     y: number;

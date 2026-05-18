@@ -38,7 +38,7 @@ export const KEEP_Z = 0x7FFFFFFF;
 /** @param {FeatureId|undefined} id @param {number} x @param {number} y @param {Tags} tags @returns {SinglePointFeature} */
 export function createSinglePoint(id, x, y, tags) {
     return {
-        id: id == null ? null : id,
+        id,
         type: SINGLE_POINT,
         x,
         y,
@@ -52,7 +52,7 @@ export function createSinglePoint(id, x, y, tags) {
 /** @param {FeatureId|undefined} id @param {1|2|3} type @param {CoordArray} geom @param {Tags} tags @returns {Feature} */
 export function createFeature(id, type, geom, tags) {
     const feature = {
-        id: id == null ? null : id,
+        id,
         type,
         geometry: geom,
         tags,
