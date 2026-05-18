@@ -61,8 +61,9 @@ function convertFeature(features, geojson, options, index) {
         features.push(createSinglePoint(id, projectX(geom.coordinates[0], S, O), projectY(geom.coordinates[1], S, O), tags));
 
     } else if (geom.type === 'MultiPoint') {
-        const out = new CoordArray(geom.coordinates.length * 3);
-        for (let i = 0; i < geom.coordinates.length; i++) writePoint(out, i * 3, geom.coordinates[i], S, O);
+        const coords = geom.coordinates;
+        const out = new CoordArray(coords.length * 3);
+        for (let i = 0; i < coords.length; i++) writePoint(out, i * 3, coords[i], S, O);
         pushFeature(features, id, POINT, out, tags, options);
 
     } else if (geom.type === 'LineString') {
@@ -86,22 +87,24 @@ function convertFeature(features, geojson, options, index) {
         }
 
     } else if (geom.type === 'Polygon') {
-        const out = new CoordArray(ringsBufferSize(geom.coordinates));
+        const coords = geom.coordinates;
+        const out = new CoordArray(ringsBufferSize(coords));
         let idx = 0;
         // for polygons, ring index 0 is outer per GeoJSON spec; others are holes
-        for (let i = 0; i < geom.coordinates.length; i++) {
-            idx = writeLine(out, idx, geom.coordinates[i], sqTolerance, true, i === 0, S, O);
+        for (let i = 0; i < coords.length; i++) {
+            idx = writeLine(out, idx, coords[i], sqTolerance, true, i === 0, S, O);
         }
         pushFeature(features, id, POLYGON, out, tags, options);
 
     } else if (geom.type === 'MultiPolygon') {
         // flatten all polygons' rings into one list; winding distinguishes
         // outer rings (positive area) from holes (negative area).
+        const coords = geom.coordinates;
         let total = 0;
-        for (const polyCoords of geom.coordinates) total += ringsBufferSize(polyCoords);
+        for (const polyCoords of coords) total += ringsBufferSize(polyCoords);
         const out = new CoordArray(total);
         let idx = 0;
-        for (const polyCoords of geom.coordinates) {
+        for (const polyCoords of coords) {
             for (let i = 0; i < polyCoords.length; i++) {
                 idx = writeLine(out, idx, polyCoords[i], sqTolerance, true, i === 0, S, O);
             }
