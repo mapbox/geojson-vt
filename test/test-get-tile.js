@@ -91,7 +91,7 @@ test('getTile: polygon with vertex exactly on tile boundary (#118)', () => {
     }, {indexMaxZoom: 0, maxZoom: 24, tolerance: 1.5, extent: 4096, buffer: 0});
 
     assert.deepEqual(index.getTile(1, 1, 1).features, [{
-        geometry: [[[0, 0], [0, 0], [2048, 4096], [0, 4096], [0, 0]]],
+        geometry: [[[0, 4096], [0, 0], [2048, 4096], [0, 4096]]],
         type: 3,
         tags: null
     }]);
@@ -111,7 +111,7 @@ test('getTile: polygon with collinear vertex on tile boundary (#161)', () => {
 
     const tile = index.getTile(3, 4, 3);
     assert.deepEqual(tile.features, [{
-        geometry: [[[1820, 762], [4096, 1987], [4096, 3701], [1820, 3701], [1820, 762]]],
+        geometry: [[[1820, 762], [4096, 1986], [4096, 3701], [1820, 3701], [1820, 762]]],
         type: 3,
         tags: null
     }]);

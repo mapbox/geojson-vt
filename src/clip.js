@@ -318,10 +318,10 @@ function intersect(out, w, ax, ay, bx, by, k, axis) {
     if (axis === 0) {
         t = (k - ax) / (bx - ax);
         out[w]     = k;
-        out[w + 1] = ay + (by - ay) * t;
+        out[w + 1] = Math.round(ay + (by - ay) * t);
     } else {
         t = (k - ay) / (by - ay);
-        out[w]     = ax + (bx - ax) * t;
+        out[w]     = Math.round(ax + (bx - ax) * t);
         out[w + 1] = k;
     }
     out[w + 2] = 0x7FFFFFFF;

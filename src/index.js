@@ -32,7 +32,7 @@ class GeoJSONVT {
         // When the gate fails, fall back to Float64Array storage (uncentered
         // [0, 1] source space — historical encoding).
         const worldSpan = (options.extent + 2 * options.buffer) * (1 << options.maxZoom);
-        const useInt32 = worldSpan <= 0x100000000; // 2^32
+        const useInt32 = worldSpan < 0x100000000; // 2^32; strict — centered range is [-2^31, +2^31), and +2^31 wraps under ToInt32.
         options.useInt32 = useInt32;
         options.CoordArray = useInt32 ? Int32Array : Float64Array;
         options.worldScale = useInt32 ? options.extent * (1 << options.maxZoom) : 1;

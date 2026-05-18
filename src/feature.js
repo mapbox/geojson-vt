@@ -61,7 +61,7 @@ export function createFeature(id, type, geom, tags) {
             const ringSize = geom[i + 1];
             const coords0 = i + 2;
             const coordsEnd = coords0 + ringLen * 3;
-            if (!outerOnly || ringSize > 0) calcBBox(feature, geom, coords0, coordsEnd);
+            if (!outerOnly || ringSize >= 0) calcBBox(feature, geom, coords0, coordsEnd);
             i = coordsEnd;
         }
     }

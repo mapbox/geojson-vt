@@ -114,7 +114,7 @@ function convertFeature(features, geojson, options, index) {
 
 function ringsBufferSize(rings) {
     let n = 0;
-    for (const ring of rings) n += 2 + ring.length * 3;
+    for (const ring of rings) if (ring.length > 0) n += 2 + ring.length * 3;
     return n;
 }
 
@@ -138,6 +138,9 @@ function writePoint(out, idx, coords, S, O) {
 // for POLYGON (sign(area) * sqrt(|area|)) and linear length for LINE — both
 // stay in Int32 range at the worst-case world span.
 function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
+    // empty rings are skipped at the call sites; this guard prevents
+    // KEEP_Z scribbling past the reserved header into the next ring
+    if (ring.length === 0) return idx;
     const headerIdx = idx;
     idx += 2; // reserve [ringLen, ringSize]; backfilled below
     const coords0 = idx;
