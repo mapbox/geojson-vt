@@ -5,20 +5,18 @@ import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './
 /** @import {AnyFeature, CoordArray, InternalOptions as Options, Tags, FeatureId as Id} from './internal.d.ts' */
 /** @import {Feature, GeoJSON} from 'geojson' */
 
-// converts GeoJSON feature into an intermediate projected JSON vector format with simplification data.
+// Converts a GeoJSON feature into an intermediate projected JSON vector format with simplification data.
 //
-// Source coords are projected once here into "storage space" and stay there
-// through clip / wrap / tile. Storage space is parameterized by the Int32
-// gating on options:
+// Source coords are projected once here into "storage space" and stay there through clip / wrap / tile.
+// Storage space is parameterized by the Int32 gating on options:
 //   - useInt32 = true: coords centered and scaled to integer maxZoom-pixel
 //     quanta. The world [0, 1] source-x → storage [-W/2, W/2] where
 //     W = extent * 2^maxZoom. Values stored in Int32Array; spec ToInt32
 //     coerces on assignment (no explicit Math.round at call sites).
 //   - useInt32 = false: storage = source ([0, 1] uncentered), stored in
 //     Float64Array. Equivalent to the historical encoding.
-// The z-slot (simplification weight) and POLYGON ringSize are stored
-// sqrt-linear so they stay in Int32 range and so tile.js's keep-or-drop
-// comparison is `> tolerance` (linear) for both paths.
+// The z-slot (simplification weight) and POLYGON ringSize are stored sqrt-linear so they stay in Int32 range
+// and tile.js's keep-or-drop comparison is `> tolerance` (linear) for both paths.
 
 /** @param {GeoJSON} data @param {Options} options @returns {AnyFeature[]} */
 export default function convert(data, options) {
@@ -44,8 +42,8 @@ function convertFeature(features, geojson, options, index) {
     // GeometryCollection has `geometries` instead of `coordinates`
     if (geom.type !== 'GeometryCollection' && geom.coordinates.length === 0) return;
 
-    // tolerance is given in pixels-at-tile-extent; convert to storage-space
-    // distance at maxZoom and square it for simplify's internal comparison.
+    // tolerance is given in pixels-at-tile-extent; convert to storage-space distance at maxZoom
+    // and square it for simplify's internal comparison.
     const tolerance = options.tolerance * options.worldScale / ((1 << options.maxZoom) * options.extent);
     const sqTolerance = tolerance * tolerance;
     const tags = geojson.properties;
@@ -97,8 +95,7 @@ function convertFeature(features, geojson, options, index) {
         pushFeature(features, id, POLYGON, out, tags, options);
 
     } else if (geom.type === 'MultiPolygon') {
-        // flatten all polygons' rings into one list; winding distinguishes
-        // outer rings (positive area) from holes (negative area).
+        // flatten all polygons' rings into one list; winding distinguishes outer rings (positive area) from holes (negative area).
         const coords = geom.coordinates;
         let total = 0;
         for (const polyCoords of coords) total += ringsBufferSize(polyCoords);
@@ -144,14 +141,12 @@ function writePoint(out, idx, coords, S, O) {
     out[idx + 2] = 0;
 }
 
-// Write one ring (header + coords) at `idx` into the pre-sized geometry
-// buffer. Returns the next write position. `ringSize` is stored sqrt-linear
-// for POLYGON (sign(area) * sqrt(|area|)) and linear length for LINE — both
-// stay in Int32 range at the worst-case world span.
+// Write one ring (header + coords) at `idx` into the pre-sized geometry buffer. Returns the next write position.
+// `ringSize` is stored sqrt-linear for POLYGON (sign(area) * sqrt(|area|)) and linear length for LINE —
+// both stay in Int32 range at the worst-case world span.
 /** @param {CoordArray} out @param {number} idx @param {number[][]} ring @param {number} sqTolerance @param {boolean} isPolygon @param {boolean} isOuter @param {number} S @param {number} O @returns {number} */
 function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
-    // empty rings are skipped at the call sites; this guard prevents
-    // KEEP_Z scribbling past the reserved header into the next ring
+    // empty rings are skipped at the call sites; this guard prevents KEEP_Z scribbling past the reserved header into the next ring
     if (ring.length === 0) return idx;
     const headerIdx = idx;
     idx += 2; // reserve [ringLen, ringSize]; backfilled below
@@ -183,8 +178,8 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
 
     const coordsEnd = idx;
 
-    // canonical winding: outer rings get one orientation, holes the opposite,
-    // determined structurally from GeoJSON nesting (not from input winding)
+    // canonical winding: outer rings get one orientation, holes the opposite, determined structurally
+    // from GeoJSON nesting (not from input winding)
     if (isPolygon && ((isOuter && size < 0) || (!isOuter && size >= 0))) {
         const nCoords = coordsEnd - coords0;
         for (let k = 0; k < nCoords / 2; k += 3) {
@@ -208,9 +203,8 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
     simplify(out, coords0, lastIdx, sqTolerance);
     out[lastIdx + 2] = KEEP_Z;
 
-    // backfill header. POLYGON: sign(area)*sqrt(|area|) — keeps sign for
-    // outer/hole distinction, fits Int32 since |area| ≤ W², sqrt ≤ W ≤ 2^32.
-    // LINE: linear length (already in storage units).
+    // backfill header. POLYGON: sign(area)*sqrt(|area|) — keeps sign for outer/hole distinction, fits Int32
+    // since |area| ≤ W², sqrt ≤ W ≤ 2^32. LINE: linear length (already in storage units).
     out[headerIdx] = (coordsEnd - coords0) / 3;
     out[headerIdx + 1] = isPolygon ? Math.sign(size) * Math.sqrt(Math.abs(size)) : size;
 

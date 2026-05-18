@@ -3,11 +3,9 @@ import {POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
 
 /** @import {AnyFeature, CoordArray, InternalOptions as Options, Tile, TileCoordArray, TileCoordArrayCtor, TileFeature, TileFeatureSinglePoint} from './internal.d.ts' */
 
-// `createTile` reads features in *storage space* (the units convert.js
-// established — centered Int32 quanta when the Int32 gate passed, or
-// uncentered Float64 source [0,1] otherwise) and projects each coord into
-// the public per-tile integer extent space. `tolerance` is in storage
-// units at the current zoom (linear, since z-slot and POLYGON ringSize
+// `createTile` reads features in *storage space* (the units convert.js established — centered Int32 quanta when
+// the Int32 gate passed, or uncentered Float64 source [0,1] otherwise) and projects each coord into the public
+// per-tile extent space. `tolerance` is in storage units at the current zoom (linear; z-slot and POLYGON ringSize
 // were stored sqrt-linear at convert).
 
 /** @param {AnyFeature[]} features @param {number} z @param {number} tx @param {number} ty @param {Options} options @returns {Tile} */
@@ -15,14 +13,12 @@ export default function createTile(features, z, tx, ty, options) {
     const extent = options.extent;
     const S = options.worldScale;
     const O = options.originShift;
-    // storage-space tolerance at this zoom: pixel-tolerance scaled to quanta,
-    // then narrowed by the current zoom factor. At z=maxZoom this equals
-    // options.tolerance in storage units (1 pixel = 1 quantum on the Int32
-    // path; equivalent ratio on the Float64 path).
+    // storage-space tolerance at this zoom: pixel-tolerance scaled to quanta, then narrowed by the current
+    // zoom factor. At z=maxZoom this equals options.tolerance in storage units (1 pixel = 1 quantum on the
+    // Int32 path; equivalent ratio on the Float64 path).
     const tolerance = z === options.maxZoom ? 0 : options.tolerance * S / ((1 << z) * extent);
     const z2 = 1 << z;
-    // Committed-tile coord type: smallest typed-array dtype that fits the
-    // tile-extent projected range [-buffer, extent+buffer].
+    // Committed-tile coord type: smallest typed-array dtype that fits the tile-extent projected range [-buffer, extent+buffer].
     const CoordArray = (extent + options.buffer) <= 32767 ? Int16Array : Int32Array;
     /** @type {Tile} */
     const tile = {
@@ -126,19 +122,17 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
         // start/end are set together by convert/clip on lineMetrics LINE features
         const start = /** @type {number} */ (feature.start);
         const end = /** @type {number} */ (feature.end);
-        // Clamp to [0, 1] — the mathematical bounds by definition. On the
-        // integer-coord path, `size` is the truncated Int32 length while
-        // clip's `feature.end` is a Float64 running sum, so a slice ending
-        // at the line end would otherwise emit mapbox_clip_end slightly > 1.
+        // Clamp to [0, 1] — the mathematical bounds by definition. On the integer-coord path, `size` is the
+        // truncated Int32 length while clip's `feature.end` is a Float64 running sum, so a slice ending at
+        // the line end would otherwise emit mapbox_clip_end slightly > 1.
         /* eslint-disable camelcase */
         tags.mapbox_clip_start = Math.max(0, start / size);
         tags.mapbox_clip_end = Math.min(1, end / size);
         /* eslint-enable camelcase */
     }
 
-    // internal type values are intentionally identical to the public ones; the cast
-    // bridges the parallel narrowing of `type` (POINT vs LINE/POLYGON) and `simplified`
-    // (flat vs ring-array) that TS can't follow across branches.
+    // internal type values are intentionally identical to the public ones; the cast bridges the parallel narrowing
+    // of `type` (POINT vs LINE/POLYGON) and `simplified` (flat vs ring-array) that TS can't follow across branches.
     const tileFeature = /** @type {TileFeature} */ ({geometry: simplified, type, tags});
     if (feature.id !== undefined) tileFeature.id = feature.id;
     tile.features.push(tileFeature);
@@ -150,8 +144,8 @@ function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, is
 
     if (ringLen === 0) return; // tolerate over-allocated trailing slack from clip's heuristic count
 
-    // z-slot and POLYGON ringSize are stored sqrt-linear, LINE ringSize linear,
-    // so both ringSize and per-coord weight compare linearly against tolerance.
+    // z-slot and POLYGON ringSize are stored sqrt-linear, LINE ringSize linear, so both ringSize and per-coord
+    // weight compare linearly against tolerance.
     if (tolerance > 0 && Math.abs(ringSize) < tolerance) {
         tile.numPoints += ringLen;
         return;

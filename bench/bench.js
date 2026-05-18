@@ -3,31 +3,29 @@
 // Run:  npm run bench
 //   or: node --expose-gc bench/bench.js [dataset1 dataset2 ...]
 //
-// Reports per dataset, two phases:
-//   init   — new GeoJSONVT(data, {})                          default options
-//   deep   — new GeoJSONVT(data, {indexMaxZoom: 10,
-//                              indexMaxPoints: 1000})      denser pre-tiling
+// Two phases per dataset:
+//   init  — new GeoJSONVT(data, {})
+//   deep  — new GeoJSONVT(data, {indexMaxZoom: 10, indexMaxPoints: 1000})
 //
-// `deep` represents a realistic "pre-tile more aggressively" config: deeper
-// indexing into dense areas, but `indexMaxPoints` still bounds it so sparse
-// regions stop early. Use `indexMaxPoints: 0` if you want every-tile pre-
-// tiling — it's a stress test, not a workload anyone runs.
+// `deep` is a realistic "pre-tile more aggressively" config: deeper indexing into dense areas,
+// but `indexMaxPoints` still bounds it so sparse regions stop early. Use `indexMaxPoints: 0`
+// for full every-tile pre-tiling (stress test, not a real workload).
 //
-// Per phase:
+// Columns per phase:
 //   ms     median build time
 //   alloc  held + Σ(bytes freed by GC during build) — total allocation
-//   peak   max usedHeapSize before any in-build GC (proxy for high-water)
+//   peak   max usedHeapSize before any in-build GC (proxy for high-water mark)
 //   held   heap + external after multi-pass forced GC
 //
-// `alloc` and `peak` come from `v8.GCProfiler` rather than snapshots —
-// naïve heap_used/RSS sampling misses GCs and underreports both. Run-to-
-// run jitter still hides some GCs near the stop boundary, so we take 3
-// iterations and report max for alloc/peak (missed GCs only undercount).
+// `alloc` and `peak` come from `v8.GCProfiler` rather than snapshots — naïve heap_used/RSS
+// sampling misses GCs and underreports both. Some GCs near measurement boundaries are still
+// missed, so we take 3 iterations and report max for alloc/peak (missed GCs only undercount).
 //
-// Each dataset runs in its own `node --expose-gc` child for a clean
-// baseline. A warmup build before measurement settles JSON.parse
-// fragmentation. Numbers aren't comparable across machines, but are
-// comparable across geojson-vt versions on the same machine.
+// Each dataset runs in its own `node --expose-gc` child for a clean baseline. A warmup build
+// before measurement stabilizes the heap after JSON.parse fragmentation. Numbers aren't
+// comparable across machines, but are stable across geojson-vt versions on the same machine.
+
+/* eslint no-void: 0, no-await-in-loop: 0 */
 
 import {readFileSync, existsSync} from 'fs';
 import {performance} from 'perf_hooks';
@@ -57,16 +55,16 @@ if (process.argv.includes('--single')) {
     const ds = DATASETS.find(d => d.name === name);
     if (!ds) { console.error(`unknown dataset: ${name}`); process.exit(2); }
     try {
-        process.stdout.write(JSON.stringify(runOne(ds)) + '\n');
+        process.stdout.write(`${JSON.stringify(runOne(ds))}\n`);
     } catch (e) {
-        process.stdout.write(JSON.stringify({name: ds.name, error: e.message}) + '\n');
+        process.stdout.write(`${JSON.stringify({name: ds.name, error: e.message})}\n`);
         process.exit(1);
     }
 } else {
     const want = new Set(process.argv.slice(2).filter(a => !a.startsWith('-')));
-    const datasets = DATASETS.filter(d => {
+    const datasets = DATASETS.filter((d) => {
         if (want.size && !want.has(d.name)) return false;
-        const ok = existsSync(new URL('../' + d.file, import.meta.url));
+        const ok = existsSync(new URL(`../${d.file}`, import.meta.url));
         if (!ok) console.error(`skipping ${d.name}: ${d.file} not found`);
         return ok;
     });
@@ -113,7 +111,7 @@ function measureBuild(data, opts, baseline) {
         settle();
     }
     const max = key => Math.max(...samples.map(s => s[key]));
-    const median = key => {
+    const median = (key) => {
         const sorted = samples.map(s => s[key]).sort((a, b) => a - b);
         return sorted[sorted.length >> 1];
     };
@@ -121,7 +119,7 @@ function measureBuild(data, opts, baseline) {
 }
 
 function runOne(ds) {
-    const data = JSON.parse(readFileSync(new URL('../' + ds.file, import.meta.url), 'utf8'));
+    const data = JSON.parse(readFileSync(new URL(`../${ds.file}`, import.meta.url), 'utf8'));
 
     void new GeoJSONVT(data, {}); // warmup
     settle();
@@ -136,15 +134,14 @@ function runOne(ds) {
 // ──────────────────────────── parent ──────────────────────────────
 
 function spawnChild(name) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
         const args = ['--expose-gc', '--max-old-space-size=8192', __filename, '--single', name];
         const child = spawn(process.execPath, args, {stdio: ['ignore', 'pipe', 'inherit']});
         let out = '';
-        child.stdout.on('data', d => { out += d; });
-        child.on('close', code => {
+        child.stdout.on('data', (d) => { out += d; });
+        child.on('close', (code) => {
             const line = out.trim().split('\n').pop();
-            try { resolve(JSON.parse(line)); }
-            catch (e) { resolve({name, error: `bad child output (code=${code}): ${e.message}`}); }
+            try { resolve(JSON.parse(line)); } catch (e) { resolve({name, error: `bad child output (code=${code}): ${e.message}`}); }
         });
     });
 }
@@ -161,11 +158,11 @@ function fmtMs(t) { return t == null ? '—' : t.toFixed(1); }
 function printTable(results) {
     const cols = [
         {h: 'dataset',    w: 12, get: r => r.name},
-        {h: 'init ms',    w:  9, get: r => fmtMs(r.init?.ms)},
+        {h: 'init ms',    w: 9,  get: r => fmtMs(r.init?.ms)},
         {h: 'init alloc', w: 11, get: r => fmtBytes(r.init?.alloc)},
         {h: 'init peak',  w: 11, get: r => fmtBytes(r.init?.peak)},
         {h: 'init held',  w: 11, get: r => fmtBytes(r.init?.held)},
-        {h: 'deep ms',    w:  9, get: r => fmtMs(r.deep?.ms)},
+        {h: 'deep ms',    w: 9,  get: r => fmtMs(r.deep?.ms)},
         {h: 'deep alloc', w: 11, get: r => fmtBytes(r.deep?.alloc)},
         {h: 'deep peak',  w: 11, get: r => fmtBytes(r.deep?.peak)},
         {h: 'deep held',  w: 11, get: r => fmtBytes(r.deep?.held)}

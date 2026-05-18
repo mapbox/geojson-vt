@@ -22,9 +22,8 @@ export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
 
     const isMetrics = options.lineMetrics;
     const CoordArray = options.CoordArray;
-    // Lazy-init: stay null while every feature so far trivially accepts. As
-    // soon as any feature rejects or needs clipping, materialize `clipped`
-    // by copying the accepted prefix.
+    // Lazy-init: stay null while every feature so far trivially accepts. As soon as any feature rejects
+    // or needs clipping, materialize `clipped` by copying the accepted prefix.
     /** @type {AnyFeature[]|null} */
     let clipped = null;
 
@@ -93,9 +92,8 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
     const isPolygon = type === POLYGON;
     const trackMetrics = isMetrics && type === LINE;
 
-    // Two passes: precount exact output sizes, then allocate and write.
-    // Metrics mode produces one feature per slice (sized individually);
-    // non-metrics packs all rings into a single inline-header buffer.
+    // Two passes: precount exact output sizes, then allocate and write. Metrics mode produces one feature
+    // per slice (sized individually); non-metrics packs all rings into a single inline-header buffer.
     if (trackMetrics) {
         // metrics features always have a single ring (split at convert/clip);
         // each output slice becomes its own feature with its own start/end.
@@ -130,14 +128,11 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
     clipped.push(createFeature(feature.id, type, out, feature.tags));
 }
 
-// Count exact output slot count (headers + coords) for one input ring,
-// mirroring `clipRing`'s topology without intersect math. The polygon-close
-// decision uses the crossing count: for valid closed input rings, close is
-// needed iff at least one segment crossed a clip line (the output then ends
-// in an intersection, which differs from the entry point). Zero crossings
-// means the ring is verbatim-copied and remains naturally closed. When
-// `sliceSizes` is provided (metrics mode), per-slice coord counts are
-// pushed into it instead of summed; the return value is then irrelevant.
+// Count exact output slot count (headers + coords) for one input ring, mirroring `clipRing`'s topology without
+// intersect math. The polygon-close decision uses the crossing count: close is needed iff at least one segment
+// crossed a clip line (the output then ends in an intersection, differing from the entry point). Zero crossings
+// means the ring is verbatim-copied and remains naturally closed. When `sliceSizes` is provided (metrics mode),
+// per-slice coord counts are pushed into it instead of summed; the return value is then irrelevant.
 /** @param {CoordArray} geom @param {number} coords0 @param {number} coordsEnd @param {number} k1 @param {number} k2 @param {0|1} axis @param {boolean} isPolygon @param {number[]|null} sliceSizes */
 function countClipRing(geom, coords0, coordsEnd, k1, k2, axis, isPolygon, sliceSizes) {
     let slices = 0;
@@ -183,16 +178,13 @@ function countClipRing(geom, coords0, coordsEnd, k1, k2, axis, isPolygon, sliceS
     return coordsTotal * 3 + slices * 2;
 }
 
-// Sutherland–Hodgman clipping (for polygon rings) or split-into-segments
-// (for linestrings). Reads one ring's coords from `geom[coords0..coordsEnd]`
-// and writes inline-header ring(s) into `out` starting at writer position
-// `w`. For polygons: at most one output ring per input ring. For linestrings:
-// any number of output rings. Returns the new `w`.
+// Sutherland–Hodgman clipping (for polygon rings) or split-into-segments (for linestrings). Reads one ring's
+// coords from `geom[coords0..coordsEnd]` and writes inline-header ring(s) into `out` starting at writer
+// position `w`. For polygons: at most one output ring per input ring; for linestrings: any number. Returns `w`.
 //
-// When `metricsSource` is set (line-metrics mode), each finalized slice is
-// instead emitted as its own feature into `clipped`, and `out` is swapped to
-// the next slice's exact-sized buffer (per `sliceSizes`, produced by the
-// precount). In that mode the returned `w` is meaningless.
+// When `metricsSource` is set (line-metrics mode), each finalized slice is instead emitted as its own feature
+// into `clipped`, and `out` is swapped to the next slice's exact-sized buffer (per `sliceSizes`, produced by
+// the precount). In that mode the returned `w` is meaningless.
 /** @param {CoordArray} geom @param {number} coords0 @param {number} coordsEnd @param {number} ringSize @param {CoordArray} out @param {number} w @param {number} k1 @param {number} k2 @param {0|1} axis @param {boolean} isPolygon @param {Feature|null} metricsSource @param {number[]|null} sliceSizes @param {AnyFeature[]|null} clipped @param {CoordArrayCtor} CoordArray */
 function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, metricsSource, sliceSizes, clipped, CoordArray) {
     const trackMetrics = metricsSource !== null;
@@ -316,13 +308,10 @@ function emitMetricsSlice(clipped, source, geom, start, end) {
     clipped.push(f);
 }
 
-// Compute the segment/clip-line intersection point at axis-parallel value `k`,
-// write its (x, y, z=KEEP) triple into `out` at position `w`, and return the
-// parametric `t` along the segment for the metrics path's start/end.
-// `k` is integer-valued in storage space (axis component falls on a
-// quantum-aligned clip line); the non-axis component is a real intersection
-// that Int32Array auto-coerces on store. The KEEP sentinel ensures the
-// intersection is never simplified away.
+// Compute the segment/clip-line intersection point at axis-parallel value `k`, write its (x, y, z=KEEP) triple
+// into `out` at position `w`, and return parametric `t` for the metrics path. `k` is integer-valued in storage
+// space (axis component falls on a quantum-aligned clip line); the non-axis component is a real intersection that
+// Int32Array auto-coerces on store. The KEEP sentinel ensures the intersection is never simplified away.
 /** @param {CoordArray} out @param {number} w @param {number} ax @param {number} ay @param {number} bx @param {number} by @param {number} k @param {0|1} axis @returns {number} */
 function intersect(out, w, ax, ay, bx, by, k, axis) {
     let t;

@@ -1,8 +1,7 @@
 
-// calculate simplification data using optimized Douglas-Peucker algorithm.
-// stored z-slot is sqrt(maxSqDist) (linear) so it fits Int32 quanta when
-// the index runs in the Int32 source-coord path, and unifies the tile.js
-// keep-or-drop comparison to `> tolerance` (linear) across both paths.
+// Calculate simplification data using optimized Douglas-Peucker algorithm. Stored z-slot is sqrt(maxSqDist)
+// (linear) so it fits Int32 quanta on the Int32 source-coord path, and unifies tile.js's keep-or-drop
+// comparison to `> tolerance` (linear) across both paths.
 
 /** @import {CoordArray} from './internal.d.ts' */
 

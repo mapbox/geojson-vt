@@ -1,8 +1,8 @@
 
-import convert from './convert.js';     // GeoJSON conversion and preprocessing
-import clip from './clip.js';           // stripe clipping algorithm
-import wrap from './wrap.js';           // date line processing
-import createTile from './tile.js';     // final simplified tile generation
+import convert from './convert.js'; // GeoJSON conversion and preprocessing
+import clip from './clip.js';       // stripe clipping algorithm
+import wrap from './wrap.js';       // date line processing
+import createTile from './tile.js'; // final simplified tile generation
 import {POINT, SINGLE_POINT} from './feature.js';
 
 /** @import {AnyFeature, InternalOptions, Tile} from './internal.d.ts' */
@@ -35,9 +35,8 @@ export default class GeoJSONVT {
         if (opts.maxZoom < 0 || opts.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
         if (opts.promoteId && opts.generateId) throw new Error('promoteId and generateId cannot be used together.');
 
-        // Int32 source-coord gate: world + wrap buffer must fit signed 32-bit.
-        // When the gate fails, fall back to Float64Array storage (uncentered
-        // [0, 1] source space — historical encoding).
+        // Int32 source-coord gate: world + wrap buffer must fit signed 32-bit. When the gate fails, fall
+        // back to Float64Array storage (uncentered [0, 1] source space — historical encoding).
         const worldSpan = (opts.extent + 2 * opts.buffer) * (1 << opts.maxZoom);
         const useInt32 = worldSpan < 0x100000000; // 2^32; strict — centered range is [-2^31, +2^31), and +2^31 wraps under ToInt32.
         opts.useInt32 = useInt32;
@@ -70,18 +69,17 @@ export default class GeoJSONVT {
         if (features.length) this.splitTile(features, 0, 0, 0);
 
         if (debug) {
-            if (features.length) console.log('features: %d, points: %d', this.tiles[0].numFeatures, this.tiles[0].numPoints);
+            const top = this.tiles[0];
+            if (top) console.log(`features: ${top.numFeatures}, points: ${top.numPoints}`);
             console.timeEnd('generate tiles');
             console.log('tiles generated:', this.total, JSON.stringify(this.stats));
         }
     }
 
-    // splits features from a parent tile to sub-tiles.
-    // z, x, and y are the coordinates of the parent tile
-    // cz, cx, and cy are the coordinates of the target tile
+    // Splits features from a parent tile to sub-tiles. z/x/y: parent tile coords; cz/cx/cy: target tile coords.
     //
-    // If no target tile is specified, splitting stops when we reach the maximum
-    // zoom or the number of points is low as specified in the options.
+    // If no target tile is specified, splitting stops when we reach the maximum zoom or when the
+    // number of points is low as specified in the options.
     /** @param {AnyFeature[]} features @param {number} z @param {number} x @param {number} y @param {number} [cz] @param {number} [cx] @param {number} [cy] */
     splitTile(features, z, x, y, cz, cx, cy) {
 
@@ -226,9 +224,8 @@ export default class GeoJSONVT {
     }
 }
 
-// Walks the retained internal tile (flat integer coord arrays) into the legacy
-// nested envelope: [x, y] pairs grouped per ring. The retained tile is
-// immutable; each call produces a fresh envelope.
+// Walks the retained internal tile (flat integer coord arrays) into the legacy nested envelope: [x, y] pairs
+// grouped per ring. The tile is immutable; each call produces a fresh envelope.
 /** @param {Tile} tile @returns {LegacyTile} */
 function materializeTile(tile) {
     /** @type {LegacyFeature[]} */

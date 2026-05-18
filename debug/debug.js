@@ -1,21 +1,13 @@
-
 import GeoJSONVT from '../src/index.js';
-import {getHeapStatistics} from 'v8';
 import {readFileSync} from 'fs';
 
 console.time('load data');
 const data = JSON.parse(readFileSync(new URL('data/hrr.json', import.meta.url)));
 console.timeEnd('load data');
 
-global.gc();
-const size = getHeapStatistics().used_heap_size;
-
 const tileIndex = new GeoJSONVT(data, {
-	debug: 1
+    debug: 1
 });
-
-global.gc();
-console.log(`memory used: ${  Math.round((getHeapStatistics().used_heap_size - size) / 1024)  } KB`);
 
 console.time('drill down');
 for (let i = 0; i < 10; i++) {
@@ -36,9 +28,6 @@ for (let i = 0; i < 10; i++) {
 console.timeEnd('drill down');
 
 console.log('tiles generated:', tileIndex.total, JSON.stringify(tileIndex.stats));
-
-global.gc();
-console.log(`memory used: ${  Math.round((getHeapStatistics().used_heap_size - size) / 1024)  } KB`);
 
 // tileIndex.maxZoom = 14;
 // tileIndex.getTile(14, 4100, 6200);
