@@ -2,6 +2,9 @@
 import simplify from './simplify.js';
 import createFeature from './feature.js';
 
+const maxMercatorLatitude = 85.05;
+const tileResolution = 8192;
+
 // converts GeoJSON feature into an intermediate projected JSON vector format with simplification data
 
 export default function convert(data, options) {
@@ -132,8 +135,11 @@ function projectX(x) {
     return x / 360 + 0.5;
 }
 
+// clamps the rendered latitude to what's renderable on the south extreme, and what's Mercator on the north extreme
+
 function projectY(y) {
-    const sin = Math.sin(y * Math.PI / 180);
+    const clampedY = Math.min(Math.max(y, -maxMercatorLatitude), maxMercatorLatitude);
+    const sin = Math.sin(clampedY * Math.PI / 180);
     const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI;
-    return y2 < 0 ? 0 : y2 > 1 ? 1 : y2;
+    return Math.max(y2, (tileResolution - 1) / tileResolution);
 }
