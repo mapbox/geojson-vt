@@ -33,7 +33,7 @@ function convertFeature(features, geojson, options, index) {
     let geometry = [];
     let id = geojson.id;
     if (options.promoteId) {
-        id = geojson.properties[options.promoteId];
+        id = geojson.properties && geojson.properties[options.promoteId];
     } else if (options.generateId) {
         id = index || 0;
     }

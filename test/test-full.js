@@ -14,6 +14,17 @@ testTiles('single-geom.json', 'single-geom-tiles.json', {indexMaxZoom: 0, indexM
 testTiles('ids.json', 'ids-promote-id-tiles.json', {indexMaxZoom: 0, promoteId: 'prop0'});
 testTiles('ids.json', 'ids-generate-id-tiles.json', {indexMaxZoom: 0, generateId: true});
 
+test('promoteId with null properties', () => {
+    // properties: null is valid GeoJSON and must not crash promoteId
+    assert.doesNotThrow(() => {
+        genTiles({
+            type: 'Feature',
+            properties: null,
+            geometry: {type: 'Point', coordinates: [0, 0]}
+        }, {promoteId: 'myid'});
+    });
+});
+
 test('throws on invalid GeoJSON', () => {
     assert.throws(() => {
         genTiles({type: 'Pologon'});
