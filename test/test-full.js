@@ -53,6 +53,15 @@ test('empty coordinates', () => {
     assert.deepEqual({}, genTiles(getJSON('empty-coords.json')));
 });
 
+test('empty part in a MultiPolygon', () => {
+    // should ignore an empty polygon in a MultiPolygon and tile the rest
+    const ring = [[0, 0], [10, 0], [10, 10], [0, 0]];
+    assert.deepEqual(
+        genTiles({type: 'MultiPolygon', coordinates: [[], [ring]]}),
+        genTiles({type: 'MultiPolygon', coordinates: [[ring]]})
+    );
+});
+
 function getJSON(name) {
     return JSON.parse(fs.readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
 }

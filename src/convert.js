@@ -67,7 +67,7 @@ function convertFeature(features, geojson, options, index) {
         for (const polygon of coords) {
             const newPolygon = [];
             convertLines(polygon, newPolygon, tolerance, true);
-            geometry.push(newPolygon);
+            if (newPolygon.length) geometry.push(newPolygon);
         }
     } else if (type === 'GeometryCollection') {
         for (const singleGeometry of geojson.geometry.geometries) {
