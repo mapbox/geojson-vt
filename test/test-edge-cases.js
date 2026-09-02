@@ -36,22 +36,27 @@ test('hole-first MultiPolygon: ring 0 treated as outer per GeoJSON spec', () => 
     assert.equal(tile.features[0].geometry.length, 2);
 });
 
-test('sub-quantum lineMetrics: no NaN in mapbox_clip_start/end', () => {
-    // Line endpoints quantize to the same storage cell. Pre-#5, bbox computed from the (empty) coord walk
-    // left maxX/minX at ±Infinity, and clip's `feature.start / 0` produced NaN tags. After #5,
-    // the outer-ring bbox is always computed so this feature is correctly bbox-rejected upstream.
-    const index = new GeoJSONVT({
-        type: 'Feature',
-        geometry: {type: 'LineString', coordinates: [[0, 0], [1e-9, 1e-9]]},
-        properties: {}
-    }, {lineMetrics: true});
+test('degenerate lineMetrics lines: no NaN in mapbox_clip_start/end', () => {
+    // Both endpoints land in the same storage cell, or within one quantum of it, so the stored ringSize
+    // truncates to 0 while the line itself survives at maxZoom (tolerance is 0 there). Dividing the running
+    // start/end sums by that zero size used to emit NaN tags; a zero-size line spans the full [0, 1] range.
+    for (const [name, coords] of [
+        ['sub-quantum', [[0.00001, 0.00001], [0.000012, 0.000012]]],
+        ['zero-length', [[0.00001, 0.00001], [0.00001, 0.00001]]]
+    ]) {
+        const index = new GeoJSONVT({
+            type: 'Feature',
+            geometry: {type: 'LineString', coordinates: coords},
+            properties: {}
+        }, {lineMetrics: true, maxZoom: 14});
 
-    const tile = index.getTile(0, 0, 0);
-    for (const f of tile.features) {
-        if (!f.tags) continue;
-        const {mapbox_clip_start: s, mapbox_clip_end: e} = f.tags;
-        assert.ok(s === undefined || Number.isFinite(s), `mapbox_clip_start not finite: ${s}`);
-        assert.ok(e === undefined || Number.isFinite(e), `mapbox_clip_end not finite: ${e}`);
+        const tile = index.getTile(14, 8192, 8191);
+        assert.ok(tile && tile.features.length > 0, `${name}: expected a feature to assert on`);
+        for (const f of tile.features) {
+            const {mapbox_clip_start: s, mapbox_clip_end: e} = f.tags;
+            assert.ok(Number.isFinite(s) && s >= 0 && s <= 1, `${name}: mapbox_clip_start not in [0, 1]: ${s}`);
+            assert.ok(Number.isFinite(e) && e >= 0 && e <= 1, `${name}: mapbox_clip_end not in [0, 1]: ${e}`);
+        }
     }
 });
 
@@ -94,4 +99,83 @@ test('polygon vertex exactly at buffer edge survives clip', () => {
     const left = index.getTile(1, 0, 0);
     const totalRings = (right ? right.features.length : 0) + (left ? left.features.length : 0);
     assert.ok(totalRings >= 1, 'feature should land in at least one tile');
+});
+
+test('Float64 fallback path agrees with Int32 on dateline wrap and lineMetrics clipping', () => {
+    // extent 8192 + buffer 64 at maxZoom 20 exceeds the 2^32 gate, so storage is Float64 in uncentered
+    // [0, 1] source space — a separate projection path, and the one where clip's interpolated coords must
+    // NOT be rounded. Tile geometry must match the Int32 path exactly; the metrics only differ by the
+    // maxZoom quantization of the Int32 store, which is well under a part in 10^6.
+    const config = maxZoom => ({extent: 8192, buffer: 64, maxZoom, indexMaxZoom: 4, lineMetrics: true});
+
+    const cases = {
+        // crossing the antimeridian: exercises wrap.js on both paths
+        dateline: {type: 'LineString', coordinates: [[170, 10], [-170, 20]]},
+        // spanning several tiles: exercises clip.js's lineMetrics start/end accumulation across slices
+        longLine: {type: 'LineString', coordinates: [[-100, -40], [-60, 0], [-20, 40], [20, 60]]}
+    };
+
+    for (const [name, geometry] of Object.entries(cases)) {
+        const data = {type: 'Feature', properties: {}, geometry};
+        const float64 = new GeoJSONVT(data, config(20));
+        const int32 = new GeoJSONVT(data, config(10));
+        assert.equal(float64.options.useInt32, false);
+        assert.equal(int32.options.useInt32, true);
+
+        let compared = 0;
+        for (let z = 0; z <= 2; z++) {
+            for (let x = 0; x < (1 << z); x++) {
+                for (let y = 0; y < (1 << z); y++) {
+                    const a = float64.getTile(z, x, y);
+                    const b = int32.getTile(z, x, y);
+                    const at = `${name} ${z}/${x}/${y}`;
+                    assert.equal(a === null, b === null, `${at}: one path produced a tile and the other didn't`);
+                    if (!a || !b) continue;
+                    compared++;
+
+                    assert.equal(a.features.length, b.features.length, `${at}: feature count differs`);
+                    for (let i = 0; i < a.features.length; i++) {
+                        assert.deepEqual(a.features[i].geometry, b.features[i].geometry, `${at}: geometry differs`);
+                        for (const key of ['mapbox_clip_start', 'mapbox_clip_end']) {
+                            const av = a.features[i].tags[key];
+                            const bv = b.features[i].tags[key];
+                            assert.ok(av >= 0 && av <= 1, `${at}: Float64 ${key} out of [0, 1]: ${av}`);
+                            assert.ok(bv >= 0 && bv <= 1, `${at}: Int32 ${key} out of [0, 1]: ${bv}`);
+                            assert.ok(Math.abs(av - bv) < 1e-6, `${at}: ${key} differs by more than quantization: ${av} vs ${bv}`);
+                        }
+                    }
+                }
+            }
+        }
+        assert.ok(compared >= 4, `${name}: expected several tiles to compare, got ${compared}`);
+    }
+});
+
+test('MultiPolygon mixing a valid polygon with a zero-area one keeps both, in input order', () => {
+    // The collinear ring has zero area but is still a ring of the MultiPolygon; the ring walk must keep it
+    // in place and, more importantly, must not lose the valid polygon on either side of it. Matches v4.
+    const collinear = [[[0, 0], [10, 10], [20, 20], [0, 0]]];
+    const valid = [[[-40, -40], [-20, -40], [-20, -20], [-40, -20], [-40, -40]]];
+
+    const ringArea = ring => Math.abs(ring.reduce((sum, [px, py], i) => {
+        const [qx, qy] = ring[(i + 1) % ring.length];
+        return sum + (px * qy - qx * py);
+    }, 0) / 2);
+
+    for (const [name, coordinates, validIdx] of [
+        ['degenerate first', [collinear, valid], 1],
+        ['degenerate last', [valid, collinear], 0]
+    ]) {
+        const index = new GeoJSONVT({type: 'MultiPolygon', coordinates});
+        const tile = index.getTile(0, 0, 0);
+        assert.ok(tile, `${name}: expected a tile`);
+        assert.equal(tile.features.length, 1, `${name}: expected one feature`);
+
+        const rings = tile.features[0].geometry;
+        assert.equal(rings.length, 2, `${name}: expected both rings`);
+        assert.ok(ringArea(rings[validIdx]) > 0, `${name}: valid polygon was lost`);
+        assert.equal(ringArea(rings[1 - validIdx]), 0, `${name}: degenerate ring should have zero area`);
+        // The square's four corners survive simplification at z0.
+        assert.equal(rings[validIdx].length, 5, `${name}: valid polygon should keep its 5 closed vertices`);
+    }
 });

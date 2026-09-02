@@ -85,16 +85,21 @@ test('getTile: polygon clipping on the boundary', () => {
 });
 
 test('getTile: polygon with vertex exactly on tile boundary (#118)', () => {
-    const index = new GeoJSONVT({
-        type: 'Polygon',
-        coordinates: [[[-90, -90], [0, -90], [90, -90], [0, 0], [-90, -90]]]
-    }, {indexMaxZoom: 0, maxZoom: 24, tolerance: 1.5, extent: 4096, buffer: 0});
-
-    assert.deepEqual(index.getTile(1, 1, 1).features, [{
-        geometry: [[[0, 4096], [0, 0], [2048, 4096], [0, 4096]]],
+    // maxZoom 24 at extent 4096 overflows the Int32 gate, so this also pins the Float64 storage path.
+    // The ring is the same cycle v4 produced, and the Int32 path at maxZoom 19 produces it identically.
+    const expected = [{
+        geometry: [[[0, 0], [0, 0], [2048, 4096], [0, 4096], [0, 0]]],
         type: 3,
         tags: null
-    }]);
+    }];
+    const options = {indexMaxZoom: 0, tolerance: 1.5, extent: 4096, buffer: 0};
+    const coordinates = [[[-90, -90], [0, -90], [90, -90], [0, 0], [-90, -90]]];
+
+    for (const maxZoom of [24, 19]) {
+        const index = new GeoJSONVT({type: 'Polygon', coordinates}, {...options, maxZoom});
+        assert.equal(index.options.useInt32, maxZoom === 19);
+        assert.deepEqual(index.getTile(1, 1, 1).features, expected);
+    }
 });
 
 test('getTile: polygon with collinear vertex on tile boundary (#161)', () => {

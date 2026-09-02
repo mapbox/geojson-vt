@@ -22,9 +22,11 @@
   "main": "geojson-vt-dev.js",
   "jsdelivr": "geojson-vt.js",
   "unpkg": "geojson-vt.js",
+  "dependencies": {
+    "@types/geojson": "^7946.0.16"
+  },
   "devDependencies": {
     "@rollup/plugin-terser": "^1.0.0",
-    "@types/geojson": "^7946.0.16",
     "benchmark": "^2.1.4",
     "eslint": "^10.3.0",
     "eslint-config-mourner": "^4.1.0",

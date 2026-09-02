@@ -20,7 +20,7 @@ export type TileCoordArrayCtor = Int16ArrayConstructor | Int32ArrayConstructor;
 export type Tags = Record<string, unknown> | null | undefined;
 export type FeatureId = number | string;
 
-export type InternalOptions = Options & {
+export type InternalOptions = Required<Options> & {
     useInt32: boolean;
     CoordArray: CoordArrayCtor;
     worldScale: number;

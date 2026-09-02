@@ -124,10 +124,11 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
         const end = /** @type {number} */ (feature.end);
         // Clamp to [0, 1] — the mathematical bounds by definition. On the integer-coord path, `size` is the
         // truncated Int32 length while clip's `feature.end` is a Float64 running sum, so a slice ending at
-        // the line end would otherwise emit mapbox_clip_end slightly > 1.
+        // the line end would otherwise emit mapbox_clip_end slightly > 1. A zero-length or sub-quantum line
+        // stores `size` 0, and the whole of it is the whole line, so it spans the full [0, 1] range.
         /* eslint-disable camelcase */
-        tags.mapbox_clip_start = Math.max(0, start / size);
-        tags.mapbox_clip_end = Math.min(1, end / size);
+        tags.mapbox_clip_start = size > 0 ? Math.max(0, start / size) : 0;
+        tags.mapbox_clip_end = size > 0 ? Math.min(1, end / size) : 1;
         /* eslint-enable camelcase */
     }
 

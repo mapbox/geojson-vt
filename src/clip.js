@@ -188,6 +188,10 @@ function countClipRing(geom, coords0, coordsEnd, k1, k2, axis, isPolygon, sliceS
 /** @param {CoordArray} geom @param {number} coords0 @param {number} coordsEnd @param {number} ringSize @param {CoordArray} out @param {number} w @param {number} k1 @param {number} k2 @param {0|1} axis @param {boolean} isPolygon @param {Feature|null} metricsSource @param {number[]|null} sliceSizes @param {AnyFeature[]|null} clipped @param {CoordArrayCtor} CoordArray */
 function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPolygon, metricsSource, sliceSizes, clipped, CoordArray) {
     const trackMetrics = metricsSource !== null;
+    // Interpolated coords are rounded only into integer storage, where the array would otherwise truncate
+    // them toward zero. Float64 storage is the uncentered [0, 1] source space, where rounding would snap
+    // every intersection to a world corner.
+    const round = CoordArray === Int32Array;
     let sliceIdx = 0;
     let headerIdx = w;
     out[w]     = 0;        // ringLen, backfilled below
@@ -214,13 +218,13 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
         if (a < k1) {
             // ---|-->  | (line enters the clip region from the left)
             if (b >= k1) {
-                t = intersect(out, w, ax, ay, bx, by, k1, axis); w += 3;
+                t = intersect(out, w, ax, ay, bx, by, k1, axis, round); w += 3;
                 if (trackMetrics) sliceMetricStart = len + segLen * t;
             }
         } else if (a > k2) {
             // |  <--|--- (line enters the clip region from the right)
             if (b <= k2) {
-                t = intersect(out, w, ax, ay, bx, by, k2, axis); w += 3;
+                t = intersect(out, w, ax, ay, bx, by, k2, axis, round); w += 3;
                 if (trackMetrics) sliceMetricStart = len + segLen * t;
             }
         } else {
@@ -231,12 +235,12 @@ function clipRing(geom, coords0, coordsEnd, ringSize, out, w, k1, k2, axis, isPo
         }
         if (b < k1 && a >= k1) {
             // <--|---  | or <--|-----|--- (line exits the clip region on the left)
-            t = intersect(out, w, ax, ay, bx, by, k1, axis); w += 3;
+            t = intersect(out, w, ax, ay, bx, by, k1, axis, round); w += 3;
             exited = true;
         }
         if (b > k2 && a <= k2) {
             // |  ---|--> or ---|-----|--> (line exits the clip region on the right)
-            t = intersect(out, w, ax, ay, bx, by, k2, axis); w += 3;
+            t = intersect(out, w, ax, ay, bx, by, k2, axis, round); w += 3;
             exited = true;
         }
 
@@ -309,19 +313,21 @@ function emitMetricsSlice(clipped, source, geom, start, end) {
 }
 
 // Compute the segment/clip-line intersection point at axis-parallel value `k`, write its (x, y, z=KEEP) triple
-// into `out` at position `w`, and return parametric `t` for the metrics path. `k` is integer-valued in storage
-// space (axis component falls on a quantum-aligned clip line); the non-axis component is a real intersection that
-// Int32Array auto-coerces on store. The KEEP sentinel ensures the intersection is never simplified away.
-/** @param {CoordArray} out @param {number} w @param {number} ax @param {number} ay @param {number} bx @param {number} by @param {number} k @param {0|1} axis @returns {number} */
-function intersect(out, w, ax, ay, bx, by, k, axis) {
+// into `out` at position `w`, and return parametric `t` for the metrics path. The axis component is `k` itself;
+// the non-axis component is a real intersection, rounded to the nearest quantum when `round` is set so that
+// integer storage doesn't truncate it toward zero. The KEEP sentinel keeps the point out of simplification.
+/** @param {CoordArray} out @param {number} w @param {number} ax @param {number} ay @param {number} bx @param {number} by @param {number} k @param {0|1} axis @param {boolean} round @returns {number} */
+function intersect(out, w, ax, ay, bx, by, k, axis, round) {
     let t;
     if (axis === 0) {
         t = (k - ax) / (bx - ax);
+        const y = ay + (by - ay) * t;
         out[w]     = k;
-        out[w + 1] = Math.round(ay + (by - ay) * t);
+        out[w + 1] = round ? Math.round(y) : y;
     } else {
         t = (k - ay) / (by - ay);
-        out[w]     = Math.round(ax + (bx - ax) * t);
+        const x = ax + (bx - ax) * t;
+        out[w]     = round ? Math.round(x) : x;
         out[w + 1] = k;
     }
     out[w + 2] = KEEP_Z;

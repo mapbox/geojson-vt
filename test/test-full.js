@@ -31,6 +31,34 @@ test('throws on invalid GeoJSON', () => {
     });
 });
 
+test('throws a clear error on a geometry missing its coordinates', () => {
+    // A geometry with no coordinates/geometries array is malformed. It used to surface as an opaque
+    // TypeError from dereferencing null; report it like any other invalid input instead.
+    const invalid = {
+        'Point, coordinates null': {type: 'Point', coordinates: null},
+        'Point, coordinates missing': {type: 'Point'},
+        'LineString, coordinates null': {type: 'LineString', coordinates: null},
+        'Polygon, coordinates null': {type: 'Polygon', coordinates: null},
+        'MultiPoint, coordinates null': {type: 'MultiPoint', coordinates: null},
+        'GeometryCollection, geometries null': {type: 'GeometryCollection', geometries: null}
+    };
+    for (const [name, geometry] of Object.entries(invalid)) {
+        assert.throws(() => genTiles({type: 'Feature', properties: {}, geometry}),
+            {message: 'Input data is not a valid GeoJSON object.'}, name);
+    }
+});
+
+test('empty coordinate arrays are not an error', () => {
+    // Distinct from the malformed cases above: the array is present, just empty. The feature is skipped.
+    for (const geometry of [
+        {type: 'Point', coordinates: []},
+        {type: 'LineString', coordinates: []},
+        {type: 'GeometryCollection', geometries: []}
+    ]) {
+        assert.deepEqual({}, genTiles({type: 'Feature', properties: {}, geometry}));
+    }
+});
+
 function testTiles(inputFile, expectedFile, options) {
     test(`full tiling test: ${  expectedFile.replace('-tiles.json', '')}`, () => {
         const tiles = genTiles(getJSON(inputFile), options);

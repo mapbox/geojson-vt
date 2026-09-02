@@ -8,7 +8,7 @@ import {POINT, SINGLE_POINT} from './feature.js';
 /** @import {AnyFeature, InternalOptions, Tile} from './internal.d.ts' */
 /** @import {Options, LegacyTile, LegacyFeature, TileCoord} from './index.d.ts' */
 
-/** @type {Options} */
+/** @type {Required<Options>} */
 const defaultOptions = {
     maxZoom: 14,            // max zoom to preserve detail on
     indexMaxZoom: 5,        // max zoom in the tile index
@@ -23,7 +23,7 @@ const defaultOptions = {
 };
 
 export default class GeoJSONVT {
-    /** @param {import('geojson').GeoJSON} data @param {Partial<Options>} [options] */
+    /** @param {import('geojson').GeoJSON} data @param {Options} [options] */
     constructor(data, options) {
         /** @type {InternalOptions} */
         const opts = this.options = Object.assign(Object.create(defaultOptions), options);

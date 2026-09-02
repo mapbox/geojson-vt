@@ -39,8 +39,11 @@ export default function convert(data, options) {
 function convertFeature(features, geojson, options, index) {
     const geom = geojson.geometry;
     if (!geom) return;
-    // GeometryCollection has `geometries` instead of `coordinates`
-    if (geom.type !== 'GeometryCollection' && geom.coordinates.length === 0) return;
+    // GeometryCollection has `geometries` instead of `coordinates`. A geometry missing its member array
+    // is malformed; report it like any other invalid input rather than dereferencing null downstream.
+    const parts = geom.type === 'GeometryCollection' ? geom.geometries : geom.coordinates;
+    if (!parts) throw new Error('Input data is not a valid GeoJSON object.');
+    if (parts.length === 0) return;
 
     // tolerance is given in pixels-at-tile-extent; convert to storage-space distance at maxZoom
     // and square it for simplify's internal comparison.
