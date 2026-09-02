@@ -18,6 +18,8 @@ import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './
 // The z-slot (simplification weight) and POLYGON ringSize are stored sqrt-linear so they stay in Int32 range
 // and tile.js's keep-or-drop comparison is `> tolerance` (linear) for both paths.
 
+const INVALID_GEOJSON = 'Input data is not a valid GeoJSON object.';
+
 /** @param {GeoJSON} data @param {Options} options @returns {AnyFeature[]} */
 export default function convert(data, options) {
     /** @type {AnyFeature[]} */
@@ -39,11 +41,11 @@ export default function convert(data, options) {
 function convertFeature(features, geojson, options, index) {
     const geom = geojson.geometry;
     if (!geom) return;
-    // GeometryCollection has `geometries` instead of `coordinates`. A geometry missing its member array
-    // is malformed; report it like any other invalid input rather than dereferencing null downstream.
+    // GeometryCollection has `geometries` instead of `coordinates`. Absent either way means malformed
+    // input, including an unrecognized type, which is how that reaches the error below.
     const parts = geom.type === 'GeometryCollection' ? geom.geometries : geom.coordinates;
-    if (!parts) throw new Error('Input data is not a valid GeoJSON object.');
-    if (parts.length === 0) return;
+    if (!parts) throw new Error(INVALID_GEOJSON);
+    if (!parts.length) return;
 
     // tolerance is given in pixels-at-tile-extent; convert to storage-space distance at maxZoom
     // and square it for simplify's internal comparison.
@@ -116,7 +118,7 @@ function convertFeature(features, geojson, options, index) {
             convertFeature(features, {type: 'Feature', id, geometry: g, properties: geojson.properties}, options, index);
         }
     } else {
-        throw new Error('Input data is not a valid GeoJSON object.');
+        throw new Error(INVALID_GEOJSON);
     }
 }
 
