@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 
 import GeoJSONVT from '../src/index.js';
 
@@ -178,4 +179,89 @@ test('MultiPolygon mixing a valid polygon with a zero-area one keeps both, in in
         // The square's four corners survive simplification at z0.
         assert.equal(rings[validIdx].length, 5, `${name}: valid polygon should keep its 5 closed vertices`);
     }
+});
+
+test('polygon straddling lon 0 / lat 0 produces no degenerate rings at maxZoom', () => {
+    // Regression: the polygon clip precount may over-reserve a closing point, and the unused slack at the end
+    // of the buffer used to be read as an empty ring on the next clip, emitting garbage single-vertex rings in
+    // stripes containing storage 0 (the equator / Greenwich meridian). Only visible at maxZoom, where tolerance
+    // no longer drops zero-size rings.
+    const index = new GeoJSONVT({
+        type: 'Polygon',
+        coordinates: [[[-10, -10], [10, -10], [10, 10], [-10, 10], [-10, -10]]]
+    });
+    let rings = 0;
+    for (const x of [8191, 8192]) {
+        for (const y of [8191, 8192]) {
+            const tile = index.getTile(14, x, y);
+            for (const feature of tile.features) {
+                for (const ring of feature.geometry) {
+                    assert.ok(ring.length >= 4, `degenerate ring ${JSON.stringify(ring)} in tile 14/${x}/${y}`);
+                    rings++;
+                }
+            }
+        }
+    }
+    assert.equal(rings, 4);
+});
+
+test('point exactly on a shared tile edge lands in exactly one tile', () => {
+    // Points use the same half-open [k1, k2) stripe as the feature bbox checks, so a point on the boundary
+    // belongs to the tile on its right/bottom, whether it's alone or accompanied by other features.
+    const point = {type: 'Feature', properties: {}, geometry: {type: 'Point', coordinates: [0, 0]}};
+    const multi = {type: 'Feature', properties: {}, geometry: {type: 'MultiPoint', coordinates: [[0, 0], [-90, 45]]}};
+    const other = {type: 'Feature', properties: {}, geometry: {type: 'Point', coordinates: [-90, -45]}};
+
+    for (const features of [[point], [point, other], [multi], [multi, other]]) {
+        const index = new GeoJSONVT({type: 'FeatureCollection', features}, {buffer: 0});
+        const hits = [];
+        for (const x of [0, 1]) {
+            for (const y of [0, 1]) {
+                const tile = index.getTile(1, x, y);
+                if (!tile) continue;
+                for (const f of tile.features) {
+                    for (const [px, py] of f.geometry) {
+                        if (px === 0 && py === 0) hits.push(`${x}/${y}`);
+                    }
+                }
+            }
+        }
+        assert.deepEqual(hits, ['1/1'], JSON.stringify(features));
+    }
+});
+
+test('bounding boxes of clipped and wrapped features match a scan of the geometry', () => {
+    const data = JSON.parse(readFileSync(new URL('fixtures/us-states.json', import.meta.url), 'utf8'));
+    const dateline = JSON.parse(readFileSync(new URL('fixtures/dateline.json', import.meta.url), 'utf8'));
+    let checked = 0;
+
+    for (const index of [new GeoJSONVT(data, {indexMaxZoom: 6, indexMaxPoints: 0}), new GeoJSONVT(dateline, {indexMaxZoom: 4, indexMaxPoints: 0})]) {
+        for (const id in index.tiles) {
+            for (const f of index.tiles[id].source || []) {
+                if (f.type === 4) continue; // single points carry no bbox
+                const bbox = {minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity};
+                const geom = f.geometry;
+                const scan = (start, end) => {
+                    for (let i = start; i < end; i += 3) {
+                        bbox.minX = Math.min(bbox.minX, geom[i]);
+                        bbox.minY = Math.min(bbox.minY, geom[i + 1]);
+                        bbox.maxX = Math.max(bbox.maxX, geom[i]);
+                        bbox.maxY = Math.max(bbox.maxY, geom[i + 1]);
+                    }
+                };
+                if (f.type === 1) {
+                    scan(0, geom.length);
+                } else {
+                    for (let i = 0; i < geom.length;) {
+                        const end = i + 2 + geom[i] * 3;
+                        scan(i + 2, end);
+                        i = end;
+                    }
+                }
+                assert.deepEqual({minX: f.minX, minY: f.minY, maxX: f.maxX, maxY: f.maxY}, bbox);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 300, `checked only ${checked} features`);
 });

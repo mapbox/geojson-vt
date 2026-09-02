@@ -34,7 +34,7 @@ export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
         if (type === SINGLE_POINT) {
             // x/y stored directly on the feature; no geometry array, no bbox.
             const a = axis === 0 ? feature.x : feature.y;
-            if (a >= k1 && a <= k2) {
+            if (a >= k1 && a < k2) {
                 if (clipped !== null) clipped.push(feature);
             } else if (clipped === null) {
                 clipped = features.slice(0, fi);
@@ -71,13 +71,13 @@ export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
 function clipPoint(geometry, k1, k2, axis, feature, clipped, CoordArray) {
     let n = 0;
     for (let i = 0; i < geometry.length; i += 3) {
-        if (geometry[i + axis] >= k1 && geometry[i + axis] <= k2) n += 3;
+        if (geometry[i + axis] >= k1 && geometry[i + axis] < k2) n += 3;
     }
     if (n === 0) return;
     const out = new CoordArray(n);
     let w = 0;
     for (let i = 0; i < geometry.length; i += 3) {
-        if (geometry[i + axis] >= k1 && geometry[i + axis] <= k2) {
+        if (geometry[i + axis] >= k1 && geometry[i + axis] < k2) {
             out[w]     = geometry[i];
             out[w + 1] = geometry[i + 1];
             out[w + 2] = geometry[i + 2];
@@ -101,7 +101,7 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
     }
     if (total === 0) return;
 
-    const out = new CoordArray(total);
+    let out = new CoordArray(total);
     // Interpolated coords are rounded only into integer storage, where the array would otherwise truncate
     // them toward zero. Float64 storage is the uncentered [0, 1] source space, where rounding would snap
     // every intersection to a world corner.
@@ -114,6 +114,10 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
         w = clipRing(geometry, i + 2, coordsEnd, geometry[i + 1], out, w, k1, k2, axis, isPolygon, round, metrics, feature.start || 0);
         i = coordsEnd;
     }
+
+    // The polygon precount reserves a closing point whenever a ring crossed a clip line, but the ring is only
+    // closed when its endpoints differ, so the buffer may have unused slack at the end: trim it away.
+    if (w < total) out = out.subarray(0, w);
 
     if (metrics === null) {
         clipped.push(createFeature(feature.id, type, out, feature.tags));

@@ -137,10 +137,6 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
 function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray, S, O) {
     const ringLen = (coordsEnd - coords0) / 3;
 
-    // clip's polygon precount reserves a closing point whenever the ring crossed a clip line, but clipRing
-    // only writes it when the endpoints differ, so the buffer may end in zeroed slack that reads as ringLen 0
-    if (ringLen === 0) return;
-
     // z-slot and POLYGON ringSize are stored sqrt-linear, LINE ringSize linear, so both ringSize and per-coord
     // weight compare linearly against tolerance.
     if (Math.abs(ringSize) < tolerance) {
