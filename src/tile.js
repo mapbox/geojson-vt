@@ -41,16 +41,11 @@ export default function createTile(features, z, tx, ty, options) {
     return tile;
 }
 
-// Project a storage-space x back to tile-extent integer space.
-// storage_x / S + O = source_x ∈ [0, 1]; then (source_x * z2 - tx) * extent.
-/** @param {number} x @param {number} z2 @param {number} tx @param {number} extent @param {number} S @param {number} O */
-function projectX(x, z2, tx, extent, S, O) {
-    return Math.round(extent * ((x / S + O) * z2 - tx));
-}
-
-/** @param {number} y @param {number} z2 @param {number} ty @param {number} extent @param {number} S @param {number} O */
-function projectY(y, z2, ty, extent, S, O) {
-    return Math.round(extent * ((y / S + O) * z2 - ty));
+// Project a storage-space coordinate back to tile-extent integer space along either axis (t = tx or ty).
+// storage / S + O = source ∈ [0, 1]; then (source * z2 - t) * extent.
+/** @param {number} v @param {number} z2 @param {number} t @param {number} extent @param {number} S @param {number} O */
+function project(v, z2, t, extent, S, O) {
+    return Math.round(extent * ((v / S + O) * z2 - t));
 }
 
 /** @param {Tile} tile @param {AnyFeature} feature @param {number} tolerance @param {Options} options @param {number} z2 @param {number} tx @param {number} ty @param {number} extent @param {TileCoordArrayCtor} CoordArray @param {number} S @param {number} O */
@@ -70,8 +65,8 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
 
         /** @type {TileFeatureSinglePoint} */
         const tileFeature = {
-            x: projectX(x, z2, tx, extent, S, O),
-            y: projectY(y, z2, ty, extent, S, O),
+            x: project(x, z2, tx, extent, S, O),
+            y: project(y, z2, ty, extent, S, O),
             type: SINGLE_POINT,
             tags: feature.tags || null
         };
@@ -93,8 +88,8 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
         const n = geom.length / 3;
         simplified = new CoordArray(n * 2);
         for (let i = 0, j = 0; i < geom.length; i += 3, j += 2) {
-            simplified[j] = projectX(geom[i], z2, tx, extent, S, O);
-            simplified[j + 1] = projectY(geom[i + 1], z2, ty, extent, S, O);
+            simplified[j] = project(geom[i], z2, tx, extent, S, O);
+            simplified[j + 1] = project(geom[i + 1], z2, ty, extent, S, O);
         }
         tile.numPoints += n;
         tile.numSimplified += n;
@@ -142,11 +137,13 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
 function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray, S, O) {
     const ringLen = (coordsEnd - coords0) / 3;
 
-    if (ringLen === 0) return; // tolerate over-allocated trailing slack from clip's heuristic count
+    // clip's polygon precount reserves a closing point whenever the ring crossed a clip line, but clipRing
+    // only writes it when the endpoints differ, so the buffer may end in zeroed slack that reads as ringLen 0
+    if (ringLen === 0) return;
 
     // z-slot and POLYGON ringSize are stored sqrt-linear, LINE ringSize linear, so both ringSize and per-coord
     // weight compare linearly against tolerance.
-    if (tolerance > 0 && Math.abs(ringSize) < tolerance) {
+    if (Math.abs(ringSize) < tolerance) {
         tile.numPoints += ringLen;
         return;
     }
@@ -167,8 +164,8 @@ function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, is
     let w = 0;
     for (let i = coords0; i < coordsEnd; i += 3) {
         if (tolerance === 0 || geom[i + 2] > tolerance) {
-            ring[w++] = projectX(geom[i], z2, tx, extent, S, O);
-            ring[w++] = projectY(geom[i + 1], z2, ty, extent, S, O);
+            ring[w++] = project(geom[i], z2, tx, extent, S, O);
+            ring[w++] = project(geom[i + 1], z2, ty, extent, S, O);
         }
     }
     result.push(ring);

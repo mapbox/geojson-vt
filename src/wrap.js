@@ -2,7 +2,7 @@
 import clip from './clip.js';
 import {createFeature, createSinglePoint, POINT, SINGLE_POINT} from './feature.js';
 
-/** @import {AnyFeature, CoordArray, CoordArrayCtor, InternalOptions as Options} from './internal.d.ts' */
+/** @import {AnyFeature, CoordArray, InternalOptions as Options} from './internal.d.ts' */
 
 // All thresholds and feature coords here live in storage space (centered Int32 quanta when the gate passed,
 // source [0,1] doubles otherwise). The wrap shift (one full world width) is `worldScale` in storage units.
@@ -23,21 +23,21 @@ export default function wrap(features, options) {
     if (left || right) {
         merged = clip(features, w0 - buf, w1 + buf, 0, w0 - S, w1 + S, options) || []; // center world copy
 
-        if (left)  merged = shiftFeatureCoords(left,  S, options).concat(merged); // merge left into center
-        if (right) merged = merged.concat(shiftFeatureCoords(right, -S, options)); // merge right into center
+        if (left)  merged = shiftFeatureCoords(left,  S).concat(merged); // merge left into center
+        if (right) merged = merged.concat(shiftFeatureCoords(right, -S)); // merge right into center
     }
     return merged;
 }
 
-/** @param {AnyFeature[]} features @param {number} offset @param {Options} options @returns {AnyFeature[]} */
-function shiftFeatureCoords(features, offset, options) {
+/** @param {AnyFeature[]} features @param {number} offset @returns {AnyFeature[]} */
+function shiftFeatureCoords(features, offset) {
     const out = [];
     for (const feature of features) {
         if (feature.type === SINGLE_POINT) {
             out.push(createSinglePoint(feature.id, feature.x + offset, feature.y, feature.tags));
             continue;
         }
-        const newGeom = shiftGeom(feature.geometry, feature.type, offset, options.CoordArray);
+        const newGeom = shiftGeom(feature.geometry, feature.type, offset);
         const shifted = createFeature(feature.id, feature.type, newGeom, feature.tags);
         if (feature.start !== undefined) {
             shifted.start = feature.start;
@@ -48,28 +48,17 @@ function shiftFeatureCoords(features, offset, options) {
     return out;
 }
 
-// Build a shifted copy of a feature's geometry — a single new buffer per feature (POINT: flat coords;
-// LINE/POLYGON: inline-header rings). Output size is identical to input, so we can pre-size exactly.
-/** @param {CoordArray} geom @param {1|2|3} type @param {number} offset @param {CoordArrayCtor} CoordArray @returns {CoordArray} */
-function shiftGeom(geom, type, offset, CoordArray) {
-    const out = new CoordArray(geom.length);
+// Build a shifted copy of a feature's geometry: copy the buffer, then offset the x slot of every coord,
+// skipping the inline ring headers of LINE / POLYGON geometry.
+/** @param {CoordArray} geom @param {1|2|3} type @param {number} offset @returns {CoordArray} */
+function shiftGeom(geom, type, offset) {
+    const out = geom.slice();
     if (type === POINT) {
-        for (let i = 0; i < geom.length; i += 3) {
-            out[i]     = geom[i] + offset;
-            out[i + 1] = geom[i + 1];
-            out[i + 2] = geom[i + 2];
-        }
+        for (let i = 0; i < out.length; i += 3) out[i] += offset;
     } else {
-        for (let i = 0; i < geom.length;) {
-            const ringLen = geom[i];
-            out[i]     = ringLen;
-            out[i + 1] = geom[i + 1];
-            const coordsEnd = i + 2 + ringLen * 3;
-            for (let j = i + 2; j < coordsEnd; j += 3) {
-                out[j]     = geom[j] + offset;
-                out[j + 1] = geom[j + 1];
-                out[j + 2] = geom[j + 2];
-            }
+        for (let i = 0; i < out.length;) {
+            const coordsEnd = i + 2 + out[i] * 3;
+            for (let j = i + 2; j < coordsEnd; j += 3) out[j] += offset;
             i = coordsEnd;
         }
     }
