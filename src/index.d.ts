@@ -37,9 +37,31 @@ export interface LegacyTile {
     features: LegacyFeature[];
 }
 
+// Zero-copy view of the tile as stored: flat [x, y, x, y, …] typed arrays, one per ring. Point features
+// come in two shapes — a lone point keeps its coords inline (type 4), a multi-point gets one array.
+export type RawFeature = {
+    id?: number | string;
+    tags: Record<string, unknown> | null | undefined;
+} & ({
+    type: 4;
+    x: number;
+    y: number;
+} | {
+    type: 1;
+    geometry: Int16Array | Int32Array;
+} | {
+    type: 2 | 3;
+    geometry: (Int16Array | Int32Array)[];
+});
+
+export interface RawTile {
+    readonly features: readonly RawFeature[];
+}
+
 export default class GeoJSONVT {
     constructor(data: GeoJSON, options?: Options);
     options: Readonly<Required<Options>>;
     tileCoords: TileCoord[];
     getTile(z: number | string, x: number | string, y: number | string): LegacyTile | null;
+    getTileRaw(z: number | string, x: number | string, y: number | string): RawTile | null;
 }

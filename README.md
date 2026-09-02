@@ -35,14 +35,29 @@ Just drag any GeoJSON on the page, watching the console.
 
 ```js
 // build an initial index of tiles
-var tileIndex = new GeoJSONVT(geoJSON);
+const tileIndex = new GeoJSONVT(geoJSON);
 
 // request a particular tile
-var features = tileIndex.getTile(z, x, y).features;
+const features = tileIndex.getTile(z, x, y).features;
 
 // show an array of tile coordinates created so far
 console.log(tileIndex.tileCoords); // [{z: 0, x: 0, y: 0}, ...]
 ```
+
+`getTile` returns `null` outside the data, and builds a fresh `[x, y]`-pair structure on every call.
+For a zero-copy alternative, `getTileRaw` hands back the tile as stored &mdash; flat
+`[x, y, x, y, ...]` typed arrays, one per ring, with no per-coordinate objects:
+
+```js
+const {features} = tileIndex.getTileRaw(z, x, y);
+
+for (const {type, geometry} of features) {
+	// type 4 is a lone point, with `x`/`y` inline instead of a `geometry`;
+	// 1 is a multi-point (one flat array), 2 and 3 are lines and polygons (an array of rings)
+}
+```
+
+The arrays belong to the index, so treat them as read-only and don't hold them past its lifetime.
 
 ### Options
 
@@ -50,7 +65,7 @@ You can fine-tune the results with an options object,
 although the defaults are sensible and work well for most use cases.
 
 ```js
-var tileIndex = new GeoJSONVT(data, {
+const tileIndex = new GeoJSONVT(data, {
 	maxZoom: 14,  // max zoom to preserve detail on; can't be higher than 24
 	tolerance: 3, // simplification tolerance (higher means simpler)
 	extent: 4096, // tile extent (both width and height)
@@ -86,4 +101,19 @@ Or use a browser build directly:
 
 ```html
 <script src="https://unpkg.com/geojson-vt/geojson-vt.js"></script>
+<script>
+    const tileIndex = new GeoJSONVT(geoJSON); // exposed as a `GeoJSONVT` global
+</script>
+```
+
+### TypeScript
+
+Type declarations ship with the library; remove `@types/geojson-vt` if you have it.
+
+```ts
+import GeoJSONVT, {type Options, type LegacyFeature} from 'geojson-vt';
+
+const options: Options = {maxZoom: 12};
+const tile = new GeoJSONVT(geoJSON, options).getTile(0, 0, 0); // null outside the data
+const features: LegacyFeature[] = tile ? tile.features : [];
 ```

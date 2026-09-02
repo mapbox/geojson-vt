@@ -6,7 +6,7 @@ import createTile from './tile.js'; // final simplified tile generation
 import {POINT, SINGLE_POINT} from './feature.js';
 
 /** @import {AnyFeature, InternalOptions, Tile} from './internal.d.ts' */
-/** @import {Options, LegacyTile, LegacyFeature, TileCoord} from './index.d.ts' */
+/** @import {Options, LegacyTile, LegacyFeature, RawTile, TileCoord} from './index.d.ts' */
 
 /** @type {Required<Options>} */
 const defaultOptions = {
@@ -179,8 +179,25 @@ export default class GeoJSONVT {
         }
     }
 
+    // Returns the tile as nested [x, y] coordinate pairs — the historical shape, built fresh on every call.
     /** @param {number|string} z @param {number|string} x @param {number|string} y @returns {LegacyTile|null} */
     getTile(z, x, y) {
+        const tile = this.findTile(z, x, y);
+        return tile ? materializeTile(tile) : null;
+    }
+
+    // Returns the tile as stored — flat typed coord arrays, no per-coordinate objects. Zero-copy, so the
+    // arrays are the index's own: treat them as read-only, and don't hold them past the index's lifetime.
+    /** @param {number|string} z @param {number|string} x @param {number|string} y @returns {RawTile|null} */
+    getTileRaw(z, x, y) {
+        const tile = this.findTile(z, x, y);
+        return tile ? {features: tile.features} : null;
+    }
+
+    // Internal tile lookup shared by both getTile flavors: drills down from the nearest indexed parent
+    // when the tile isn't built yet. Returns the retained tile, not a public envelope.
+    /** @param {number|string} z @param {number|string} x @param {number|string} y @returns {Tile|null} */
+    findTile(z, x, y) {
         z = +z;
         x = +x;
         y = +y;
@@ -194,7 +211,7 @@ export default class GeoJSONVT {
         x = (x + z2) & (z2 - 1); // wrap tile x coordinate
 
         const id = toID(z, x, y);
-        if (this.tiles[id]) return materializeTile(this.tiles[id]);
+        if (this.tiles[id]) return this.tiles[id];
 
         if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -220,7 +237,7 @@ export default class GeoJSONVT {
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
 
-        return this.tiles[id] ? materializeTile(this.tiles[id]) : null;
+        return this.tiles[id] ?? null;
     }
 }
 

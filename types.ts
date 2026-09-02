@@ -24,4 +24,13 @@ if (tile) for (const f of tile.features) {
     void first;
 }
 
+// getTileRaw is the zero-copy flavor: a lone point carries x/y, a multi-point one flat array, lines and
+// polygons an array of rings.
+const rawTile = index.getTileRaw(0, 0, 0);
+if (rawTile) for (const f of rawTile.features) {
+    if (f.type === 4) { const xy: [number, number] = [f.x, f.y]; void xy; }
+    else if (f.type === 1) { const first: number = f.geometry[0]; void first; }
+    else { const ring: Int16Array | Int32Array = f.geometry[0]; void ring; }
+}
+
 void extent;

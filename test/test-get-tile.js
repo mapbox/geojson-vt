@@ -122,6 +122,50 @@ test('getTile: polygon with collinear vertex on tile boundary (#161)', () => {
     }]);
 });
 
+test('getTileRaw: flat typed coords match getTile pairs', () => {
+    const index = new GeoJSONVT(getJSON('us-states.json'), {indexMaxZoom: 7, indexMaxPoints: 200});
+
+    let checked = 0;
+    for (const {z, x, y} of index.tileCoords) {
+        const legacy = index.getTile(z, x, y).features;
+        const raw = index.getTileRaw(z, x, y).features;
+        assert.equal(raw.length, legacy.length);
+
+        for (let i = 0; i < raw.length; i++) {
+            const f = raw[i], l = legacy[i];
+            assert.equal(f.tags, l.tags);
+            // a lone point keeps x/y inline and is published as a one-point POINT feature
+            const rings = f.type === 4 ? [[f.x, f.y]] : f.type === 1 ? [f.geometry] : f.geometry;
+            assert.equal(f.type === 4 ? 1 : f.type, l.type);
+            assert.deepEqual(rings.map(r => Array.from(r)), (f.type === 1 || f.type === 4 ? [l.geometry.flat()] : l.geometry.map(ring => ring.flat())));
+            checked++;
+        }
+    }
+    assert.ok(checked > 500, `expected many features, compared ${checked}`);
+});
+
+test('getTileRaw: returns the retained arrays, and null where getTile does', () => {
+    const index = new GeoJSONVT(getJSON('us-states.json'), {});
+
+    // zero-copy: the same feature list and ring buffers come back on every call
+    const a = index.getTileRaw(0, 0, 0);
+    const b = index.getTileRaw(0, 0, 0);
+    assert.equal(a.features, b.features);
+    assert.ok(a.features[0].geometry[0] instanceof Int16Array || a.features[0].geometry[0] instanceof Int32Array);
+
+    // both flavors resolve the same tiles, including the out-of-range and no-parent nulls
+    assert.equal(index.getTileRaw(-1, 0, 0), null);
+    assert.equal(index.getTileRaw(25, 0, 0), null);
+    let nulls = 0;
+    for (let x = 0; x < 8; x++) for (let y = 0; y < 8; y++) {
+        const raw = index.getTileRaw(3, x, y);
+        const legacy = index.getTile(3, x, y);
+        assert.equal(raw === null, legacy === null, `z3-${x}-${y}`);
+        if (raw === null) nulls++;
+    }
+    assert.ok(nulls > 0, 'expected some tiles with no parent to drill down from');
+});
+
 test('getTile: line metrics with vertex on tile border (geojson-vt-cpp#92)', () => {
     const index = new GeoJSONVT({
         type: 'Feature',
