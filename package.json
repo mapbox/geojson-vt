@@ -28,10 +28,10 @@
   "devDependencies": {
     "@rollup/plugin-terser": "^1.0.0",
     "benchmark": "^2.1.4",
-    "eslint": "^10.3.0",
-    "eslint-config-mourner": "^4.1.0",
-    "rollup": "^4.60.3",
-    "typescript": "^6.0.3"
+    "eslint": "^10.9.1",
+    "eslint-config-mourner": "^5.0.1",
+    "rollup": "^4.63.1",
+    "typescript": "^7.0.2"
   },
   "license": "ISC",
   "scripts": {
