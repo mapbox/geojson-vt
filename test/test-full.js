@@ -59,6 +59,14 @@ test('empty coordinate arrays are not an error', () => {
     }
 });
 
+test('empty part in a MultiPolygon is skipped, the rest is tiled', () => {
+    const ring = [[0, 0], [10, 0], [10, 10], [0, 0]];
+    assert.deepEqual(
+        genTiles({type: 'MultiPolygon', coordinates: [[], [ring]]}),
+        genTiles({type: 'MultiPolygon', coordinates: [[ring]]})
+    );
+});
+
 function testTiles(inputFile, expectedFile, options) {
     test(`full tiling test: ${  expectedFile.replace('-tiles.json', '')}`, () => {
         const tiles = genTiles(getJSON(inputFile), options);
