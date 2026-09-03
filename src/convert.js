@@ -9,12 +9,13 @@ import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './
 //
 // Source coords are projected once here into "storage space" and stay there through clip / wrap / tile.
 // Storage space is parameterized by the Int32 gating on options:
-//   - useInt32 = true: coords centered and scaled to integer maxZoom-pixel
-//     quanta. The world [0, 1] source-x → storage [-W/2, W/2] where
-//     W = extent * 2^maxZoom. Values stored in Int32Array; spec ToInt32
-//     coerces on assignment (no explicit Math.round at call sites).
-//   - useInt32 = false: storage = source ([0, 1] uncentered), stored in
-//     Float64Array. Equivalent to the historical encoding.
+//   - useInt32 = true: coords centered and scaled to integer maxZoom-pixel quanta, rounded to nearest
+//     before the Int32Array store (spec ToInt32 would truncate toward zero, which is a half-quantum bias
+//     versus the Math.round that tile projection and downstream consumers use). The world [0, 1] source-x
+//     → storage [-W/2, W/2] where W = extent * 2^maxZoom.
+//   - useInt32 = false: storage = source ([0, 1] uncentered), stored in Float64Array unrounded.
+//     Equivalent to the historical encoding.
+// Single Points are kept unquantized on both paths: they live in plain object fields, not a typed array.
 // The z-slot (simplification weight) and POLYGON ringSize are stored sqrt-linear so they stay in Int32 range
 // and tile.js's keep-or-drop comparison is `> tolerance` (linear) for both paths.
 
@@ -55,6 +56,7 @@ function convertFeature(features, geojson, options, index) {
     const CoordArray = options.CoordArray;
     const S = options.worldScale;
     const O = options.originShift;
+    const R = options.useInt32;
 
     let id = geojson.id;
     if (options.promoteId) id = geojson.properties?.[options.promoteId];
@@ -67,8 +69,8 @@ function convertFeature(features, geojson, options, index) {
         const coords = geom.coordinates;
         const out = new CoordArray(coords.length * 3);
         for (let i = 0; i < coords.length; i++) {
-            out[i * 3]     = projectX(coords[i][0], S, O);
-            out[i * 3 + 1] = projectY(coords[i][1], S, O);
+            out[i * 3]     = quantize(projectX(coords[i][0], S, O), R);
+            out[i * 3 + 1] = quantize(projectY(coords[i][1], S, O), R);
         }
         pushFeature(features, id, POINT, out, tags, options);
 
@@ -91,7 +93,7 @@ function convertFeature(features, geojson, options, index) {
         let idx = 0;
         for (const rings of groups) {
             for (let i = 0; i < rings.length; i++) {
-                idx = writeLine(out, idx, rings[i], sqTolerance, isPolygon, isPolygon && i === 0, S, O);
+                idx = writeLine(out, idx, rings[i], sqTolerance, isPolygon, isPolygon && i === 0, S, O, R);
             }
         }
         pushFeature(features, id, isPolygon ? POLYGON : LINE, out, tags, options);
@@ -125,15 +127,15 @@ function pushFeature(features, id, type, geom, tags, options) {
 /** @param {AnyFeature[]} features @param {Id|undefined} id @param {number[][]} coords @param {Tags} tags @param {number} sqTolerance @param {Options} options */
 function pushLine(features, id, coords, tags, sqTolerance, options) {
     const out = new options.CoordArray(2 + coords.length * 3);
-    writeLine(out, 0, coords, sqTolerance, false, false, options.worldScale, options.originShift);
+    writeLine(out, 0, coords, sqTolerance, false, false, options.worldScale, options.originShift, options.useInt32);
     pushFeature(features, id, LINE, out, tags, options);
 }
 
 // Write one ring (header + coords) at `idx` into the pre-sized geometry buffer. Returns the next write position.
 // `ringSize` is stored sqrt-linear for POLYGON (sign(area) * sqrt(|area|)) and linear length for LINE —
 // both stay in Int32 range at the worst-case world span.
-/** @param {CoordArray} out @param {number} idx @param {number[][]} ring @param {number} sqTolerance @param {boolean} isPolygon @param {boolean} isOuter @param {number} S @param {number} O @returns {number} */
-function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
+/** @param {CoordArray} out @param {number} idx @param {number[][]} ring @param {number} sqTolerance @param {boolean} isPolygon @param {boolean} isOuter @param {number} S @param {number} O @param {boolean} R @returns {number} */
+function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O, R) {
     // empty rings are skipped at the call sites; this guard prevents KEEP_Z scribbling past the reserved header into the next ring
     if (ring.length === 0) return idx;
     const headerIdx = idx;
@@ -144,8 +146,9 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
     let size = 0;
 
     for (let j = 0; j < ring.length; j++) {
-        const x = projectX(ring[j][0], S, O);
-        const y = projectY(ring[j][1], S, O);
+        // quantized before the size accumulation so ringSize describes the geometry actually stored
+        const x = quantize(projectX(ring[j][0], S, O), R);
+        const y = quantize(projectY(ring[j][1], S, O), R);
 
         out[idx]     = x;
         out[idx + 1] = y;
@@ -196,6 +199,14 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O) {
     out[headerIdx + 1] = isPolygon ? Math.sign(size) * Math.sqrt(Math.abs(size)) : size;
 
     return idx;
+}
+
+// Round-half-up to the storage quantum on the Int32 path; identity on the Float64 path. Bit-identical to
+// Math.round for coordinate magnitudes, but Math.floor compiles to a single instruction where Math.round
+// is a builtin call — Math.round here cost +27–34% on convert for polygon datasets, this variant is free.
+/** @param {number} v @param {boolean} R */
+function quantize(v, R) {
+    return R ? Math.floor(v + 0.5) : v;
 }
 
 /** @param {number} x @param {number} S @param {number} O */

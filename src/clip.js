@@ -104,7 +104,8 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
     let out = new CoordArray(total);
     // Interpolated coords are rounded only into integer storage, where the array would otherwise truncate
     // them toward zero. Float64 storage is the uncentered [0, 1] source space, where rounding would snap
-    // every intersection to a world corner.
+    // every intersection to a world corner. Math.floor(v + 0.5) is round-half-up, same as Math.round for
+    // these magnitudes, but a single instruction rather than a builtin call.
     const round = CoordArray === Int32Array;
     // line-metrics mode collects a (start, end) pair per emitted slice; such features always have a single ring
     const metrics = isMetrics && type === LINE ? /** @type {number[]} */ ([]) : null;
@@ -303,11 +304,11 @@ function intersect(out, w, ax, ay, bx, by, k, axis, round) {
         t = (k - ax) / (bx - ax);
         const y = ay + (by - ay) * t;
         out[w]     = k;
-        out[w + 1] = round ? Math.round(y) : y;
+        out[w + 1] = round ? Math.floor(y + 0.5) : y;
     } else {
         t = (k - ay) / (by - ay);
         const x = ax + (bx - ax) * t;
-        out[w]     = round ? Math.round(x) : x;
+        out[w]     = round ? Math.floor(x + 0.5) : x;
         out[w + 1] = k;
     }
     out[w + 2] = KEEP_Z;

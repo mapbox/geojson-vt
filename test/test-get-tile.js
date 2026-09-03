@@ -52,13 +52,10 @@ test('getTile: unbuffered tile top/bottom edges', () => {
         buffer: 0
     });
 
-    // Line at lat=66.51326044311188 inverse-projects to y=0.25 source. The
-    // Int32 source-coord path truncates the sub-quantum fraction (Float64
-    // y = 0.24999999999999983) toward zero, landing the storage value
-    // exactly on the (2,1,0)/(2,1,1) tile boundary; clip's `min >= k1 &&
-    // max < k2` places the boundary in the upper-numbered tile. The line is
-    // geometrically the same place either way — top edge (y=0) of (2,1,1)
-    // is the bottom edge (y=4096) of (2,1,0).
+    // Line at lat=66.51326044311188 inverse-projects to y=0.25 source (Float64 y = 0.24999999999999983).
+    // Quantizing to maxZoom pixels rounds that onto exactly the (2,1,0)/(2,1,1) tile boundary; clip's
+    // `min >= k1 && max < k2` places the boundary in the upper-numbered tile. The line is geometrically
+    // the same place either way — top edge (y=0) of (2,1,1) is the bottom edge (y=4096) of (2,1,0).
     assert.deepEqual(index.getTile(2, 1, 0).features, []);
     assert.deepEqual(index.getTile(2, 1, 1).features, [{geometry: [[[0, 0], [4096, 0]]], type: 2, tags: null}]);
 });
@@ -114,9 +111,12 @@ test('getTile: polygon with collinear vertex on tile boundary (#161)', () => {
         ]]
     }, {buffer: 0, maxZoom: 5});
 
+    // x = 1821 rather than v4's 1820: lon 20 is 7281.78 maxZoom pixels, stored rounded as 7282, and 7282 / 4
+    // = 1820.5 rounds up again at z3. Such double-rounding ties move a vertex by one tile unit below maxZoom;
+    // at maxZoom the output matches v4 exactly.
     const tile = index.getTile(3, 4, 3);
     assert.deepEqual(tile.features, [{
-        geometry: [[[1820, 762], [4096, 1986], [4096, 3701], [1820, 3701], [1820, 762]]],
+        geometry: [[[1821, 762], [4096, 1986], [4096, 3700], [1821, 3700], [1821, 762]]],
         type: 3,
         tags: null
     }]);
