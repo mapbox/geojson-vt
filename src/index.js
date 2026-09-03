@@ -1,10 +1,14 @@
 
-import convert from './convert.js';     // GeoJSON conversion and preprocessing
-import clip from './clip.js';           // stripe clipping algorithm
-import wrap from './wrap.js';           // date line processing
-import transform from './transform.js'; // coordinate transformation
-import createTile from './tile.js';     // final simplified tile generation
+import convert from './convert.js'; // GeoJSON conversion and preprocessing
+import clip from './clip.js';       // stripe clipping algorithm
+import wrap from './wrap.js';       // date line processing
+import createTile from './tile.js'; // final simplified tile generation
+import {POINT, SINGLE_POINT} from './feature.js';
 
+/** @import {AnyFeature, InternalOptions, Tile} from './internal.d.ts' */
+/** @import {Options, LegacyTile, LegacyFeature, RawTile, TileCoord} from './index.d.ts' */
+
+/** @type {Required<Options>} */
 const defaultOptions = {
     maxZoom: 14,            // max zoom to preserve detail on
     indexMaxZoom: 5,        // max zoom in the tile index
@@ -18,63 +22,80 @@ const defaultOptions = {
     debug: 0                // logging level (0, 1 or 2)
 };
 
-class GeoJSONVT {
+export default class GeoJSONVT {
+    /** @param {import('geojson').GeoJSON} data @param {Options} [options] */
     constructor(data, options) {
-        options = this.options = extend(Object.create(defaultOptions), options);
+        /** @type {InternalOptions} */
+        const opts = this.options = Object.assign(Object.create(defaultOptions), options);
 
-        const debug = options.debug;
+        const debug = opts.debug;
 
         if (debug) console.time('preprocess data');
 
-        if (options.maxZoom < 0 || options.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
-        if (options.promoteId && options.generateId) throw new Error('promoteId and generateId cannot be used together.');
+        if (opts.maxZoom < 0 || opts.maxZoom > 24) throw new Error('maxZoom should be in the 0-24 range');
+        if (opts.promoteId && opts.generateId) throw new Error('promoteId and generateId cannot be used together.');
+
+        // Int32 source-coord gate: world + wrap buffer must fit signed 32-bit. When the gate fails, fall
+        // back to Float64Array storage (uncentered [0, 1] source space — historical encoding).
+        const worldSpan = (opts.extent + 2 * opts.buffer) * (1 << opts.maxZoom);
+        const useInt32 = worldSpan < 0x100000000; // 2^32; strict — centered range is [-2^31, +2^31), and +2^31 wraps under ToInt32.
+        opts.useInt32 = useInt32;
+        opts.CoordArray = useInt32 ? Int32Array : Float64Array;
+        opts.worldScale = useInt32 ? opts.extent * (1 << opts.maxZoom) : 1;
+        opts.originShift = useInt32 ? 0.5 : 0;
 
         // projects and adds simplification info
-        let features = convert(data, options);
+        let features = convert(data, opts);
 
         // tiles and tileCoords are part of the public API
+        /** @type {Record<number, Tile>} */
         this.tiles = {};
+        /** @type {TileCoord[]} */
         this.tileCoords = [];
+        /** @type {Record<string, number>} */
+        this.stats = {};
+        this.total = 0;
 
         if (debug) {
             console.timeEnd('preprocess data');
-            console.log('index: maxZoom: %d, maxPoints: %d', options.indexMaxZoom, options.indexMaxPoints);
+            console.log('index: maxZoom: %d, maxPoints: %d', opts.indexMaxZoom, opts.indexMaxPoints);
             console.time('generate tiles');
-            this.stats = {};
-            this.total = 0;
         }
 
         // wraps features (ie extreme west and extreme east)
-        features = wrap(features, options);
+        features = wrap(features, opts);
 
         // start slicing from the top tile down
         if (features.length) this.splitTile(features, 0, 0, 0);
 
         if (debug) {
-            if (features.length) console.log('features: %d, points: %d', this.tiles[0].numFeatures, this.tiles[0].numPoints);
+            const top = this.tiles[0];
+            if (top) console.log(`features: ${top.numFeatures}, points: ${top.numPoints}`);
             console.timeEnd('generate tiles');
             console.log('tiles generated:', this.total, JSON.stringify(this.stats));
         }
     }
 
-    // splits features from a parent tile to sub-tiles.
-    // z, x, and y are the coordinates of the parent tile
-    // cz, cx, and cy are the coordinates of the target tile
+    // Splits features from a parent tile to sub-tiles. z/x/y: parent tile coords; cz/cx/cy: target tile coords.
     //
-    // If no target tile is specified, splitting stops when we reach the maximum
-    // zoom or the number of points is low as specified in the options.
+    // If no target tile is specified, splitting stops when we reach the maximum zoom or when the
+    // number of points is low as specified in the options.
+    /** @param {AnyFeature[]} features @param {number} z @param {number} x @param {number} y @param {number} [cz] @param {number} [cx] @param {number} [cy] */
     splitTile(features, z, x, y, cz, cx, cy) {
 
-        const stack = [features, z, x, y];
-        const options = this.options;
+        /** @type {AnyFeature[][]} */
+        const featStack = [features];
+        /** @type {number[]} */
+        const numStack = [z, x, y];
+        const options = /** @type {InternalOptions} */ (this.options);
         const debug = options.debug;
 
         // avoid recursion by using a processing queue
-        while (stack.length) {
-            y = stack.pop();
-            x = stack.pop();
-            z = stack.pop();
-            features = stack.pop();
+        while (featStack.length) {
+            y = /** @type {number} */ (numStack.pop());
+            x = /** @type {number} */ (numStack.pop());
+            z = /** @type {number} */ (numStack.pop());
+            features = /** @type {AnyFeature[]} */ (featStack.pop());
 
             const z2 = 1 << z;
             const id = toID(z, x, y);
@@ -85,16 +106,12 @@ class GeoJSONVT {
 
                 tile = this.tiles[id] = createTile(features, z, x, y, options);
                 this.tileCoords.push({z, x, y});
+                this.stats[z] = (this.stats[z] || 0) + 1;
+                this.total++;
 
-                if (debug) {
-                    if (debug > 1) {
-                        console.log('tile z%d-%d-%d (features: %d, points: %d, simplified: %d)',
-                            z, x, y, tile.numFeatures, tile.numPoints, tile.numSimplified);
-                        console.timeEnd('creation');
-                    }
-                    const key = `z${  z}`;
-                    this.stats[key] = (this.stats[key] || 0) + 1;
-                    this.total++;
+                if (debug > 1) {
+                    console.log(`tile z${z}-${x}-${y} (features: ${tile.numFeatures}, points: ${tile.numPoints}, simplified: ${tile.numSimplified})`);
+                    console.timeEnd('creation');
                 }
             }
 
@@ -109,10 +126,10 @@ class GeoJSONVT {
             } else if (z === options.maxZoom || z === cz) {
                 // stop tiling if we reached base zoom or our target tile zoom
                 continue;
-            } else if (cz != null) {
-                // stop tiling if it's not an ancestor of the target tile
+            } else {
+                // cx, cy are always passed together with cz; stop tiling if it's not an ancestor of the target tile
                 const zoomSteps = cz - z;
-                if (x !== cx >> zoomSteps || y !== cy >> zoomSteps) continue;
+                if (x !== /** @type {number} */(cx) >> zoomSteps || y !== /** @type {number} */(cy) >> zoomSteps) continue;
             }
 
             // if we slice further down, no need to keep source geometry
@@ -122,46 +139,71 @@ class GeoJSONVT {
 
             if (debug > 1) console.time('clipping');
 
-            // values we'll use for clipping
-            const k1 = 0.5 * options.buffer / options.extent;
-            const k2 = 0.5 - k1;
-            const k3 = 0.5 + k1;
-            const k4 = 1 + k1;
+            // Convert tile-grid clip thresholds to storage space:
+            //   source = (gridCoord ± k) / z2
+            //   storage = (source - originShift) * worldScale
+            // (b is the half-buffer in storage units; tile-step in storage = S/z2.)
+            const S = options.worldScale;
+            const O = options.originShift;
+            const step = S / z2;
+            const b = 0.5 * options.buffer * S / (z2 * options.extent);
+            const xc = (x / z2 - O) * S; // tile's left edge in storage
+            const yc = (y / z2 - O) * S; // tile's top edge in storage
 
             let tl = null;
             let bl = null;
             let tr = null;
             let br = null;
 
-            const left  = clip(features, z2, x - k1, x + k3, 0, tile.minX, tile.maxX, options);
-            const right = clip(features, z2, x + k2, x + k4, 0, tile.minX, tile.maxX, options);
+            const left  = clip(features, xc - b, xc + step / 2 + b, 0, tile.minX, tile.maxX, options);
+            const right = clip(features, xc + step / 2 - b, xc + step + b, 0, tile.minX, tile.maxX, options);
 
             if (left) {
-                tl = clip(left, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
-                bl = clip(left, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
+                tl = clip(left, yc - b, yc + step / 2 + b, 1, tile.minY, tile.maxY, options);
+                bl = clip(left, yc + step / 2 - b, yc + step + b, 1, tile.minY, tile.maxY, options);
             }
 
             if (right) {
-                tr = clip(right, z2, y - k1, y + k3, 1, tile.minY, tile.maxY, options);
-                br = clip(right, z2, y + k2, y + k4, 1, tile.minY, tile.maxY, options);
+                tr = clip(right, yc - b, yc + step / 2 + b, 1, tile.minY, tile.maxY, options);
+                br = clip(right, yc + step / 2 - b, yc + step + b, 1, tile.minY, tile.maxY, options);
             }
 
             if (debug > 1) console.timeEnd('clipping');
 
-            stack.push(tl || [], z + 1, x * 2,     y * 2);
-            stack.push(bl || [], z + 1, x * 2,     y * 2 + 1);
-            stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
-            stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
+            featStack.push(tl || [], bl || [], tr || [], br || []);
+            numStack.push(
+                z + 1, x * 2, y * 2,
+                z + 1, x * 2, y * 2 + 1,
+                z + 1, x * 2 + 1, y * 2,
+                z + 1, x * 2 + 1, y * 2 + 1);
         }
     }
 
+    // Returns the tile as nested [x, y] coordinate pairs — the historical shape, built fresh on every call.
+    /** @param {number|string} z @param {number|string} x @param {number|string} y @returns {LegacyTile|null} */
     getTile(z, x, y) {
+        const tile = this.findTile(z, x, y);
+        return tile ? materializeTile(tile) : null;
+    }
+
+    // Returns the tile as stored — flat typed coord arrays, no per-coordinate objects. Zero-copy, so the
+    // arrays are the index's own: treat them as read-only, and don't hold them past the index's lifetime.
+    /** @param {number|string} z @param {number|string} x @param {number|string} y @returns {RawTile|null} */
+    getTileRaw(z, x, y) {
+        const tile = this.findTile(z, x, y);
+        return tile ? {features: tile.features} : null;
+    }
+
+    // Internal tile lookup shared by both getTile flavors: drills down from the nearest indexed parent
+    // when the tile isn't built yet. Returns the retained tile, not a public envelope.
+    /** @param {number|string} z @param {number|string} x @param {number|string} y @returns {Tile|null} */
+    findTile(z, x, y) {
         z = +z;
         x = +x;
         y = +y;
 
-        const options = this.options;
-        const {extent, debug} = options;
+        const options = /** @type {InternalOptions} */ (this.options);
+        const debug = options.debug;
 
         if (z < 0 || z > 24) return null;
 
@@ -169,7 +211,7 @@ class GeoJSONVT {
         x = (x + z2) & (z2 - 1); // wrap tile x coordinate
 
         const id = toID(z, x, y);
-        if (this.tiles[id]) return transform(this.tiles[id], extent);
+        if (this.tiles[id]) return this.tiles[id];
 
         if (debug > 1) console.log('drilling down to z%d-%d-%d', z, x, y);
 
@@ -195,19 +237,41 @@ class GeoJSONVT {
         this.splitTile(parent.source, z0, x0, y0, z, x, y);
         if (debug > 1) console.timeEnd('drilling down');
 
-        return this.tiles[id] ? transform(this.tiles[id], extent) : null;
+        return this.tiles[id] ?? null;
     }
 }
 
+// Walks the retained internal tile (flat integer coord arrays) into the legacy nested envelope: [x, y] pairs
+// grouped per ring. The tile is immutable; each call produces a fresh envelope.
+/** @param {Tile} tile @returns {LegacyTile} */
+function materializeTile(tile) {
+    /** @type {LegacyFeature[]} */
+    const features = [];
+    for (const f of tile.features) {
+        /** @type {LegacyFeature} */
+        let legacy;
+        if (f.type === SINGLE_POINT) { // narrow to public POINT envelope
+            legacy = {type: POINT, geometry: [[f.x, f.y]], tags: f.tags ?? null};
+        } else if (f.type === POINT) {
+            legacy = {type: POINT, geometry: flatToPairs(f.geometry), tags: f.tags ?? null};
+        } else {
+            legacy = {type: f.type, geometry: f.geometry.map(flatToPairs), tags: f.tags ?? null};
+        }
+        if (f.id != null) legacy.id = f.id;
+        features.push(legacy);
+    }
+    return {features};
+}
+
+/** @param {import('./internal.d.ts').TileCoordArray} flat @returns {[number, number][]} */
+function flatToPairs(flat) {
+    /** @type {[number, number][]} */
+    const pairs = [];
+    for (let i = 0; i < flat.length; i += 2) pairs.push([flat[i], flat[i + 1]]);
+    return pairs;
+}
+
+/** @param {number} z @param {number} x @param {number} y */
 function toID(z, x, y) {
     return (((1 << z) * y + x) * 32) + z;
-}
-
-function extend(dest, src) {
-    for (const i in src) dest[i] = src[i];
-    return dest;
-}
-
-export default function geojsonvt(data, options) {
-    return new GeoJSONVT(data, options);
 }

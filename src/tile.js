@@ -1,6 +1,26 @@
 
+import {POINT, LINE, POLYGON, SINGLE_POINT} from './feature.js';
+
+/** @import {AnyFeature, CoordArray, InternalOptions as Options, Tile, TileCoordArray, TileCoordArrayCtor, TileFeature, TileFeatureSinglePoint} from './internal.d.ts' */
+
+// `createTile` reads features in *storage space* (the units convert.js established — centered Int32 quanta when
+// the Int32 gate passed, or uncentered Float64 source [0,1] otherwise) and projects each coord into the public
+// per-tile extent space. `tolerance` is in storage units at the current zoom (linear; z-slot and POLYGON ringSize
+// were stored sqrt-linear at convert).
+
+/** @param {AnyFeature[]} features @param {number} z @param {number} tx @param {number} ty @param {Options} options @returns {Tile} */
 export default function createTile(features, z, tx, ty, options) {
-    const tolerance = z === options.maxZoom ? 0 : options.tolerance / ((1 << z) * options.extent);
+    const extent = options.extent;
+    const S = options.worldScale;
+    const O = options.originShift;
+    // storage-space tolerance at this zoom: pixel-tolerance scaled to quanta, then narrowed by the current
+    // zoom factor. At z=maxZoom this equals options.tolerance in storage units (1 pixel = 1 quantum on the
+    // Int32 path; equivalent ratio on the Float64 path).
+    const tolerance = z === options.maxZoom ? 0 : options.tolerance * S / ((1 << z) * extent);
+    const z2 = 1 << z;
+    // Committed-tile coord type: smallest typed-array dtype that fits the tile-extent projected range [-buffer, extent+buffer].
+    const CoordArray = (extent + options.buffer) <= 32767 ? Int16Array : Int32Array;
+    /** @type {Tile} */
     const tile = {
         features: [],
         numPoints: 0,
@@ -10,114 +30,139 @@ export default function createTile(features, z, tx, ty, options) {
         x: tx,
         y: ty,
         z,
-        transformed: false,
-        minX: 2,
-        minY: 1,
-        maxX: -1,
-        maxY: 0
+        minX: Infinity,
+        minY: Infinity,
+        maxX: -Infinity,
+        maxY: -Infinity
     };
     for (const feature of features) {
-        addFeature(tile, feature, tolerance, options);
+        addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray, S, O);
     }
     return tile;
 }
 
-function addFeature(tile, feature, tolerance, options) {
-    const geom = feature.geometry;
-    const type = feature.type;
-    const simplified = [];
-
-    tile.minX = Math.min(tile.minX, feature.minX);
-    tile.minY = Math.min(tile.minY, feature.minY);
-    tile.maxX = Math.max(tile.maxX, feature.maxX);
-    tile.maxY = Math.max(tile.maxY, feature.maxY);
-
-    if (type === 'Point' || type === 'MultiPoint') {
-        for (let i = 0; i < geom.length; i += 3) {
-            simplified.push(geom[i], geom[i + 1]);
-            tile.numPoints++;
-            tile.numSimplified++;
-        }
-
-    } else if (type === 'LineString') {
-        addLine(simplified, geom, tile, tolerance, false, false);
-
-    } else if (type === 'MultiLineString' || type === 'Polygon') {
-        for (let i = 0; i < geom.length; i++) {
-            addLine(simplified, geom[i], tile, tolerance, type === 'Polygon', i === 0);
-        }
-
-    } else if (type === 'MultiPolygon') {
-
-        for (let k = 0; k < geom.length; k++) {
-            const polygon = geom[k];
-            for (let i = 0; i < polygon.length; i++) {
-                addLine(simplified, polygon[i], tile, tolerance, true, i === 0);
-            }
-        }
-    }
-
-    if (simplified.length) {
-        let tags = feature.tags || null;
-
-        if (type === 'LineString' && options.lineMetrics) {
-            tags = {};
-            for (const key in feature.tags) tags[key] = feature.tags[key];
-            /* eslint-disable dot-notation */
-            tags['mapbox_clip_start'] = geom.start / geom.size;
-            tags['mapbox_clip_end'] = geom.end / geom.size;
-            /* eslint-enable dot-notation */
-        }
-
-        const tileFeature = {
-            geometry: simplified,
-            type: type === 'Polygon' || type === 'MultiPolygon' ? 3 :
-            (type === 'LineString' || type === 'MultiLineString' ? 2 : 1),
-            tags
-        };
-        if (feature.id !== null) {
-            tileFeature.id = feature.id;
-        }
-        tile.features.push(tileFeature);
-    }
+// Project a storage-space coordinate back to tile-extent integer space along either axis (t = tx or ty).
+// storage / S + O = source ∈ [0, 1]; then (source * z2 - t) * extent.
+/** @param {number} v @param {number} z2 @param {number} t @param {number} extent @param {number} S @param {number} O */
+function project(v, z2, t, extent, S, O) {
+    return Math.round(extent * ((v / S + O) * z2 - t));
 }
 
-function addLine(result, geom, tile, tolerance, isPolygon, isOuter) {
-    const sqTolerance = tolerance * tolerance;
+/** @param {Tile} tile @param {AnyFeature} feature @param {number} tolerance @param {Options} options @param {number} z2 @param {number} tx @param {number} ty @param {number} extent @param {TileCoordArrayCtor} CoordArray @param {number} S @param {number} O */
+function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, CoordArray, S, O) {
+    const type = feature.type;
 
-    if (tolerance > 0 && (geom.size < (isPolygon ? sqTolerance : tolerance))) {
-        tile.numPoints += geom.length / 3;
+    if (type === SINGLE_POINT) {
+        const x = feature.x;
+        const y = feature.y;
+        if (x < tile.minX) tile.minX = x;
+        if (y < tile.minY) tile.minY = y;
+        if (x > tile.maxX) tile.maxX = x;
+        if (y > tile.maxY) tile.maxY = y;
+
+        tile.numPoints++;
+        tile.numSimplified++;
+
+        /** @type {TileFeatureSinglePoint} */
+        const tileFeature = {
+            x: project(x, z2, tx, extent, S, O),
+            y: project(y, z2, ty, extent, S, O),
+            type: SINGLE_POINT,
+            tags: feature.tags || null
+        };
+        if (feature.id !== undefined) tileFeature.id = feature.id;
+        tile.features.push(tileFeature);
         return;
     }
 
-    const ring = [];
+    const geom = feature.geometry;
+    /** @type {TileCoordArray | TileCoordArray[]} */
+    let simplified;
 
-    for (let i = 0; i < geom.length; i += 3) {
-        if (tolerance === 0 || geom[i + 2] > sqTolerance) {
-            tile.numSimplified++;
-            ring.push(geom[i], geom[i + 1]);
+    if (feature.minX < tile.minX) tile.minX = feature.minX;
+    if (feature.minY < tile.minY) tile.minY = feature.minY;
+    if (feature.maxX > tile.maxX) tile.maxX = feature.maxX;
+    if (feature.maxY > tile.maxY) tile.maxY = feature.maxY;
+
+    if (type === POINT) {
+        const n = geom.length / 3;
+        simplified = new CoordArray(n * 2);
+        for (let i = 0, j = 0; i < geom.length; i += 3, j += 2) {
+            simplified[j] = project(geom[i], z2, tx, extent, S, O);
+            simplified[j + 1] = project(geom[i + 1], z2, ty, extent, S, O);
         }
-        tile.numPoints++;
+        tile.numPoints += n;
+        tile.numSimplified += n;
+        if (!simplified.length) return;
+
+    } else {
+        simplified = [];
+        const isPolygon = type === POLYGON;
+        for (let i = 0; i < geom.length;) {
+            const ringLen = geom[i];
+            const ringSize = geom[i + 1];
+            const coords0 = i + 2;
+            const coordsEnd = coords0 + ringLen * 3;
+            addLine(simplified, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray, S, O);
+            i = coordsEnd;
+        }
+        if (!simplified.length) return;
     }
 
-    if (isPolygon) rewind(ring, isOuter);
+    let tags = feature.tags || null;
+    if (type === LINE && options.lineMetrics) {
+        tags = {};
+        for (const key in feature.tags) tags[key] = feature.tags[key];
+        const size = geom[1]; // first ring's ringSize (line length)
+        // start/end are set together by convert/clip on lineMetrics LINE features
+        const start = /** @type {number} */ (feature.start);
+        const end = /** @type {number} */ (feature.end);
+        // Clamp to the [0, 1] the metrics are defined on: `size` is the truncated integer line length while
+        // start/end are Float64 running sums, so a slice at either extreme can land just outside. A
+        // degenerate line stores `size` 0 and is all of itself, hence the 0 and the `end >= size` arm.
+        /* eslint-disable camelcase */
+        tags.mapbox_clip_start = size > 0 ? Math.max(0, start / size) : 0;
+        tags.mapbox_clip_end = end >= size ? 1 : end / size;
+        /* eslint-enable camelcase */
+    }
 
-    result.push(ring);
+    // internal type values are intentionally identical to the public ones; the cast bridges the parallel narrowing
+    // of `type` (POINT vs LINE/POLYGON) and `simplified` (flat vs ring-array) that TS can't follow across branches.
+    const tileFeature = /** @type {TileFeature} */ ({geometry: simplified, type, tags});
+    if (feature.id !== undefined) tileFeature.id = feature.id;
+    tile.features.push(tileFeature);
 }
 
-function rewind(ring, clockwise) {
-    let area = 0;
-    for (let i = 0, len = ring.length, j = len - 2; i < len; j = i, i += 2) {
-        area += (ring[i] - ring[j]) * (ring[i + 1] + ring[j + 1]);
+/** @param {TileCoordArray[]} result @param {CoordArray} geom @param {number} coords0 @param {number} coordsEnd @param {number} ringSize @param {Tile} tile @param {number} tolerance @param {boolean} isPolygon @param {number} z2 @param {number} tx @param {number} ty @param {number} extent @param {TileCoordArrayCtor} CoordArray @param {number} S @param {number} O */
+function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray, S, O) {
+    const ringLen = (coordsEnd - coords0) / 3;
+
+    // z-slot and POLYGON ringSize are stored sqrt-linear, LINE ringSize linear, so both ringSize and per-coord
+    // weight compare linearly against tolerance.
+    if (Math.abs(ringSize) < tolerance) {
+        tile.numPoints += ringLen;
+        return;
     }
-    if (area > 0 === clockwise) {
-        for (let i = 0, len = ring.length; i < len / 2; i += 2) {
-            const x = ring[i];
-            const y = ring[i + 1];
-            ring[i] = ring[len - 2 - i];
-            ring[i + 1] = ring[len - 1 - i];
-            ring[len - 2 - i] = x;
-            ring[len - 1 - i] = y;
+
+    // Pre-count kept points so the retained ring is allocated at exact size
+    let kept = 0;
+    if (tolerance === 0) {
+        kept = ringLen;
+    } else {
+        for (let i = coords0; i < coordsEnd; i += 3) {
+            if (geom[i + 2] > tolerance) kept++;
         }
     }
+    tile.numPoints += ringLen;
+    tile.numSimplified += kept;
+
+    const ring = new CoordArray(kept * 2);
+    let w = 0;
+    for (let i = coords0; i < coordsEnd; i += 3) {
+        if (tolerance === 0 || geom[i + 2] > tolerance) {
+            ring[w++] = project(geom[i], z2, tx, extent, S, O);
+            ring[w++] = project(geom[i + 1], z2, ty, extent, S, O);
+        }
+    }
+    result.push(ring);
 }

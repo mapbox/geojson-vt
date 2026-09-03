@@ -1,6 +1,11 @@
 
-// calculate simplification data using optimized Douglas-Peucker algorithm
+// Calculate simplification data using optimized Douglas-Peucker algorithm. Stored z-slot is sqrt(maxSqDist)
+// (linear) so it fits Int32 quanta on the Int32 source-coord path, and unifies tile.js's keep-or-drop
+// comparison to `> tolerance` (linear) across both paths.
 
+/** @import {CoordArray} from './internal.d.ts' */
+
+/** @param {CoordArray} coords @param {number} first @param {number} last @param {number} sqTolerance */
 export default function simplify(coords, first, last, sqTolerance) {
     let maxSqDist = sqTolerance;
     const mid = first + ((last - first) >> 1);
@@ -32,13 +37,16 @@ export default function simplify(coords, first, last, sqTolerance) {
     }
 
     if (maxSqDist > sqTolerance) {
-        if (index - first > 3) simplify(coords, first, index, sqTolerance);
-        coords[index + 2] = maxSqDist;
-        if (last - index > 3) simplify(coords, index, last, sqTolerance);
+        // maxSqDist > sqTolerance implies index was assigned
+        const i = /** @type {number} */ (index);
+        if (i - first > 3) simplify(coords, first, i, sqTolerance);
+        coords[i + 2] = Math.sqrt(maxSqDist);
+        if (last - i > 3) simplify(coords, i, last, sqTolerance);
     }
 }
 
 // square distance from a point to a segment
+/** @param {number} px @param {number} py @param {number} x @param {number} y @param {number} bx @param {number} by */
 function getSqSegDist(px, py, x, y, bx, by) {
 
     let dx = bx - x;

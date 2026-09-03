@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
 
-import geojsonvt from '../src/index.js';
+import GeoJSONVT from '../src/index.js';
 
 testTiles('us-states.json', 'us-states-tiles.json', {indexMaxZoom: 7, indexMaxPoints: 200});
 testTiles('dateline.json', 'dateline-tiles.json', {indexMaxZoom: 0, indexMaxPoints: 10000});
@@ -29,6 +29,42 @@ test('throws on invalid GeoJSON', () => {
     assert.throws(() => {
         genTiles({type: 'Pologon'});
     });
+});
+
+test('throws a clear error on a geometry missing its coordinates', () => {
+    // A geometry with no coordinates/geometries array is malformed. It used to surface as an opaque
+    // TypeError from dereferencing null; report it like any other invalid input instead.
+    const invalid = {
+        'Point, coordinates null': {type: 'Point', coordinates: null},
+        'Point, coordinates missing': {type: 'Point'},
+        'LineString, coordinates null': {type: 'LineString', coordinates: null},
+        'Polygon, coordinates null': {type: 'Polygon', coordinates: null},
+        'MultiPoint, coordinates null': {type: 'MultiPoint', coordinates: null},
+        'GeometryCollection, geometries null': {type: 'GeometryCollection', geometries: null}
+    };
+    for (const [name, geometry] of Object.entries(invalid)) {
+        assert.throws(() => genTiles({type: 'Feature', properties: {}, geometry}),
+            {message: 'Input data is not a valid GeoJSON object.'}, name);
+    }
+});
+
+test('empty coordinate arrays are not an error', () => {
+    // Distinct from the malformed cases above: the array is present, just empty. The feature is skipped.
+    for (const geometry of [
+        {type: 'Point', coordinates: []},
+        {type: 'LineString', coordinates: []},
+        {type: 'GeometryCollection', geometries: []}
+    ]) {
+        assert.deepEqual({}, genTiles({type: 'Feature', properties: {}, geometry}));
+    }
+});
+
+test('empty part in a MultiPolygon is skipped, the rest is tiled', () => {
+    const ring = [[0, 0], [10, 0], [10, 10], [0, 0]];
+    assert.deepEqual(
+        genTiles({type: 'MultiPolygon', coordinates: [[], [ring]]}),
+        genTiles({type: 'MultiPolygon', coordinates: [[ring]]})
+    );
 });
 
 function testTiles(inputFile, expectedFile, options) {
@@ -58,7 +94,7 @@ function getJSON(name) {
 }
 
 function genTiles(data, options) {
-    const index = geojsonvt(data, Object.assign({
+    const index = new GeoJSONVT(data, Object.assign({
         indexMaxZoom: 0,
         indexMaxPoints: 10000
     }, options));
