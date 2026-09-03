@@ -42,6 +42,7 @@ function shiftFeatureCoords(features, offset) {
         if (feature.start !== undefined) {
             shifted.start = feature.start;
             shifted.end = feature.end;
+            shifted.size = feature.size;
         }
         out.push(shifted);
     }

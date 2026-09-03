@@ -113,14 +113,21 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
     if (type === LINE && options.lineMetrics) {
         tags = {};
         for (const key in feature.tags) tags[key] = feature.tags[key];
-        const size = geom[1]; // first ring's ringSize (line length)
-        // start/end are set together by convert/clip on lineMetrics LINE features
+        // start/end/size are set together by convert/clip on lineMetrics LINE features
         const start = /** @type {number} */ (feature.start);
         const end = /** @type {number} */ (feature.end);
-        // Clamp to the [0, 1] the metrics are defined on: `size` is the truncated integer line length while
-        // start/end are Float64 running sums, so a slice at either extreme can land just outside. A
-        // degenerate line stores `size` 0 and is all of itself, hence the 0 and the `end >= size` arm.
+        const size = /** @type {number} */ (feature.size);
+        // Clamp to the [0, 1] the metrics are defined on: size and start/end are independently accumulated
+        // Float64 sums, so a slice at either extreme can land a rounding step outside. A degenerate line has
+        // size 0 and is all of itself, hence the 0 and the `end >= size` arm.
+        // Storage units -> tile units at this zoom; an exact power of two on the Int32 path. The lengths are
+        // emitted alongside the ratios (matching geojson-vt-cpp) because consumers that recover the feature
+        // length as distance/(clip_end - clip_start) divide by a range that collapses on a line's terminal
+        // tile, amplifying a rounding step in the ratios into hundreds of pixels of pattern phase error.
+        const lenScale = extent * z2 / S;
         /* eslint-disable camelcase */
+        tags.mapbox_clip_feature_len = size * lenScale;
+        tags.mapbox_clip_seg_len = (end - start) * lenScale;
         tags.mapbox_clip_start = size > 0 ? Math.max(0, start / size) : 0;
         tags.mapbox_clip_end = end >= size ? 1 : end / size;
         /* eslint-enable camelcase */

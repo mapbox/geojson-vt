@@ -38,6 +38,7 @@ export interface Feature {
     maxY: number;
     start?: number;
     end?: number;
+    size?: number;
 }
 
 export interface SinglePointFeature {

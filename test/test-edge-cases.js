@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 import GeoJSONVT from '../src/index.js';
+import simplify from '../src/simplify.js';
+import {KEEP_Z} from '../src/feature.js';
 
 // Covers reviewer-flagged gaps that none of the existing tests exercise.
 
@@ -264,4 +266,32 @@ test('bounding boxes of clipped and wrapped features match a scan of the geometr
         }
     }
     assert.ok(checked > 300, `checked only ${checked} features`);
+});
+
+test('simplification weight is clamped instead of overflowing Int32', () => {
+    // worldScale ≈ 2^32 (still under the Int32 gate): the corner vertex's perpendicular distance to the
+    // closing diagonal is ~span/sqrt(2) ≈ 3.0e9, which wraps negative when stored raw and drops the vertex.
+    const line = {type: 'LineString', coordinates: [[-180, -85], [-180, 85], [180, 85]]};
+    const index = new GeoJSONVT(line, {extent: 4095, buffer: 0, maxZoom: 20, indexMaxZoom: 0, tolerance: 3});
+    assert.equal(index.options.useInt32, true);
+    assert.deepEqual(index.getTile(0, 0, 0).features[0].geometry, [[[0, 4088], [0, 7], [4095, 7]]]);
+});
+
+test('simplify clamps the z-slot to KEEP_Z', () => {
+    const coords = new Int32Array([-2e9, -2e9, 0, -2e9, 2e9, 0, 2e9, 2e9, 0]);
+    simplify(coords, 0, 6, 0);
+    assert.equal(coords[5], KEEP_Z);
+});
+
+test('line metrics survive a length that overflows the Int32 ringSize slot', () => {
+    // At GL JS's scale (extent 8192 * 2^18 = 2^31) this line is 2.26e9 storage units long, past INT32_MAX.
+    // Read back out of the geometry header it wraps negative, which pins every slice to clip_start 0 /
+    // clip_end 1 while the geometry stays correct — so the denominator is carried as Float64 on the feature.
+    const line = {type: 'LineString', coordinates: [[-150, -75], [150, 75]]};
+    const index = new GeoJSONVT(line, {maxZoom: 18, extent: 8192, buffer: 2048, tolerance: 6, lineMetrics: true});
+    const [a, b] = index.getTile(1, 0, 0).features;
+    assert.equal(a.tags.mapbox_clip_start.toFixed(6), '0.306322');
+    assert.equal(a.tags.mapbox_clip_end.toFixed(6), '0.650000');
+    assert.equal(b.tags.mapbox_clip_start.toFixed(6), '0.950000');
+    assert.equal(b.tags.mapbox_clip_end.toFixed(6), '1.000000');
 });

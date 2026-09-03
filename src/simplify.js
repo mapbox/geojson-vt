@@ -3,6 +3,8 @@
 // (linear) so it fits Int32 quanta on the Int32 source-coord path, and unifies tile.js's keep-or-drop
 // comparison to `> tolerance` (linear) across both paths.
 
+import {KEEP_Z} from './feature.js';
+
 /** @import {CoordArray} from './internal.d.ts' */
 
 /** @param {CoordArray} coords @param {number} first @param {number} last @param {number} sqTolerance */
@@ -40,7 +42,9 @@ export default function simplify(coords, first, last, sqTolerance) {
         // maxSqDist > sqTolerance implies index was assigned
         const i = /** @type {number} */ (index);
         if (i - first > 3) simplify(coords, first, i, sqTolerance);
-        coords[i + 2] = Math.sqrt(maxSqDist);
+        // clamp to KEEP_Z: at near-2^32 world spans the max perpendicular distance (~span/sqrt(2)) exceeds
+        // Int32 range and would wrap negative on store, dropping a vertex that should always be kept
+        coords[i + 2] = Math.min(Math.sqrt(maxSqDist), KEEP_Z);
         if (last - i > 3) simplify(coords, i, last, sqTolerance);
     }
 }

@@ -15,8 +15,10 @@
 // where `ringLen` is the coord-triple count and `ringSize` is the ring's length (LINE, unsigned) or
 // signed area (POLYGON). The whole feature lives in a single Float64Array — no per-ring sub-arrays.
 //
-// When lineMetrics is on, LINE features always have a single ring, and `feature.start` / `feature.end`
-// carry the clip metrics (in source-length units). They are absent otherwise.
+// When lineMetrics is on, LINE features always have a single ring, and `feature.start` / `feature.end` /
+// `feature.size` carry the clip metrics (in storage-length units) — the slice's span and the full line's
+// length. All three are Float64 on the feature, never read back out of the Int32 geometry buffer. They are
+// absent otherwise.
 
 export const POINT = 1;
 export const LINE = 2;
@@ -41,7 +43,7 @@ export function createSinglePoint(id, x, y, tags) {
     };
 }
 
-// LINE features with `options.lineMetrics` get a `start`/`end` pair attached later (in convert.js for
+// LINE features with `options.lineMetrics` get `start`/`end`/`size` attached later (in convert.js for
 // full lines, in clip.js for per-slice features). Absent on all other feature types.
 /** @param {FeatureId|undefined} id @param {1|2|3} type @param {CoordArray} geom @param {Tags} tags @returns {Feature} */
 export function createFeature(id, type, geom, tags) {

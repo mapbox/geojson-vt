@@ -114,12 +114,16 @@ function ringsBufferSize(rings) {
     return n;
 }
 
-/** @param {AnyFeature[]} features @param {Id|undefined} id @param {1|2|3} type @param {CoordArray} geom @param {Tags} tags @param {Options} options */
-function pushFeature(features, id, type, geom, tags, options) {
+// Unrounded length of the last LINE ring `writeLine` wrote, in storage units — read by `pushLine`, which is
+// the only path lineMetrics features take (LineString directly, MultiLineString exploded into one per part).
+let lastLineSize = 0;
+
+/** @param {AnyFeature[]} features @param {Id|undefined} id @param {1|2|3} type @param {CoordArray} geom @param {Tags} tags @param {Options} options @param {number} [size] */
+function pushFeature(features, id, type, geom, tags, options, size) {
     const feature = createFeature(id, type, geom, tags);
     if (type === LINE && options.lineMetrics) {
         feature.start = 0;
-        feature.end = geom[1]; // first ring's ringSize (line length)
+        feature.end = feature.size = /** @type {number} */ (size);
     }
     features.push(feature);
 }
@@ -128,12 +132,11 @@ function pushFeature(features, id, type, geom, tags, options) {
 function pushLine(features, id, coords, tags, sqTolerance, options) {
     const out = new options.CoordArray(2 + coords.length * 3);
     writeLine(out, 0, coords, sqTolerance, false, false, options.worldScale, options.originShift, options.useInt32);
-    pushFeature(features, id, LINE, out, tags, options);
+    pushFeature(features, id, LINE, out, tags, options, lastLineSize);
 }
 
 // Write one ring (header + coords) at `idx` into the pre-sized geometry buffer. Returns the next write position.
-// `ringSize` is stored sqrt-linear for POLYGON (sign(area) * sqrt(|area|)) and linear length for LINE —
-// both stay in Int32 range at the worst-case world span.
+// `ringSize` is stored sqrt-linear for POLYGON (sign(area) * sqrt(|area|)) and clamped linear length for LINE.
 /** @param {CoordArray} out @param {number} idx @param {number[][]} ring @param {number} sqTolerance @param {boolean} isPolygon @param {boolean} isOuter @param {number} S @param {number} O @param {boolean} R @returns {number} */
 function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O, R) {
     // empty rings are skipped at the call sites; this guard prevents KEEP_Z scribbling past the reserved header into the next ring
@@ -193,10 +196,18 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O, R) {
     simplify(out, coords0, lastIdx, sqTolerance);
     out[lastIdx + 2] = KEEP_Z;
 
-    // backfill header. POLYGON: sign(area)*sqrt(|area|) — keeps sign for outer/hole distinction, fits Int32
-    // since |area| ≤ W², sqrt ≤ W ≤ 2^32. LINE: linear length (already in storage units).
+    // Backfill the header. POLYGON stores sign(area)*sqrt(|area|), keeping the sign for the outer/hole
+    // distinction; it fits the Int32 slot because |area| ≤ (W/2)² over the centered range, so sqrt ≤ W/2 < 2^31.
+    // LINE stores linear length, which a line longer than one world span overflows — clamped rather than
+    // widened because the slot is only ever compared against a tolerance by magnitude, and a wrapped length
+    // could land near zero and drop the whole ring. Line metrics need the true value and read `lastLineSize`.
     out[headerIdx] = (coordsEnd - coords0) / 3;
-    out[headerIdx + 1] = isPolygon ? Math.sign(size) * Math.sqrt(Math.abs(size)) : size;
+    if (isPolygon) {
+        out[headerIdx + 1] = Math.sign(size) * Math.sqrt(Math.abs(size));
+    } else {
+        lastLineSize = size;
+        out[headerIdx + 1] = Math.min(size, KEEP_Z);
+    }
 
     return idx;
 }

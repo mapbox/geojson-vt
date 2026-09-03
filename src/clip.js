@@ -130,6 +130,7 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
         const f = createFeature(feature.id, LINE, out.slice(i, coordsEnd), feature.tags);
         f.start = metrics[n];
         f.end = metrics[n + 1];
+        f.size = feature.size;
         clipped.push(f);
         i = coordsEnd;
     }
