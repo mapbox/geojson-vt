@@ -21,6 +21,10 @@ import {createFeature, createSinglePoint, POINT, LINE, POLYGON, KEEP_Z} from './
 
 const INVALID_GEOJSON = 'Input data is not a valid GeoJSON object.';
 
+// Set when a coord falls outside Int32 storage: lng beyond ±360 (e.g. lines crossing the antimeridian into
+// the next world copy) at high extent * 2^maxZoom. The feature is then converted again into a Float64Array.
+let overflow = false;
+
 /** @param {GeoJSON} data @param {Options} options @returns {AnyFeature[]} */
 export default function convert(data, options) {
     /** @type {AnyFeature[]} */
@@ -62,6 +66,8 @@ function convertFeature(features, geojson, options, index) {
     if (options.promoteId) id = geojson.properties?.[options.promoteId];
     else if (options.generateId) id = index || 0;
 
+    const start = features.length;
+
     if (geom.type === 'Point') {
         features.push(createSinglePoint(id, projectX(geom.coordinates[0], S, O), projectY(geom.coordinates[1], S, O), tags));
 
@@ -69,7 +75,9 @@ function convertFeature(features, geojson, options, index) {
         const coords = geom.coordinates;
         const out = new CoordArray(coords.length * 3);
         for (let i = 0; i < coords.length; i++) {
-            out[i * 3]     = quantize(projectX(coords[i][0], S, O), R);
+            const x = quantize(projectX(coords[i][0], S, O), R);
+            out[i * 3] = x;
+            if (Math.abs(x) >= 0x80000000) overflow = true;
             out[i * 3 + 1] = quantize(projectY(coords[i][1], S, O), R);
         }
         pushFeature(features, id, POINT, out, tags, options);
@@ -104,6 +112,14 @@ function convertFeature(features, geojson, options, index) {
         }
     } else {
         throw new Error(INVALID_GEOJSON);
+    }
+
+    if (overflow) {
+        overflow = false;
+        if (CoordArray === Int32Array) {
+            features.length = start;
+            convertFeature(features, geojson, Object.assign(Object.create(options), {CoordArray: Float64Array}), index);
+        }
     }
 }
 
@@ -153,8 +169,9 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O, R) {
         const x = quantize(projectX(ring[j][0], S, O), R);
         const y = quantize(projectY(ring[j][1], S, O), R);
 
-        out[idx]     = x;
+        out[idx] = x;
         out[idx + 1] = y;
+        if (Math.abs(x) >= 0x80000000) overflow = true;
         idx += 3;
 
         if (j > 0) {

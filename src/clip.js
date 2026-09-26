@@ -21,7 +21,6 @@ export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
     if (maxAll < k1 || minAll >= k2) return null;     // trivial reject
 
     const isMetrics = options.lineMetrics;
-    const CoordArray = options.CoordArray;
     // Lazy-init: stay null while every feature so far trivially accepts. As soon as any feature rejects
     // or needs clipping, materialize `clipped` by copying the accepted prefix.
     /** @type {AnyFeature[]|null} */
@@ -55,6 +54,9 @@ export default function clip(features, k1, k2, axis, minAll, maxAll, options) {
             continue;
         }
         if (clipped === null) clipped = features.slice(0, fi);
+
+        // per feature: those that overflowed Int32 storage are kept in Float64 (see convert.js)
+        const CoordArray = /** @type {CoordArrayCtor} */ (geometry.constructor);
 
         if (type === POINT) {
             clipPoint(geometry, k1, k2, axis, feature, clipped, CoordArray);
@@ -103,7 +105,7 @@ function clipLinesOrPolygons(geometry, type, k1, k2, axis, feature, clipped, isM
 
     let out = new CoordArray(total);
     // Interpolated coords are rounded only into integer storage, where the array would otherwise truncate
-    // them toward zero. Float64 storage is the uncentered [0, 1] source space, where rounding would snap
+    // them toward zero. Float64 storage may be the uncentered [0, 1] source space, where rounding would snap
     // every intersection to a world corner. Math.floor(v + 0.5) is round-half-up, same as Math.round for
     // these magnitudes, but a single instruction rather than a builtin call.
     const round = CoordArray === Int32Array;

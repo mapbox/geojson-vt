@@ -28,9 +28,9 @@
   "devDependencies": {
     "@rollup/plugin-terser": "^1.0.0",
     "benchmark": "^2.1.4",
-    "eslint": "^10.9.1",
+    "eslint": "^10.11.0",
     "eslint-config-mourner": "^5.0.1",
-    "rollup": "^4.63.1",
+    "rollup": "^4.63.5",
     "typescript": "^7.0.2"
   },
   "license": "ISC",
@@ -47,5 +47,8 @@
     "geojson-vt.js",
     "geojson-vt-dev.js",
     "src"
-  ]
+  ],
+  "allowScripts": {
+    "fsevents@2.3.3": true
+  }
 }
