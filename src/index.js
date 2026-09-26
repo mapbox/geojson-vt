@@ -26,7 +26,11 @@ export default class GeoJSONVT {
     /** @param {import('geojson').GeoJSON} data @param {Options} [options] */
     constructor(data, options) {
         /** @type {InternalOptions} */
-        const opts = this.options = Object.assign(Object.create(defaultOptions), options);
+        const opts = this.options = Object.create(defaultOptions);
+        for (const key of Object.keys(options || {})) {
+            if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+            opts[key] = /** @type {any} */ (options)[key];
+        }
 
         const debug = opts.debug;
 
