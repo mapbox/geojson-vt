@@ -214,13 +214,14 @@ function writeLine(out, idx, ring, sqTolerance, isPolygon, isOuter, S, O, R) {
     out[lastIdx + 2] = KEEP_Z;
 
     // Backfill the header. POLYGON stores sign(area)*sqrt(|area|), keeping the sign for the outer/hole
-    // distinction; it fits the Int32 slot because |area| ≤ (W/2)² over the centered range, so sqrt ≤ W/2 < 2^31.
-    // LINE stores linear length, which a line longer than one world span overflows — clamped rather than
-    // widened because the slot is only ever compared against a tolerance by magnitude, and a wrapped length
-    // could land near zero and drop the whole ring. Line metrics need the true value and read `lastLineSize`.
+    // distinction; a whole-world ring has area W², so at W = 2^31 (extent 8192, maxZoom 18) sqrt reaches 2^31
+    // and would wrap negative, turning the outer ring into a hole. LINE stores linear length, which a line
+    // longer than one world span overflows. Both are clamped rather than widened because the slot is only
+    // ever compared against a tolerance by magnitude, and a wrapped value could land near zero and drop the
+    // whole ring. Line metrics need the true length and read `lastLineSize`.
     out[headerIdx] = (coordsEnd - coords0) / 3;
     if (isPolygon) {
-        out[headerIdx + 1] = Math.sign(size) * Math.sqrt(Math.abs(size));
+        out[headerIdx + 1] = Math.sign(size) * Math.min(Math.sqrt(Math.abs(size)), KEEP_Z);
     } else {
         lastLineSize = size;
         out[headerIdx + 1] = Math.min(size, KEEP_Z);

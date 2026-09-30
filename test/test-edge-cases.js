@@ -295,3 +295,12 @@ test('line metrics survive a length that overflows the Int32 ringSize slot', () 
     assert.equal(b.tags.mapbox_clip_start.toFixed(6), '0.950000');
     assert.equal(b.tags.mapbox_clip_end.toFixed(6), '1.000000');
 });
+
+test('whole-world polygon area does not overflow the Int32 ringSize slot', () => {
+    // At GL JS's scale (W = 8192 * 2^18 = 2^31) a whole-world ring has sqrt(area) = 2^31, which wrapped negative
+    // and marked the outer ring as a hole: it was left out of the bbox, so the feature was never clipped.
+    const polygon = {type: 'Polygon', coordinates: [[[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]]]};
+    const index = new GeoJSONVT(polygon, {maxZoom: 18, extent: 8192, buffer: 2048, tolerance: 6});
+    assert.deepEqual(index.getTile(3, 4, 2).features[0].geometry,
+        [[[-2048, 10240], [-2048, -2048], [10240, -2048], [10240, 10240], [-2048, 10240]]]);
+});
