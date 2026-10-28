@@ -140,6 +140,9 @@ function addFeature(tile, feature, tolerance, options, z2, tx, ty, extent, Coord
     tile.features.push(tileFeature);
 }
 
+// Reused across calls to hold a ring's projected points before they are copied into a ring of exact size.
+let scratch = new Float64Array(0);
+
 /** @param {TileCoordArray[]} result @param {CoordArray} geom @param {number} coords0 @param {number} coordsEnd @param {number} ringSize @param {Tile} tile @param {number} tolerance @param {boolean} isPolygon @param {number} z2 @param {number} tx @param {number} ty @param {number} extent @param {TileCoordArrayCtor} CoordArray @param {number} S @param {number} O */
 function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, isPolygon, z2, tx, ty, extent, CoordArray, S, O) {
     const ringLen = (coordsEnd - coords0) / 3;
@@ -151,25 +154,21 @@ function addLine(result, geom, coords0, coordsEnd, ringSize, tile, tolerance, is
         return;
     }
 
-    // Pre-count kept points so the retained ring is allocated at exact size
-    let kept = 0;
-    if (tolerance === 0) {
-        kept = ringLen;
-    } else {
-        for (let i = coords0; i < coordsEnd; i += 3) {
-            if (geom[i + 2] > tolerance) kept++;
-        }
-    }
-    tile.numPoints += ringLen;
-    tile.numSimplified += kept;
-
-    const ring = new CoordArray(kept * 2);
+    // Project into a shared scratch buffer, then copy into a ring of exact size. A kept point that rounds to the
+    // same tile coordinate as the one before it adds nothing at tile resolution, so it is left out; without
+    // simplification (tolerance 0) long runs of source vertices otherwise collapse onto one grid point at low zooms.
+    if (scratch.length < ringLen * 2) scratch = new Float64Array(ringLen * 2);
     let w = 0;
     for (let i = coords0; i < coordsEnd; i += 3) {
-        if (tolerance === 0 || geom[i + 2] > tolerance) {
-            ring[w++] = project(geom[i], z2, tx, extent, S, O);
-            ring[w++] = project(geom[i + 1], z2, ty, extent, S, O);
-        }
+        if (tolerance !== 0 && geom[i + 2] <= tolerance) continue;
+        const x = project(geom[i], z2, tx, extent, S, O);
+        const y = project(geom[i + 1], z2, ty, extent, S, O);
+        if (w > 0 && x === scratch[w - 2] && y === scratch[w - 1]) continue;
+        scratch[w++] = x;
+        scratch[w++] = y;
     }
-    result.push(ring);
+    tile.numPoints += ringLen;
+    tile.numSimplified += w / 2;
+
+    result.push(new CoordArray(scratch.subarray(0, w)));
 }
