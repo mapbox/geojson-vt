@@ -83,9 +83,10 @@ test('getTile: polygon clipping on the boundary', () => {
 
 test('getTile: polygon with vertex exactly on tile boundary (#118)', () => {
     // maxZoom 24 at extent 4096 overflows the Int32 gate, so this also pins the Float64 storage path.
-    // The ring is the same cycle v4 produced, and the Int32 path at maxZoom 19 produces it identically.
+    // The ring is the cycle v4 produced less its repeated [0, 0], and the Int32 path at maxZoom 19 produces it
+    // identically.
     const expected = [{
-        geometry: [[[0, 0], [0, 0], [2048, 4096], [0, 4096], [0, 0]]],
+        geometry: [[[0, 0], [2048, 4096], [0, 4096], [0, 0]]],
         type: 3,
         tags: null
     }];
@@ -96,6 +97,20 @@ test('getTile: polygon with vertex exactly on tile boundary (#118)', () => {
         const index = new GeoJSONVT({type: 'Polygon', coordinates}, {...options, maxZoom});
         assert.equal(index.options.useInt32, maxZoom === 19);
         assert.deepEqual(index.getTile(1, 1, 1).features, expected);
+    }
+});
+
+test('getTile: drops vertices that round to the same tile coordinate', () => {
+    // Without simplification every source vertex is kept, and at low zooms runs of them land on one grid point.
+    const coordinates = [];
+    for (let i = 0; i <= 1000; i++) coordinates.push([10 + i * 1e-5, 10 + (i % 2) * 1e-5]);
+    coordinates.push([20, 10]);
+    const index = new GeoJSONVT({type: 'LineString', coordinates}, {tolerance: 0, indexMaxZoom: 0});
+
+    const line = index.getTile(0, 0, 0).features[0].geometry[0];
+    assert.equal(line.length, 2);
+    for (let i = 1; i < line.length; i++) {
+        assert.notDeepEqual(line[i], line[i - 1]);
     }
 });
 
